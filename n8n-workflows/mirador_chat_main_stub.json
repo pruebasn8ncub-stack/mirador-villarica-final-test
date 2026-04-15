@@ -33,14 +33,13 @@
       "parameters": {
         "method": "POST",
         "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/sessions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             { "name": "Content-Type", "value": "application/json" },
             { "name": "Prefer", "value": "resolution=merge-duplicates,return=minimal" },
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
           ]
         },
         "sendBody": true,
@@ -52,10 +51,7 @@
       "name": "Upsert Session",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300],
-      "credentials": {
-        "httpHeaderAuth": { "id": "IkWeji0O7NPCXFdd", "name": "Mirador Supabase Auth" }
-      }
+      "position": [680, 300]
     },
     {
       "parameters": {
