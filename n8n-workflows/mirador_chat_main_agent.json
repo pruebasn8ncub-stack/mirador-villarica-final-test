@@ -1,0 +1,625 @@
+{
+  "name": "Mirador Chat \u2014 Main (AI Agent)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mirador-chat",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "mirador-chat",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "IkWeji0O7NPCXFdd",
+          "name": "Mirador Webhook Bearer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body ?? item;\nconst uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!body || typeof body !== 'object') throw new Error('Invalid body');\nif (typeof body.session_id !== 'string' || !uuidRe.test(body.session_id)) throw new Error('Invalid session_id');\nif (typeof body.message !== 'string' || body.message.length === 0 || body.message.length > 1000) throw new Error('Invalid message');\nreturn [{ json: {\n  session_id: body.session_id,\n  message: body.message,\n  user_metadata: body.user_metadata ?? null,\n  received_at: new Date().toISOString(),\n} }];"
+      },
+      "id": "validate",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/sessions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $json.session_id, user_agent: $json.user_metadata?.user_agent ?? null, referrer: $json.user_metadata?.referrer ?? null }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "supabase-session",
+      "name": "Upsert Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: $('Validate Payload').first().json.session_id, role: 'user', content: $('Validate Payload').first().json.message }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "supabase-msg-in",
+      "name": "Save User Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Validate Payload').first().json.message }}",
+        "options": {
+          "systemMessage": "# System Prompt v1 \u2014 Mirador de Villarrica Chatbot\n\n## Bloque 1 \u2014 Identidad y reglas\n\nEres el asistente virtual de **Mirador de Villarrica**, un proyecto inmobiliario de **Terra Segura** en Colico, Regi\u00f3n de La Araucan\u00eda (Chile). Tu rol es informar, guiar y calificar internamente a posibles compradores que visitan el sitio web.\n\n### Tono\n- Apertura formal (\"usted\"). Si el lead tutea, cambia a tutear.\n- Cercano pero profesional. M\u00e1ximo **4 l\u00edneas por mensaje**. M\u00e1ximo **1 emoji** por mensaje (cero durante calificaci\u00f3n).\n- Espa\u00f1ol chileno neutro. Si el lead escribe en ingl\u00e9s o portugu\u00e9s, respondes en ese idioma.\n\n### Principio de conducci\u00f3n\nTu conversaci\u00f3n tiene 4 responsabilidades simult\u00e1neas:\n1. **Informar** con precisi\u00f3n usando la KB estructurada (Bloque 2).\n2. **Guiar** hacia 3 preguntas clave (intenci\u00f3n, plazo, presupuesto) **sin parecer formulario**.\n3. **Calificar** internamente al lead (invisible para \u00e9l).\n4. **Derivar** a Diego cuando corresponde.\n\n### Principio \"calificar sin interrogar\"\n**NUNCA** preguntes las 3 variables seguidas. Tejelas en la conversaci\u00f3n natural, **una por turno, despu\u00e9s de responder** la duda del lead.\n\n**Orden preferente:** intenci\u00f3n \u2192 plazo \u2192 presupuesto. Ad\u00e1ptate si el lead revela datos en otro orden.\n\n**Ejemplo de tejido correcto:**\n> Lead: \u00bfQu\u00e9 tama\u00f1o tienen las parcelas?\n> T\u00fa: Las parcelas van desde 5.000 m\u00b2 hasta 1 hect\u00e1rea. El precio parte en $11.990.000 contado para las m\u00e1s chicas. \u00bfEst\u00e1 pensando en algo m\u00e1s para una casa de descanso o m\u00e1s bien como inversi\u00f3n?\n\n### Se\u00f1ales para iniciar calificaci\u00f3n\nInicia la calificaci\u00f3n tejida cuando el lead:\n- Pregunta por disponibilidad o parcelas espec\u00edficas\n- Pregunta por financiamiento concreto\n- Pregunta por visitas o tour\n- Menciona plazos propios\n- Responde afirmativamente a ofertas de m\u00e1s info\n\nSi el lead solo hace dudas informativas generales, responde sin presionar.\n\n### Captura de contacto\nCuando tengas al menos 2 de las 3 variables calificadoras, pide contacto de forma org\u00e1nica:\n> \"Genial, con lo que me cuenta. Para que Diego le prepare una propuesta con las parcelas que mejor calzan con lo que busca, \u00bfme deja su nombre y un WhatsApp donde contactarle?\"\n\nSi el lead se niega \u2192 contin\u00faa conversaci\u00f3n, **no insistas**. Si solo da nombre, reintenta contacto **1 sola vez**.\n\n### Cuando llamar cada tool\n\n| Tool | \u00dasala cuando |\n|---|---|\n| `mostrar_master_plan` | Lead pide plano, distribuci\u00f3n, d\u00f3nde est\u00e1n las parcelas |\n| `mostrar_galeria` | Lead pide fotos / galer\u00eda. Debes determinar tema: `volcan`, `lago`, `bosque`, `atardecer`, `vista_general` |\n| `derivar_whatsapp` | Lead quiere hablar con Diego directo / pregunta fuera de tu KB |\n| `calificar_lead` | Tienes 2+ variables calificadoras + contacto. Llamas **una sola vez** por sesi\u00f3n |\n\n**Nota sobre `calificar_lead`:** el output `tool_output_text` YA contiene el cierre correcto seg\u00fan score. L\u00e9elo literal al usuario \u2014 no lo parafrasees ni agregues datos.\n\n### NUNCA hagas\n- Inventar precios por parcela individual\n- Confirmar disponibilidad de parcela espec\u00edfica (no tienes inventario real)\n- Prometer fechas de escrituraci\u00f3n o plazos de entrega\n- Dar descuentos\n- Comparar con otros proyectos de Terra Segura\n- Dar asesor\u00eda legal, tributaria ni financiera\n- Insistir m\u00e1s de 2 veces en la misma pregunta de calificaci\u00f3n\n- Hacer follow-up si el lead se va en silencio\n- Repetir calificaci\u00f3n en la misma sesi\u00f3n si ya disparaste `calificar_lead`\n\n### SIEMPRE\n- Primero responde la duda del lead, despu\u00e9s teje pregunta\n- M\u00e1ximo 1 pregunta de calificaci\u00f3n por turno\n- Si no sabes algo \u2192 deriva a Diego\n- Si el lead pide algo muy espec\u00edfico que no est\u00e1 en tu KB \u2192 usa `derivar_whatsapp`\n\n### Override CALIENTE\nSi el lead pide expl\u00edcitamente hablar con Diego o \"que me llamen ya\", pasa a CALIENTE autom\u00e1tico al calificar (par\u00e1metro `override_caliente: true`).\n\n---\n\n## Bloque 2 \u2014 Knowledge Base (fuente de verdad)\n\n### Proyecto\n- **Nombre:** Mirador de Villarrica\n- **Desarrolladora:** Terra Segura Inmobiliaria\n- **Ubicaci\u00f3n:** Colico, Regi\u00f3n de La Araucan\u00eda, Chile\n- **Superficie total:** 80 hect\u00e1reas\n- **Total de parcelas:** 74\n- **Rango de tama\u00f1os:** 5.000 m\u00b2 a 1 hect\u00e1rea (10.000 m\u00b2)\n- **Estado legal:** SAG aprobado, roles listos, inscripci\u00f3n inmediata\n\n### Precios (fuente: brochure oficial)\n- **Pago contado:** desde **$11.990.000 CLP**\n- **Pago con cr\u00e9dito directo:** desde **$17.490.000 CLP** (50% pie + 36 cuotas UF)\n- **Reserva:** **$250.000 CLP** (cubre abogados, notar\u00eda, Conservador de Bienes Ra\u00edces)\n- **Formas de pago:** Webpay, transferencia, vale vista\n- **Precio espec\u00edfico por parcela lo maneja Diego** \u2014 NO des valores por lote.\n\n### Ubicaci\u00f3n y distancias\n| Lugar | Tiempo | Distancia |\n|---|---|---|\n| Cunco | 20 min | 20 km |\n| Lago Colico | 20 min | 20 km |\n| Villarrica centro | 55 min | 60 km |\n| Temuco | 55 min | 60 km |\n| Puc\u00f3n | 1 h 25 min | 85 km |\n| Aeropuerto Araucan\u00eda | 45 min | \u2014 |\n\n**Acceso desde Santiago:** vuelo a Temuco (1:20 h) \u2192 autom\u00f3vil al proyecto (45 min).\n\n### Caracter\u00edsticas t\u00e9cnicas\n- **Agua:** pozo (cada propietario hace el suyo)\n- **Luz:** postaci\u00f3n el\u00e9ctrica en la entrada del proyecto\n- **Caminos internos:** estabilizados, avance 50% al momento del brochure\n- **Accesos:** aptos para todo tipo de veh\u00edculos\n- **Entrada:** port\u00f3n\n- **Orientaci\u00f3n:** plano con br\u00fajula \u2014 algunas parcelas con vista al volc\u00e1n Villarrica (norte), otras al Lago Colico\n\n### Entorno y atractivos\n- Zona tur\u00edstica consolidada del sur de Chile\n- Deportes de aventura, termas, senderismo\n- Plusval\u00eda en crecimiento por turismo\n- Bosque nativo, praderas, vistas al volc\u00e1n Villarrica\n\n### Proceso de compra (5 pasos)\n1. **Reuni\u00f3n virtual** con equipo Terra Segura\n2. **Reserva $250.000** \u2014 cubre gastos operacionales\n3. **Promesa de compraventa** \u2014 firma digital con clave \u00fanica + pago pie (Webpay/transferencia/vale vista)\n4. **Escritura de compraventa** \u2014 sin costo notarial adicional\n5. **Entrega** \u2014 inscripci\u00f3n CBR a nombre del comprador\n\n### Contacto comercial\n- **Diego Cavagnaro** \u2014 Terra Segura Inmobiliaria\n- WhatsApp: +56 9 4032 9987\n- Email: diego@terrasegura.cl\n- Oficina: Av Las Condes 7700, Oficina 205A, Santiago\n- **Horario:** lunes a viernes, 9:00 a 19:00 hrs\n\n### Material p\u00fablico\n- Brochure PDF: disponible en el sitio\n- Tour 360\u00b0: https://lanube360.com/mirador-de-villarrica/\n- KMZ descargable disponible en el sitio\n\n### FAQ cubierta\n- **\u00bfIncluye construcci\u00f3n?** No. Solo parcelas con factibilidad de luz y agua.\n- **\u00bfInternet/fibra?** No confirmado en material oficial. Consulta con Diego.\n- **\u00bfSeguridad 24/7?** Port\u00f3n de entrada. Otros servicios no confirmados.\n- **\u00bfVisitas?** Diego coordina tras reuni\u00f3n virtual.\n- **\u00bfPlusval\u00eda garantizada?** Ning\u00fan vendedor puede garantizar plusval\u00eda. El atractivo viene de la consolidaci\u00f3n tur\u00edstica de la zona.\n- **\u00bfDescuentos?** Las condiciones las define Diego caso a caso.\n\n### Datos que NO TIENES (deriva a Diego)\n- Precio por n\u00famero de parcela\n- Disponibilidad actual por parcela\n- Orientaci\u00f3n exacta de cada lote\n- Reglamento de copropiedad detallado\n- Condiciones de financiamiento personalizadas\n- Otros proyectos de Terra Segura\n",
+          "maxIterations": 5
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4.5",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 400
+        }
+      },
+      "id": "openrouter-model",
+      "name": "OpenRouter Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        500
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "crHqCGLvcnKGMEZi",
+          "name": "Mirador OpenRouter"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Validate Payload').first().json.session_id }}",
+        "contextWindowLength": 10
+      },
+      "id": "memory",
+      "name": "Window Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1120,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "name": "mostrar_master_plan",
+        "description": "Muestra el master plan (distribuci\u00f3n) del proyecto Mirador de Villarrica como imagen. \u00dasalo cuando el lead pida ver el plano, la distribuci\u00f3n, o d\u00f3nde est\u00e1n ubicadas las parcelas. No requiere par\u00e1metros.",
+        "workflowId": {
+          "__rl": true,
+          "value": "SURT3H0n5n9mqb5O",
+          "mode": "id"
+        }
+      },
+      "id": "tool-master-plan",
+      "name": "Tool mostrar_master_plan",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1240,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "name": "mostrar_galeria",
+        "description": "Muestra una galer\u00eda de fotos filtradas por tema. \u00dasala cuando el lead pida ver fotos, im\u00e1genes o galer\u00eda. Debes determinar el tema: 'volcan' (fotos con volc\u00e1n al fondo), 'lago' (Lago Colico y alrededores), 'bosque' (bosque nativo), 'atardecer', o 'vista_general' (si no est\u00e1 claro).",
+        "workflowId": {
+          "__rl": true,
+          "value": "vsRCsE9Osgc1Qfdw",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tema": "={{ $fromAI('tema', 'Tema de la galer\u00eda: volcan | lago | bosque | atardecer | vista_general', 'string') }}"
+          },
+          "schema": [
+            {
+              "id": "tema",
+              "displayName": "tema",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "tool-galeria",
+      "name": "Tool mostrar_galeria",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "name": "derivar_whatsapp",
+        "description": "Genera un link de WhatsApp directo a Diego con contexto pre-cargado. \u00dasalo cuando: (a) el lead expl\u00edcitamente pide hablar con Diego, (b) hace una pregunta fuera de tu KB que debe responder Diego, (c) pide algo muy espec\u00edfico (precio de parcela X, disponibilidad). Requiere el motivo (resumen breve de qu\u00e9 quiere) y resumen_conversacion (contexto).",
+        "workflowId": {
+          "__rl": true,
+          "value": "ewwF9NgmTJR3ujU2",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "motivo": "={{ $fromAI('motivo', 'Motivo por el cual el lead quiere hablar con Diego (1 l\u00ednea)', 'string') }}",
+            "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de la conversaci\u00f3n hasta ahora (2-3 l\u00edneas)', 'string') }}"
+          },
+          "schema": [
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "resumen_conversacion",
+              "displayName": "resumen_conversacion",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "tool-derivar",
+      "name": "Tool derivar_whatsapp",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1480,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "name": "calificar_lead",
+        "description": "Califica y registra al lead en la base de datos. \u00daSALA UNA SOLA VEZ POR SESI\u00d3N, cuando tengas al menos: nombre + WhatsApp + 2 de las 3 variables (intencion, plazo, presupuesto). Valores v\u00e1lidos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido \u00b7 plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido \u00b7 presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide expl\u00edcitamente 'que me llamen YA'.",
+        "workflowId": {
+          "__rl": true,
+          "value": "ILXLExvJIJDu8KED",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nombre": "={{ $fromAI('nombre', 'Nombre del lead', 'string') }}",
+            "whatsapp": "={{ $fromAI('whatsapp', 'WhatsApp del lead con c\u00f3digo pa\u00eds (+56...) o vac\u00edo si no se dio', 'string') }}",
+            "email": "={{ $fromAI('email', 'Email del lead o vac\u00edo', 'string') }}",
+            "intencion": "={{ $fromAI('intencion', 'Uno de: inversion, segunda_vivienda, vivir_permanente, evaluando, no_definido', 'string') }}",
+            "plazo": "={{ $fromAI('plazo', 'Uno de: ahora, 1_a_3_meses, 3_a_6_meses, 6_a_12_meses, mas_de_1_ano, no_definido', 'string') }}",
+            "presupuesto": "={{ $fromAI('presupuesto', 'Uno de: contado, credito, no_definido', 'string') }}",
+            "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de 2-3 l\u00edneas de la conversaci\u00f3n y el inter\u00e9s del lead', 'string') }}",
+            "session_id": "={{ $('Validate Payload').first().json.session_id }}",
+            "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidi\u00f3 hablar con Diego YA expl\u00edcitamente', 'boolean') }}"
+          },
+          "schema": [
+            {
+              "id": "nombre",
+              "type": "string",
+              "required": true,
+              "displayName": "nombre",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp",
+              "type": "string",
+              "required": false,
+              "displayName": "whatsapp",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "type": "string",
+              "required": false,
+              "displayName": "email",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "intencion",
+              "type": "string",
+              "required": true,
+              "displayName": "intencion",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "plazo",
+              "type": "string",
+              "required": true,
+              "displayName": "plazo",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "presupuesto",
+              "type": "string",
+              "required": true,
+              "displayName": "presupuesto",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resumen_conversacion",
+              "type": "string",
+              "required": true,
+              "displayName": "resumen_conversacion",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "session_id",
+              "type": "string",
+              "required": true,
+              "displayName": "session_id",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "override_caliente",
+              "type": "boolean",
+              "required": false,
+              "displayName": "override_caliente",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "id": "tool-calificar",
+      "name": "Tool calificar_lead",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsea la respuesta del AI Agent para extraer reply + attachments.\n// El AI Agent devuelve `output` con el texto, y cada tool invocada tiene su output\n// accesible via intermediateSteps. Extraemos attachments de los tools visuales.\nconst agentData = $json;\nconst reply = agentData.output || agentData.text || '';\n\n// Buscar attachments en los tool outputs\nconst attachments = [];\nconst steps = agentData.intermediateSteps || [];\nfor (const step of steps) {\n  const obs = step.observation || step.toolOutput || step;\n  let parsed = obs;\n  if (typeof obs === 'string') {\n    try { parsed = JSON.parse(obs); } catch {}\n  }\n  if (parsed && typeof parsed === 'object') {\n    if (parsed.type === 'image' && parsed.url) {\n      attachments.push({ type: 'image', url: parsed.url, caption: parsed.caption });\n    } else if (parsed.type === 'gallery' && Array.isArray(parsed.images)) {\n      attachments.push({ type: 'gallery', images: parsed.images });\n    } else if (parsed.type === 'whatsapp_link' && parsed.url) {\n      attachments.push({ type: 'whatsapp_link', url: parsed.url, label: parsed.label || 'Hablar con Diego por WhatsApp' });\n    }\n  }\n}\n\nreturn [{ json: { reply, attachments } }];"
+      },
+      "id": "extract-attachments",
+      "name": "Extract Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: $('Validate Payload').first().json.session_id, role: 'assistant', content: $json.reply }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "supabase-msg-out",
+      "name": "Save Assistant Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $('Extract Attachments').first().json.reply, attachments: $('Extract Attachments').first().json.attachments, session_id: $('Validate Payload').first().json.session_id }) }}"
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Upsert Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Session": {
+      "main": [
+        [
+          {
+            "node": "Save User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save User Message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Attachments": {
+      "main": [
+        [
+          {
+            "node": "Save Assistant Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Assistant Message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool mostrar_master_plan": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool mostrar_galeria": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool derivar_whatsapp": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool calificar_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "[Tool] Mirador - mostrar_master_plan",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retorna master plan como attachment image.\nreturn [{ json: {\n  type: 'image',\n  url: 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/assets/master-plan.jpg',\n  caption: 'Master Plan — 74 parcelas en 80 hectáreas',\n  tool_output_text: 'Este es el master plan del proyecto. Las parcelas se distribuyen en una meseta elevada con caminos internos estabilizados. ¿Hay alguna zona que quieras mirar con más detalle?',\n} }];"
+      },
+      "id": "build-payload",
+      "name": "Build Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Build Payload", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

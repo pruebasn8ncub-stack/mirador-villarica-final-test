@@ -1,0 +1,30 @@
+{
+  "name": "[Tool] Mirador - mostrar_galeria",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"tema\": \"volcan\"\n}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const BASE = 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/assets';\n\nconst CATALOGO = {\n  volcan: [\n    { url: `${BASE}/banner-volcan.jpg`, alt: 'Vista aérea del proyecto con Volcán Villarrica al fondo' },\n  ],\n  lago: [\n    { url: `${BASE}/lagocolico.jpg`, alt: 'Lago Colico a 20 minutos del proyecto' },\n    { url: `${BASE}/galeria1.jpg`, alt: 'Entorno natural hacia el lago' },\n    { url: `${BASE}/galeria5-atardecer.jpg`, alt: 'Atardecer en Mirador de Villarrica' },\n  ],\n  bosque: [\n    { url: `${BASE}/galeria3.jpg`, alt: 'Bosque nativo en Mirador de Villarrica' },\n    { url: `${BASE}/imagen1.jpg`, alt: 'Bosque y accesos del proyecto' },\n  ],\n  atardecer: [\n    { url: `${BASE}/galeria5-atardecer.jpg`, alt: 'Atardecer sobre el proyecto' },\n  ],\n  vista_general: [\n    { url: `${BASE}/galeria6.jpg`, alt: 'Panorámica del terreno' },\n    { url: `${BASE}/galeria7.jpg`, alt: 'Parcela con vista al entorno natural' },\n    { url: `${BASE}/galeria2.jpg`, alt: 'Vista general del proyecto' },\n  ],\n};\n\nconst tema = ($json.tema || 'vista_general').toLowerCase();\nconst images = CATALOGO[tema] || CATALOGO.vista_general;\n\nreturn [{ json: {\n  type: 'gallery',\n  images,\n  count: images.length,\n  tema_resuelto: CATALOGO[tema] ? tema : 'vista_general',\n  tool_output_text: `Te comparto ${images.length} ${images.length === 1 ? 'foto' : 'fotos'} del tema \"${tema}\". ¿Quieres ver algo específico más?`,\n} }];"
+      },
+      "id": "build-gallery",
+      "name": "Build Gallery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Build Gallery", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

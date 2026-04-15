@@ -1,0 +1,30 @@
+{
+  "name": "[Tool] Mirador - derivar_whatsapp",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"motivo\": \"quiere conocer parcelas disponibles\",\n  \"resumen_conversacion\": \"interesado en inversión, plazo corto\"\n}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// NOTA: durante desarrollo, el número de Diego apunta al WhatsApp de Hugo (56992533044).\n// Antes de go-live cambiar a 56940329987 (Diego Cavagnaro).\nconst DIEGO_WA = '56940329987';\n\nconst motivo = ($json.motivo || '').toString().slice(0, 200);\nconst resumen = ($json.resumen_conversacion || '').toString().slice(0, 400);\n\nconst mensaje = `Hola Diego, vengo del chat de Mirador de Villarrica.\\n\\n${motivo ? `Motivo: ${motivo}\\n` : ''}${resumen ? `Contexto: ${resumen}` : ''}`.trim();\nconst url = `https://wa.me/${DIEGO_WA}?text=${encodeURIComponent(mensaje)}`;\n\nreturn [{ json: {\n  type: 'whatsapp_link',\n  url,\n  label: 'Hablar con Diego por WhatsApp',\n  preview_text: mensaje,\n  tool_output_text: 'Te dejo el contacto directo de Diego. Al tocar el botón se abre WhatsApp con un mensaje precargado con el contexto de esta conversación.',\n} }];"
+      },
+      "id": "build-link",
+      "name": "Build wa.me Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Build wa.me Link", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
