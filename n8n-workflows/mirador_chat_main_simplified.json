@@ -1,5 +1,5 @@
 {
-  "name": "Mirador Chat \u2014 Main (AI Agent)",
+  "name": "Mirador Chat - Main (Simplified)",
   "nodes": [
     {
       "parameters": {
@@ -40,96 +40,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/sessions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "resolution=merge-duplicates,return=minimal"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ id: $json.session_id, user_agent: $json.user_metadata?.user_agent ?? null, referrer: $json.user_metadata?.referrer ?? null }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "supabase-session",
-      "name": "Upsert Session",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        680,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=minimal"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session_id: $('Validate Payload').first().json.session_id, role: 'user', content: $('Validate Payload').first().json.message }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "supabase-msg-in",
-      "name": "Save User Message",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        900,
-        300
-      ]
-    },
-    {
-      "parameters": {
         "promptType": "define",
         "text": "={{ $('Validate Payload').first().json.message }}",
         "options": {
@@ -142,13 +52,13 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.9,
       "position": [
-        1120,
+        680,
         300
       ]
     },
     {
       "parameters": {
-        "model": "anthropic/claude-sonnet-4.5",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free",
         "options": {
           "temperature": 0.3,
           "maxTokens": 400
@@ -159,7 +69,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
       "position": [
-        1000,
+        560,
         500
       ],
       "credentials": {
@@ -173,21 +83,28 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Validate Payload').first().json.session_id }}",
+        "tableName": "mirador_chat_history",
         "contextWindowLength": 10
       },
-      "id": "memory",
-      "name": "Window Memory",
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "id": "postgres-memory",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        1120,
+        680,
         500
-      ]
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "gKtQrCdcY2E8edN4",
+          "name": "Mirador Supabase Postgres"
+        }
+      }
     },
     {
       "parameters": {
         "name": "mostrar_master_plan",
-        "description": "Muestra el master plan (distribuci\u00f3n) del proyecto Mirador de Villarrica como imagen. \u00dasalo cuando el lead pida ver el plano, la distribuci\u00f3n, o d\u00f3nde est\u00e1n ubicadas las parcelas. No requiere par\u00e1metros.",
+        "description": "Muestra el master plan (distribucion) del proyecto Mirador de Villarrica como imagen. Usalo cuando el lead pida ver el plano, la distribucion, o donde estan ubicadas las parcelas. No requiere parametros.",
         "workflowId": {
           "__rl": true,
           "value": "SURT3H0n5n9mqb5O",
@@ -199,14 +116,14 @@
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
       "position": [
-        1240,
+        800,
         520
       ]
     },
     {
       "parameters": {
         "name": "mostrar_galeria",
-        "description": "Muestra una galer\u00eda de fotos filtradas por tema. \u00dasala cuando el lead pida ver fotos, im\u00e1genes o galer\u00eda. Debes determinar el tema: 'volcan' (fotos con volc\u00e1n al fondo), 'lago' (Lago Colico y alrededores), 'bosque' (bosque nativo), 'atardecer', o 'vista_general' (si no est\u00e1 claro).",
+        "description": "Muestra una galeria de fotos filtradas por tema. Usala cuando el lead pida ver fotos, imagenes o galeria. Debes determinar el tema: 'volcan' (fotos con volcan al fondo), 'lago' (Lago Colico y alrededores), 'bosque' (bosque nativo), 'atardecer', o 'vista_general' (si no esta claro).",
         "workflowId": {
           "__rl": true,
           "value": "vsRCsE9Osgc1Qfdw",
@@ -215,7 +132,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "tema": "={{ $fromAI('tema', 'Tema de la galer\u00eda: volcan | lago | bosque | atardecer | vista_general', 'string') }}"
+            "tema": "={{ $fromAI('tema', 'Tema de la galeria: volcan | lago | bosque | atardecer | vista_general', 'string') }}"
           },
           "schema": [
             {
@@ -235,14 +152,14 @@
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
       "position": [
-        1360,
+        920,
         520
       ]
     },
     {
       "parameters": {
         "name": "derivar_whatsapp",
-        "description": "Genera un link de WhatsApp directo a Diego con contexto pre-cargado. \u00dasalo cuando: (a) el lead expl\u00edcitamente pide hablar con Diego, (b) hace una pregunta fuera de tu KB que debe responder Diego, (c) pide algo muy espec\u00edfico (precio de parcela X, disponibilidad). Requiere el motivo (resumen breve de qu\u00e9 quiere) y resumen_conversacion (contexto).",
+        "description": "Genera un link de WhatsApp directo a Diego con contexto pre-cargado. Usalo cuando: (a) el lead explicitamente pide hablar con Diego, (b) hace una pregunta fuera de tu KB que debe responder Diego, (c) pide algo muy especifico (precio de parcela X, disponibilidad). Requiere el motivo (resumen breve de que quiere) y resumen_conversacion (contexto).",
         "workflowId": {
           "__rl": true,
           "value": "ewwF9NgmTJR3ujU2",
@@ -251,8 +168,8 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "motivo": "={{ $fromAI('motivo', 'Motivo por el cual el lead quiere hablar con Diego (1 l\u00ednea)', 'string') }}",
-            "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de la conversaci\u00f3n hasta ahora (2-3 l\u00edneas)', 'string') }}"
+            "motivo": "={{ $fromAI('motivo', 'Motivo por el cual el lead quiere hablar con Diego (1 linea)', 'string') }}",
+            "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de la conversacion hasta ahora (2-3 lineas)', 'string') }}"
           },
           "schema": [
             {
@@ -281,14 +198,14 @@
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
       "position": [
-        1480,
+        1040,
         520
       ]
     },
     {
       "parameters": {
         "name": "calificar_lead",
-        "description": "Califica y registra al lead en la base de datos. \u00daSALA UNA SOLA VEZ POR SESI\u00d3N, cuando tengas al menos: nombre + WhatsApp + 2 de las 3 variables (intencion, plazo, presupuesto). Valores v\u00e1lidos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido \u00b7 plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido \u00b7 presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide expl\u00edcitamente 'que me llamen YA'.",
+        "description": "Califica y registra al lead en la base de datos. USALA UNA SOLA VEZ POR SESION, cuando tengas al menos: nombre + WhatsApp + 2 de las 3 variables (intencion, plazo, presupuesto). Valores validos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide explicitamente 'que me llamen YA'.",
         "workflowId": {
           "__rl": true,
           "value": "ILXLExvJIJDu8KED",
@@ -298,14 +215,14 @@
           "mappingMode": "defineBelow",
           "value": {
             "nombre": "={{ $fromAI('nombre', 'Nombre del lead', 'string') }}",
-            "whatsapp": "={{ $fromAI('whatsapp', 'WhatsApp del lead con c\u00f3digo pa\u00eds (+56...) o vac\u00edo si no se dio', 'string') }}",
-            "email": "={{ $fromAI('email', 'Email del lead o vac\u00edo', 'string') }}",
+            "whatsapp": "={{ $fromAI('whatsapp', 'WhatsApp del lead con codigo pais (+56...) o vacio si no se dio', 'string') }}",
+            "email": "={{ $fromAI('email', 'Email del lead o vacio', 'string') }}",
             "intencion": "={{ $fromAI('intencion', 'Uno de: inversion, segunda_vivienda, vivir_permanente, evaluando, no_definido', 'string') }}",
             "plazo": "={{ $fromAI('plazo', 'Uno de: ahora, 1_a_3_meses, 3_a_6_meses, 6_a_12_meses, mas_de_1_ano, no_definido', 'string') }}",
             "presupuesto": "={{ $fromAI('presupuesto', 'Uno de: contado, credito, no_definido', 'string') }}",
-            "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de 2-3 l\u00edneas de la conversaci\u00f3n y el inter\u00e9s del lead', 'string') }}",
+            "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de 2-3 lineas de la conversacion y el interes del lead', 'string') }}",
             "session_id": "={{ $('Validate Payload').first().json.session_id }}",
-            "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidi\u00f3 hablar con Diego YA expl\u00edcitamente', 'boolean') }}"
+            "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidio hablar con Diego YA explicitamente', 'boolean') }}"
           },
           "schema": [
             {
@@ -397,65 +314,20 @@
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
       "position": [
-        1600,
+        1160,
         520
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Parsea la respuesta del AI Agent para extraer reply + attachments.\n// El AI Agent devuelve `output` con el texto, y cada tool invocada tiene su output\n// accesible via intermediateSteps. Extraemos attachments de los tools visuales.\nconst agentData = $json;\nconst reply = agentData.output || agentData.text || '';\n\n// Buscar attachments en los tool outputs\nconst attachments = [];\nconst steps = agentData.intermediateSteps || [];\nfor (const step of steps) {\n  const obs = step.observation || step.toolOutput || step;\n  let parsed = obs;\n  if (typeof obs === 'string') {\n    try { parsed = JSON.parse(obs); } catch {}\n  }\n  if (parsed && typeof parsed === 'object') {\n    if (parsed.type === 'image' && parsed.url) {\n      attachments.push({ type: 'image', url: parsed.url, caption: parsed.caption });\n    } else if (parsed.type === 'gallery' && Array.isArray(parsed.images)) {\n      attachments.push({ type: 'gallery', images: parsed.images });\n    } else if (parsed.type === 'whatsapp_link' && parsed.url) {\n      attachments.push({ type: 'whatsapp_link', url: parsed.url, label: parsed.label || 'Hablar con Diego por WhatsApp' });\n    }\n  }\n}\n\nreturn [{ json: { reply, attachments } }];"
+        "jsCode": "const agentData = $json;\nconst reply = agentData.output || agentData.text || '';\nconst attachments = [];\nconst steps = agentData.intermediateSteps || [];\nfor (const step of steps) {\n  const obs = step.observation || step.toolOutput || step;\n  let parsed = obs;\n  if (typeof obs === 'string') {\n    try { parsed = JSON.parse(obs); } catch {}\n  }\n  if (parsed && typeof parsed === 'object') {\n    if (parsed.type === 'image' && parsed.url) {\n      attachments.push({ type: 'image', url: parsed.url, caption: parsed.caption });\n    } else if (parsed.type === 'gallery' && Array.isArray(parsed.images)) {\n      attachments.push({ type: 'gallery', images: parsed.images });\n    } else if (parsed.type === 'whatsapp_link' && parsed.url) {\n      attachments.push({ type: 'whatsapp_link', url: parsed.url, label: parsed.label || 'Hablar con Diego por WhatsApp' });\n    }\n  }\n}\nreturn [{ json: { reply, attachments } }];"
       },
       "id": "extract-attachments",
       "name": "Extract Attachments",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1340,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=minimal"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session_id: $('Validate Payload').first().json.session_id, role: 'assistant', content: $json.reply }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "supabase-msg-out",
-      "name": "Save Assistant Message",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1560,
+        900,
         300
       ]
     },
@@ -469,7 +341,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1780,
+        1120,
         300
       ]
     }
@@ -487,28 +359,6 @@
       ]
     },
     "Validate Payload": {
-      "main": [
-        [
-          {
-            "node": "Upsert Session",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Upsert Session": {
-      "main": [
-        [
-          {
-            "node": "Save User Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save User Message": {
       "main": [
         [
           {
@@ -534,17 +384,6 @@
       "main": [
         [
           {
-            "node": "Save Assistant Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Assistant Message": {
-      "main": [
-        [
-          {
             "node": "Respond to Webhook",
             "type": "main",
             "index": 0
@@ -563,7 +402,7 @@
         ]
       ]
     },
-    "Window Memory": {
+    "Postgres Chat Memory": {
       "ai_memory": [
         [
           {
