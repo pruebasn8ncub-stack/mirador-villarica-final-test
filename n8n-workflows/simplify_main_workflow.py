@@ -84,6 +84,7 @@ nodes = [
             "options": {
                 "systemMessage": SYSTEM_PROMPT,
                 "maxIterations": 5,
+                "returnIntermediateSteps": True,
             },
         },
         "id": "ai-agent",
@@ -94,7 +95,7 @@ nodes = [
     },
     {
         "parameters": {
-            "model": "nvidia/nemotron-3-super-120b-a12b:free",
+            "model": "openai/gpt-oss-120b:free",
             "options": {
                 "temperature": 0.3,
                 "maxTokens": 400,
@@ -225,20 +226,32 @@ nodes = [
                 "const reply = agentData.output || agentData.text || '';\n"
                 "const attachments = [];\n"
                 "const steps = agentData.intermediateSteps || [];\n"
+                "\n"
+                "function pushAttachment(p) {\n"
+                "  if (!p || typeof p !== 'object') return;\n"
+                "  if (p.type === 'image' && p.url) {\n"
+                "    attachments.push({ type: 'image', url: p.url, caption: p.caption });\n"
+                "  } else if (p.type === 'gallery' && Array.isArray(p.images)) {\n"
+                "    attachments.push({ type: 'gallery', images: p.images });\n"
+                "  } else if (p.type === 'whatsapp_link' && p.url) {\n"
+                "    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con Diego por WhatsApp' });\n"
+                "  }\n"
+                "}\n"
+                "\n"
                 "for (const step of steps) {\n"
-                "  const obs = step.observation || step.toolOutput || step;\n"
+                "  const obs = step.observation ?? step.toolOutput ?? step;\n"
                 "  let parsed = obs;\n"
                 "  if (typeof obs === 'string') {\n"
-                "    try { parsed = JSON.parse(obs); } catch {}\n"
+                "    try { parsed = JSON.parse(obs); } catch { continue; }\n"
                 "  }\n"
-                "  if (parsed && typeof parsed === 'object') {\n"
-                "    if (parsed.type === 'image' && parsed.url) {\n"
-                "      attachments.push({ type: 'image', url: parsed.url, caption: parsed.caption });\n"
-                "    } else if (parsed.type === 'gallery' && Array.isArray(parsed.images)) {\n"
-                "      attachments.push({ type: 'gallery', images: parsed.images });\n"
-                "    } else if (parsed.type === 'whatsapp_link' && parsed.url) {\n"
-                "      attachments.push({ type: 'whatsapp_link', url: parsed.url, label: parsed.label || 'Hablar con Diego por WhatsApp' });\n"
+                "  if (Array.isArray(parsed)) {\n"
+                "    for (const item of parsed) {\n"
+                "      const unwrapped = item && item.json ? item.json : item;\n"
+                "      pushAttachment(unwrapped);\n"
                 "    }\n"
+                "  } else {\n"
+                "    const unwrapped = parsed && parsed.json ? parsed.json : parsed;\n"
+                "    pushAttachment(unwrapped);\n"
                 "  }\n"
                 "}\n"
                 "return [{ json: { reply, attachments } }];"
