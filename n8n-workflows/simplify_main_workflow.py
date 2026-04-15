@@ -152,29 +152,6 @@ nodes = [
     },
     {
         "parameters": {
-            "name": "derivar_whatsapp",
-            "description": "Genera un link de WhatsApp directo a Diego con contexto pre-cargado. Usalo cuando: (a) el lead explicitamente pide hablar con Diego, (b) hace una pregunta fuera de tu KB que debe responder Diego, (c) pide algo muy especifico (precio de parcela X, disponibilidad). Requiere el motivo (resumen breve de que quiere) y resumen_conversacion (contexto).",
-            "workflowId": {"__rl": True, "value": WF_IDS["derivar_whatsapp"], "mode": "id"},
-            "workflowInputs": {
-                "mappingMode": "defineBelow",
-                "value": {
-                    "motivo": "={{ $fromAI('motivo', 'Motivo por el cual el lead quiere hablar con Diego (1 linea)', 'string') }}",
-                    "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de la conversacion hasta ahora (2-3 lineas)', 'string') }}"
-                },
-                "schema": [
-                    {"id": "motivo", "displayName": "motivo", "required": True, "defaultMatch": False, "display": True, "canBeUsedToMatch": True, "type": "string"},
-                    {"id": "resumen_conversacion", "displayName": "resumen_conversacion", "required": True, "defaultMatch": False, "display": True, "canBeUsedToMatch": True, "type": "string"}
-                ]
-            },
-        },
-        "id": "tool-derivar",
-        "name": "Tool derivar_whatsapp",
-        "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
-        "typeVersion": 2.2,
-        "position": [1040, 520],
-    },
-    {
-        "parameters": {
             "name": "calificar_lead",
             "description": "Califica y registra al lead en la base de datos. USALA UNA SOLA VEZ POR SESION, cuando tengas al menos: nombre + WhatsApp + 2 de las 3 variables (intencion, plazo, presupuesto). Valores validos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide explicitamente 'que me llamen YA'.",
             "workflowId": {"__rl": True, "value": WF_IDS["calificar_lead"], "mode": "id"},
@@ -284,7 +261,6 @@ connections = {
     "Postgres Chat Memory": {"ai_memory": [[{"node": "AI Agent", "type": "ai_memory", "index": 0}]]},
     "Tool mostrar_master_plan": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool mostrar_galeria": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
-    "Tool derivar_whatsapp": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool calificar_lead": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
 }
 
