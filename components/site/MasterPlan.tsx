@@ -14,7 +14,7 @@ export function MasterPlan() {
           <p className="mb-3 text-sm uppercase tracking-[0.2em] text-mostaza-500">Distribución</p>
           <h2 className="text-3xl font-bold text-bosque-800 md:text-4xl">Master Plan</h2>
           <p className="mx-auto mt-3 max-w-2xl text-bosque-700">
-            74 parcelas distribuidas en 80 hectáreas, con caminos internos estabilizados y
+            94 parcelas distribuidas en 80 hectáreas, con caminos internos estabilizados y
             portón de acceso.
           </p>
         </div>
@@ -32,7 +32,7 @@ export function MasterPlan() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/assets/master-plan.jpg"
-            alt="Master Plan de Mirador de Villarrica — 74 parcelas en 80 hectáreas"
+            alt="Master Plan de Mirador de Villarrica — 94 parcelas en 80 hectáreas"
             className="h-auto w-full object-contain"
           />
         </div>

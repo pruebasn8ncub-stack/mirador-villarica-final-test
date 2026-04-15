@@ -152,6 +152,43 @@ nodes = [
     },
     {
         "parameters": {
+            "name": "consultar_disponibilidad",
+            "description": "Consulta el inventario EN VIVO de parcelas (Google Sheet publico de Terra Segura). Usala cuando el lead pregunte por: precios especificos por parcela, disponibilidad (Disponible/Reservada/Vendida), que parcelas caben en su presupuesto, tamanos especificos, parcelas destacadas, o por una parcela puntual (ej: 'parcela 48', 'lote B5'). SIEMPRE llama esta tool antes de afirmar precio o disponibilidad. Si falla, deriva a Diego. Parametros (TODOS opcionales): numero='1'..'74' o 'B1'..'B20' para busqueda puntual; estado='disponible'|'reservado'|'vendido'|'todos' (default disponible); tamano_min/tamano_max en m2 (0=sin limite); presupuesto_contado_max o presupuesto_credito_max en CLP (0=sin limite); sector='numeradas'|'lote_b'|'todas'; solo_destacadas=true para parcelas con estrella; max_resultados entre 1 y 10 (default 5).",
+            "workflowId": {"__rl": True, "value": WF_IDS["consultar_disponibilidad"], "mode": "id"},
+            "workflowInputs": {
+                "mappingMode": "defineBelow",
+                "value": {
+                    "numero": "={{ $fromAI('numero', \"Numero de parcela especifica: '1'..'74' o 'B1'..'B20'. Vacio si es busqueda filtrada.\", 'string') }}",
+                    "estado": "={{ $fromAI('estado', \"Estado buscado: 'disponible' (default), 'reservado', 'vendido' o 'todos'.\", 'string') }}",
+                    "tamano_min": "={{ $fromAI('tamano_min', 'Tamano minimo en m2. 0 = sin limite.', 'number') }}",
+                    "tamano_max": "={{ $fromAI('tamano_max', 'Tamano maximo en m2. 0 = sin limite.', 'number') }}",
+                    "presupuesto_contado_max": "={{ $fromAI('presupuesto_contado_max', 'Presupuesto maximo contado en CLP. 0 = sin limite.', 'number') }}",
+                    "presupuesto_credito_max": "={{ $fromAI('presupuesto_credito_max', 'Presupuesto maximo credito (valor total) en CLP. 0 = sin limite.', 'number') }}",
+                    "sector": "={{ $fromAI('sector', \"Sector: 'numeradas' (1-74), 'lote_b' (B1-B20) o 'todas' (default).\", 'string') }}",
+                    "solo_destacadas": "={{ $fromAI('solo_destacadas', 'true para mostrar solo parcelas destacadas (estrella).', 'boolean') }}",
+                    "max_resultados": "={{ $fromAI('max_resultados', 'Cantidad maxima de parcelas a devolver (1-10, default 5).', 'number') }}"
+                },
+                "schema": [
+                    {"id": "numero", "type": "string", "required": False, "displayName": "numero", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "estado", "type": "string", "required": False, "displayName": "estado", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "tamano_min", "type": "number", "required": False, "displayName": "tamano_min", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "tamano_max", "type": "number", "required": False, "displayName": "tamano_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "presupuesto_contado_max", "type": "number", "required": False, "displayName": "presupuesto_contado_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "presupuesto_credito_max", "type": "number", "required": False, "displayName": "presupuesto_credito_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "sector", "type": "string", "required": False, "displayName": "sector", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "solo_destacadas", "type": "boolean", "required": False, "displayName": "solo_destacadas", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "max_resultados", "type": "number", "required": False, "displayName": "max_resultados", "defaultMatch": False, "display": True, "canBeUsedToMatch": True}
+                ]
+            },
+        },
+        "id": "tool-consultar-disponibilidad",
+        "name": "Tool consultar_disponibilidad",
+        "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+        "typeVersion": 2.2,
+        "position": [1040, 520],
+    },
+    {
+        "parameters": {
             "name": "calificar_lead",
             "description": "Califica y registra al lead en la base de datos. USALA UNA SOLA VEZ POR SESION, cuando tengas al menos: nombre + WhatsApp + 2 de las 3 variables (intencion, plazo, presupuesto). Valores validos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide explicitamente 'que me llamen YA'.",
             "workflowId": {"__rl": True, "value": WF_IDS["calificar_lead"], "mode": "id"},
@@ -261,6 +298,7 @@ connections = {
     "Postgres Chat Memory": {"ai_memory": [[{"node": "AI Agent", "type": "ai_memory", "index": 0}]]},
     "Tool mostrar_master_plan": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool mostrar_galeria": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
+    "Tool consultar_disponibilidad": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool calificar_lead": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
 }
 

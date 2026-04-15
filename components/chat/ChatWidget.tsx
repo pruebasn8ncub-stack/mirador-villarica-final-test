@@ -12,7 +12,7 @@ const OPENING_MESSAGE: Message = {
   id: 'opening',
   role: 'assistant',
   content:
-    'Hola, soy el asistente virtual de Mirador de Villarrica — el proyecto de Terra Segura en Colico, Región de La Araucanía: 74 parcelas con SAG aprobado, roles listos y caminos estabilizados.\n\nCuéntame, ¿qué te gustaría saber del proyecto?',
+    'Hola, soy el asistente virtual de Mirador de Villarrica — el proyecto de Terra Segura en Colico, Región de La Araucanía: 94 parcelas con SAG aprobado, roles listos y caminos estabilizados.\n\nCuéntame, ¿qué te gustaría saber del proyecto?',
   timestamp: Date.now(),
 };
 
@@ -27,7 +27,7 @@ async function mockReply(userText: string): Promise<{ reply: string; attachments
   const lower = userText.toLowerCase();
   if (lower.includes('plano') || lower.includes('master')) {
     return {
-      reply: 'Claro, te comparto el master plan del proyecto. Las 74 parcelas se distribuyen en una meseta elevada con vistas al volcán y al lago.',
+      reply: 'Claro, te comparto el master plan del proyecto. Las 94 parcelas se distribuyen en una meseta elevada con vistas al volcán y al lago.',
       attachments: [
         {
           type: 'image',
