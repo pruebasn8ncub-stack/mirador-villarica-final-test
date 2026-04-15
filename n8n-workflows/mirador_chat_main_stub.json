@@ -14,11 +14,14 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [240, 300],
-      "webhookId": "mirador-chat"
+      "webhookId": "mirador-chat",
+      "credentials": {
+        "httpHeaderAuth": { "id": "IkWeji0O7NPCXFdd", "name": "Mirador Webhook Bearer" }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Validación básica del payload. El schema real se aplica ya en Next.js,\n// pero duplicamos aquí la validación mínima por si alguien llama al webhook\n// sin pasar por el proxy.\nconst item = $input.first().json;\nconst body = item.body ?? item;\n\nconst uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\n\nif (!body || typeof body !== 'object') {\n  throw new Error('Invalid body');\n}\nif (typeof body.session_id !== 'string' || !uuidRe.test(body.session_id)) {\n  throw new Error('Invalid session_id');\n}\nif (typeof body.message !== 'string' || body.message.length === 0 || body.message.length > 1000) {\n  throw new Error('Invalid message');\n}\n\nreturn [{ json: {\n  session_id: body.session_id,\n  message: body.message,\n  user_metadata: body.user_metadata ?? null,\n  received_at: new Date().toISOString(),\n} }];"
+        "jsCode": "const item = $input.first().json;\nconst body = item.body ?? item;\n\nconst uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\n\nif (!body || typeof body !== 'object') throw new Error('Invalid body');\nif (typeof body.session_id !== 'string' || !uuidRe.test(body.session_id)) throw new Error('Invalid session_id');\nif (typeof body.message !== 'string' || body.message.length === 0 || body.message.length > 1000) throw new Error('Invalid message');\n\nreturn [{ json: {\n  session_id: body.session_id,\n  message: body.message,\n  user_metadata: body.user_metadata ?? null,\n  received_at: new Date().toISOString(),\n} }];"
       },
       "id": "validate",
       "name": "Validate Payload",
@@ -28,79 +31,94 @@
     },
     {
       "parameters": {
-        "operation": "upsert",
-        "tableId": "sessions",
-        "dataToSend": "defineBelow",
-        "fieldsToMatchOn": "id",
-        "valuesToSend": {
-          "values": [
-            { "column": "id", "value": "={{ $json.session_id }}" },
-            { "column": "user_agent", "value": "={{ $json.user_metadata?.user_agent ?? null }}" },
-            { "column": "referrer", "value": "={{ $json.user_metadata?.referrer ?? null }}" }
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/sessions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=merge-duplicates,return=minimal" },
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
           ]
-        }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $json.session_id, user_agent: $json.user_metadata?.user_agent ?? null, referrer: $json.user_metadata?.referrer ?? null }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
       },
       "id": "supabase-session",
       "name": "Upsert Session",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [680, 300],
-      "credentials": { "supabaseApi": { "id": "REPLACE_ID", "name": "Supabase Mirador" } }
+      "credentials": {
+        "httpHeaderAuth": { "id": "IkWeji0O7NPCXFdd", "name": "Mirador Supabase Auth" }
+      }
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "messages",
-        "dataToSend": "defineBelow",
-        "valuesToSend": {
-          "values": [
-            { "column": "session_id", "value": "={{ $('Validate Payload').first().json.session_id }}" },
-            { "column": "role", "value": "user" },
-            { "column": "content", "value": "={{ $('Validate Payload').first().json.message }}" }
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" },
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
           ]
-        }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: $('Validate Payload').first().json.session_id, role: 'user', content: $('Validate Payload').first().json.message }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
       },
       "id": "supabase-msg-in",
       "name": "Save User Message",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [900, 300],
-      "credentials": { "supabaseApi": { "id": "REPLACE_ID", "name": "Supabase Mirador" } }
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
     },
     {
       "parameters": {
         "jsCode": "// STUB ECO: en Wave 2 se reemplaza por AI Agent node.\nconst payload = $('Validate Payload').first().json;\nreturn [{ json: {\n  reply: `eco: ${payload.message}`,\n  attachments: [],\n  session_id: payload.session_id,\n} }];"
       },
       "id": "stub-echo",
-      "name": "Stub Echo (reemplazar en Wave 2)",
+      "name": "Stub Echo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [1120, 300]
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "messages",
-        "dataToSend": "defineBelow",
-        "valuesToSend": {
-          "values": [
-            { "column": "session_id", "value": "={{ $('Validate Payload').first().json.session_id }}" },
-            { "column": "role", "value": "assistant" },
-            { "column": "content", "value": "={{ $json.reply }}" }
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" },
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
           ]
-        }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: $('Validate Payload').first().json.session_id, role: 'assistant', content: $json.reply }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
       },
       "id": "supabase-msg-out",
       "name": "Save Assistant Message",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [1340, 300],
-      "credentials": { "supabaseApi": { "id": "REPLACE_ID", "name": "Supabase Mirador" } }
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { reply: $('Stub Echo (reemplazar en Wave 2)').first().json.reply, attachments: $('Stub Echo (reemplazar en Wave 2)').first().json.attachments, session_id: $('Validate Payload').first().json.session_id } }}"
+        "responseBody": "={{ JSON.stringify({ reply: $('Stub Echo').first().json.reply, attachments: $('Stub Echo').first().json.attachments, session_id: $('Validate Payload').first().json.session_id }) }}"
       },
       "id": "respond",
       "name": "Respond to Webhook",
@@ -113,15 +131,9 @@
     "Webhook": { "main": [[{ "node": "Validate Payload", "type": "main", "index": 0 }]] },
     "Validate Payload": { "main": [[{ "node": "Upsert Session", "type": "main", "index": 0 }]] },
     "Upsert Session": { "main": [[{ "node": "Save User Message", "type": "main", "index": 0 }]] },
-    "Save User Message": { "main": [[{ "node": "Stub Echo (reemplazar en Wave 2)", "type": "main", "index": 0 }]] },
-    "Stub Echo (reemplazar en Wave 2)": { "main": [[{ "node": "Save Assistant Message", "type": "main", "index": 0 }]] },
+    "Save User Message": { "main": [[{ "node": "Stub Echo", "type": "main", "index": 0 }]] },
+    "Stub Echo": { "main": [[{ "node": "Save Assistant Message", "type": "main", "index": 0 }]] },
     "Save Assistant Message": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "meta": {
-    "templateCredsSetupCompleted": false,
-    "description": "Webhook principal stub con persistencia en Supabase. El nodo 'Stub Echo' se reemplaza por un AI Agent node en Wave 2. Auth: Header 'Authorization: Bearer <token>' configurado vía credential 'Header Auth' del webhook."
-  }
+  "settings": { "executionOrder": "v1" }
 }
