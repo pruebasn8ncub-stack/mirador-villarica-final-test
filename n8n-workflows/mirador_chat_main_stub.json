@@ -1,0 +1,127 @@
+{
+  "name": "Mirador Chat — Main (stub eco)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mirador-chat",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "mirador-chat"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validación básica del payload. El schema real se aplica ya en Next.js,\n// pero duplicamos aquí la validación mínima por si alguien llama al webhook\n// sin pasar por el proxy.\nconst item = $input.first().json;\nconst body = item.body ?? item;\n\nconst uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\n\nif (!body || typeof body !== 'object') {\n  throw new Error('Invalid body');\n}\nif (typeof body.session_id !== 'string' || !uuidRe.test(body.session_id)) {\n  throw new Error('Invalid session_id');\n}\nif (typeof body.message !== 'string' || body.message.length === 0 || body.message.length > 1000) {\n  throw new Error('Invalid message');\n}\n\nreturn [{ json: {\n  session_id: body.session_id,\n  message: body.message,\n  user_metadata: body.user_metadata ?? null,\n  received_at: new Date().toISOString(),\n} }];"
+      },
+      "id": "validate",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "sessions",
+        "dataToSend": "defineBelow",
+        "fieldsToMatchOn": "id",
+        "valuesToSend": {
+          "values": [
+            { "column": "id", "value": "={{ $json.session_id }}" },
+            { "column": "user_agent", "value": "={{ $json.user_metadata?.user_agent ?? null }}" },
+            { "column": "referrer", "value": "={{ $json.user_metadata?.referrer ?? null }}" }
+          ]
+        }
+      },
+      "id": "supabase-session",
+      "name": "Upsert Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": { "supabaseApi": { "id": "REPLACE_ID", "name": "Supabase Mirador" } }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "messages",
+        "dataToSend": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            { "column": "session_id", "value": "={{ $('Validate Payload').first().json.session_id }}" },
+            { "column": "role", "value": "user" },
+            { "column": "content", "value": "={{ $('Validate Payload').first().json.message }}" }
+          ]
+        }
+      },
+      "id": "supabase-msg-in",
+      "name": "Save User Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "supabaseApi": { "id": "REPLACE_ID", "name": "Supabase Mirador" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// STUB ECO: en Wave 2 se reemplaza por AI Agent node.\nconst payload = $('Validate Payload').first().json;\nreturn [{ json: {\n  reply: `eco: ${payload.message}`,\n  attachments: [],\n  session_id: payload.session_id,\n} }];"
+      },
+      "id": "stub-echo",
+      "name": "Stub Echo (reemplazar en Wave 2)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "messages",
+        "dataToSend": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            { "column": "session_id", "value": "={{ $('Validate Payload').first().json.session_id }}" },
+            { "column": "role", "value": "assistant" },
+            { "column": "content", "value": "={{ $json.reply }}" }
+          ]
+        }
+      },
+      "id": "supabase-msg-out",
+      "name": "Save Assistant Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "credentials": { "supabaseApi": { "id": "REPLACE_ID", "name": "Supabase Mirador" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $('Stub Echo (reemplazar en Wave 2)').first().json.reply, attachments: $('Stub Echo (reemplazar en Wave 2)').first().json.attachments, session_id: $('Validate Payload').first().json.session_id } }}"
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate Payload", "type": "main", "index": 0 }]] },
+    "Validate Payload": { "main": [[{ "node": "Upsert Session", "type": "main", "index": 0 }]] },
+    "Upsert Session": { "main": [[{ "node": "Save User Message", "type": "main", "index": 0 }]] },
+    "Save User Message": { "main": [[{ "node": "Stub Echo (reemplazar en Wave 2)", "type": "main", "index": 0 }]] },
+    "Stub Echo (reemplazar en Wave 2)": { "main": [[{ "node": "Save Assistant Message", "type": "main", "index": 0 }]] },
+    "Save Assistant Message": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Webhook principal stub con persistencia en Supabase. El nodo 'Stub Echo' se reemplaza por un AI Agent node en Wave 2. Auth: Header 'Authorization: Bearer <token>' configurado vía credential 'Header Auth' del webhook."
+  }
+}

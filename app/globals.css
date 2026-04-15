@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bosque: #1a3d2e;
+  --mostaza: #f4a84b;
+  --crema: #faf6ee;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--crema);
+  color: var(--bosque);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus ring consistente en todo el sitio */
+*:focus-visible {
+  outline: 2px solid var(--mostaza);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Typing indicator dots */
+@keyframes bounceDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.typing-dot {
+  animation: bounceDot 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
