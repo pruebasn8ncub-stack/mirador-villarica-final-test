@@ -4,7 +4,7 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"tema\": \"volcan\"\n}"
+        "jsonExample": "{}"
       },
       "id": "trigger",
       "name": "Execute Workflow Trigger",
@@ -14,7 +14,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const BASE = 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/assets';\n\nconst CATALOGO = {\n  volcan: [\n    { url: `${BASE}/banner-volcan.jpg`, alt: 'Vista aérea del proyecto con Volcán Villarrica al fondo' },\n  ],\n  lago: [\n    { url: `${BASE}/lagocolico.jpg`, alt: 'Lago Colico a 20 minutos del proyecto' },\n    { url: `${BASE}/galeria1.jpg`, alt: 'Entorno natural hacia el lago' },\n    { url: `${BASE}/galeria5-atardecer.jpg`, alt: 'Atardecer en Mirador de Villarrica' },\n  ],\n  bosque: [\n    { url: `${BASE}/galeria3.jpg`, alt: 'Bosque nativo en Mirador de Villarrica' },\n    { url: `${BASE}/imagen1.jpg`, alt: 'Bosque y accesos del proyecto' },\n  ],\n  atardecer: [\n    { url: `${BASE}/galeria5-atardecer.jpg`, alt: 'Atardecer sobre el proyecto' },\n  ],\n  vista_general: [\n    { url: `${BASE}/galeria6.jpg`, alt: 'Panorámica del terreno' },\n    { url: `${BASE}/galeria7.jpg`, alt: 'Parcela con vista al entorno natural' },\n    { url: `${BASE}/galeria2.jpg`, alt: 'Vista general del proyecto' },\n  ],\n};\n\nconst tema = ($json.tema || 'vista_general').toLowerCase();\nconst images = CATALOGO[tema] || CATALOGO.vista_general;\n\nreturn [{ json: {\n  type: 'gallery',\n  images,\n  count: images.length,\n  tema_resuelto: CATALOGO[tema] ? tema : 'vista_general',\n  tool_output_text: `Te comparto ${images.length} ${images.length === 1 ? 'foto' : 'fotos'} del tema \"${tema}\". ¿Quieres ver algo específico más?`,\n} }];"
+        "jsCode": "const BASE = 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/assets';\n\nconst IMAGES = [\n  { url: `${BASE}/banner-volcan.jpg` },\n  { url: `${BASE}/galeria2.jpg` },\n  { url: `${BASE}/galeria3.jpg` },\n  { url: `${BASE}/galeria5-atardecer.jpg` },\n  { url: `${BASE}/imagen1.jpg` },\n  { url: `${BASE}/galeria7.jpg` },\n];\n\nreturn [{ json: {\n  type: 'gallery_floating',\n  images: IMAGES,\n  caption: 'Entorno del proyecto — 6 fotos',\n  description_detailed: 'Galería de 6 fotos aéreas y panorámicas del entorno de Mirador de Villarrica en Colico, Región de La Araucanía. Se ven: vistas aéreas amplias de las 80 hectáreas del proyecto rodeado de bosque nativo (coigües, robles, renovales) y campos ondulados; el Lago Colico y otros cuerpos de agua al fondo en varias tomas; cerros boscosos típicos de la precordillera araucana; valles poblados al fondo dando escala; vegetación en distintas estaciones (verde pleno y tonos otoñales); cielos despejados. Las imágenes muestran el paisaje en el que se insertan las 74 parcelas. El Volcán Villarrica NO aparece directamente en estas fotos; si el lead quiere verlo en contexto al proyecto, recomienda el tour 360°: https://lanube360.com/mirador-de-villarrica/',\n  tool_output_text: 'Te abrí una galería flotante con 6 fotos del entorno del proyecto. Ahí se ven las vistas aéreas con bosque nativo, el Lago Colico y cerros boscosos de la precordillera. ¿Qué tipo de paisaje te llama más la atención?',\n} }];"
       },
       "id": "build-gallery",
       "name": "Build Gallery",

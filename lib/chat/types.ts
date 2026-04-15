@@ -3,6 +3,7 @@ export type Role = 'user' | 'assistant';
 export type Attachment =
   | { type: 'image'; url: string; caption?: string }
   | { type: 'gallery'; images: { url: string; alt: string }[] }
+  | { type: 'gallery_floating'; images: { url: string; alt?: string }[]; caption?: string }
   | { type: 'whatsapp_link'; url: string; label: string };
 
 export interface Message {

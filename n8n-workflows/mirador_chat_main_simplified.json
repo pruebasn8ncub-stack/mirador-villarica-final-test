@@ -124,28 +124,11 @@
     {
       "parameters": {
         "name": "mostrar_galeria",
-        "description": "Muestra una galeria de fotos filtradas por tema. Usala cuando el lead pida ver fotos, imagenes o galeria. Debes determinar el tema: 'volcan' (fotos con volcan al fondo), 'lago' (Lago Colico y alrededores), 'bosque' (bosque nativo), 'atardecer', o 'vista_general' (si no esta claro).",
+        "description": "Abre una galeria flotante en el widget con 6 fotos del entorno del proyecto. Usala cuando el lead pida ver fotos, imagenes, galeria o quiera conocer el entorno/paisaje. No requiere parametros. La galeria se abre automaticamente en el widget - solo avisa al lead que ya la abriste y describe brevemente lo que vera.",
         "workflowId": {
           "__rl": true,
           "value": "vsRCsE9Osgc1Qfdw",
           "mode": "id"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "tema": "={{ $fromAI('tema', 'Tema de la galeria: volcan | lago | bosque | atardecer | vista_general', 'string') }}"
-          },
-          "schema": [
-            {
-              "id": "tema",
-              "displayName": "tema",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string"
-            }
-          ]
         }
       },
       "id": "tool-galeria",
@@ -321,7 +304,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const agentData = $json;\nconst reply = agentData.output || agentData.text || '';\nconst attachments = [];\nconst steps = agentData.intermediateSteps || [];\n\nfunction pushAttachment(p) {\n  if (!p || typeof p !== 'object') return;\n  if (p.type === 'image' && p.url) {\n    attachments.push({ type: 'image', url: p.url, caption: p.caption });\n  } else if (p.type === 'gallery' && Array.isArray(p.images)) {\n    attachments.push({ type: 'gallery', images: p.images });\n  } else if (p.type === 'whatsapp_link' && p.url) {\n    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con Diego por WhatsApp' });\n  }\n}\n\nfor (const step of steps) {\n  const obs = step.observation ?? step.toolOutput ?? step;\n  let parsed = obs;\n  if (typeof obs === 'string') {\n    try { parsed = JSON.parse(obs); } catch { continue; }\n  }\n  if (Array.isArray(parsed)) {\n    for (const item of parsed) {\n      const unwrapped = item && item.json ? item.json : item;\n      pushAttachment(unwrapped);\n    }\n  } else {\n    const unwrapped = parsed && parsed.json ? parsed.json : parsed;\n    pushAttachment(unwrapped);\n  }\n}\nreturn [{ json: { reply, attachments } }];"
+        "jsCode": "const agentData = $json;\nlet reply = (agentData.output || agentData.text || '').toString();\n// Sanitize: remove zero-width chars (modelo free a veces los emite)\nreply = reply.replace(/[\\u200B-\\u200D\\uFEFF\\u2060]/g, '');\nreply = reply.replace(/\\s{3,}/g, ' ').trim();\nif (reply.length < 3) {\n  reply = 'Te comparto la informacion solicitada.';\n}\nconst attachments = [];\nconst steps = agentData.intermediateSteps || [];\n\nfunction pushAttachment(p) {\n  if (!p || typeof p !== 'object') return;\n  if (p.type === 'image' && p.url) {\n    attachments.push({ type: 'image', url: p.url, caption: p.caption });\n  } else if (p.type === 'gallery' && Array.isArray(p.images)) {\n    attachments.push({ type: 'gallery', images: p.images });\n  } else if (p.type === 'gallery_floating' && Array.isArray(p.images)) {\n    attachments.push({ type: 'gallery_floating', images: p.images, caption: p.caption });\n  } else if (p.type === 'whatsapp_link' && p.url) {\n    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con Diego por WhatsApp' });\n  }\n}\n\nfor (const step of steps) {\n  const obs = step.observation ?? step.toolOutput ?? step;\n  let parsed = obs;\n  if (typeof obs === 'string') {\n    try { parsed = JSON.parse(obs); } catch { continue; }\n  }\n  if (Array.isArray(parsed)) {\n    for (const item of parsed) {\n      const unwrapped = item && item.json ? item.json : item;\n      pushAttachment(unwrapped);\n    }\n  } else {\n    const unwrapped = parsed && parsed.json ? parsed.json : parsed;\n    pushAttachment(unwrapped);\n  }\n}\nreturn [{ json: { reply, attachments } }];"
       },
       "id": "extract-attachments",
       "name": "Extract Attachments",

@@ -141,17 +141,8 @@ nodes = [
     {
         "parameters": {
             "name": "mostrar_galeria",
-            "description": "Muestra una galeria de fotos filtradas por tema. Usala cuando el lead pida ver fotos, imagenes o galeria. Debes determinar el tema: 'volcan' (fotos con volcan al fondo), 'lago' (Lago Colico y alrededores), 'bosque' (bosque nativo), 'atardecer', o 'vista_general' (si no esta claro).",
+            "description": "Abre una galeria flotante en el widget con 6 fotos del entorno del proyecto. Usala cuando el lead pida ver fotos, imagenes, galeria o quiera conocer el entorno/paisaje. No requiere parametros. La galeria se abre automaticamente en el widget - solo avisa al lead que ya la abriste y describe brevemente lo que vera.",
             "workflowId": {"__rl": True, "value": WF_IDS["galeria"], "mode": "id"},
-            "workflowInputs": {
-                "mappingMode": "defineBelow",
-                "value": {
-                    "tema": "={{ $fromAI('tema', 'Tema de la galeria: volcan | lago | bosque | atardecer | vista_general', 'string') }}"
-                },
-                "schema": [
-                    {"id": "tema", "displayName": "tema", "required": True, "defaultMatch": False, "display": True, "canBeUsedToMatch": True, "type": "string"}
-                ]
-            },
         },
         "id": "tool-galeria",
         "name": "Tool mostrar_galeria",
@@ -223,7 +214,13 @@ nodes = [
         "parameters": {
             "jsCode": (
                 "const agentData = $json;\n"
-                "const reply = agentData.output || agentData.text || '';\n"
+                "let reply = (agentData.output || agentData.text || '').toString();\n"
+                "// Sanitize: remove zero-width chars (modelo free a veces los emite)\n"
+                "reply = reply.replace(/[\\u200B-\\u200D\\uFEFF\\u2060]/g, '');\n"
+                "reply = reply.replace(/\\s{3,}/g, ' ').trim();\n"
+                "if (reply.length < 3) {\n"
+                "  reply = 'Te comparto la informacion solicitada.';\n"
+                "}\n"
                 "const attachments = [];\n"
                 "const steps = agentData.intermediateSteps || [];\n"
                 "\n"
@@ -233,6 +230,8 @@ nodes = [
                 "    attachments.push({ type: 'image', url: p.url, caption: p.caption });\n"
                 "  } else if (p.type === 'gallery' && Array.isArray(p.images)) {\n"
                 "    attachments.push({ type: 'gallery', images: p.images });\n"
+                "  } else if (p.type === 'gallery_floating' && Array.isArray(p.images)) {\n"
+                "    attachments.push({ type: 'gallery_floating', images: p.images, caption: p.caption });\n"
                 "  } else if (p.type === 'whatsapp_link' && p.url) {\n"
                 "    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con Diego por WhatsApp' });\n"
                 "  }\n"

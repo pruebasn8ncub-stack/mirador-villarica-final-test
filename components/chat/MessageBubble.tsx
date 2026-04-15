@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import type { Message } from '@/lib/chat/types';
 import { AttachmentImage } from './AttachmentImage';
 import { AttachmentGallery } from './AttachmentGallery';
+import { AttachmentFloatingGallery } from './AttachmentFloatingGallery';
 import { AttachmentWhatsAppLink } from './AttachmentWhatsAppLink';
 
 interface MessageBubbleProps {
@@ -29,6 +30,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           }
           if (att.type === 'gallery') {
             return <AttachmentGallery key={key} images={att.images} />;
+          }
+          if (att.type === 'gallery_floating') {
+            return (
+              <AttachmentFloatingGallery
+                key={key}
+                images={att.images}
+                caption={att.caption}
+              />
+            );
           }
           return <AttachmentWhatsAppLink key={key} url={att.url} label={att.label} />;
         })}
