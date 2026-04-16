@@ -244,6 +244,8 @@ nodes = [
                 "  if (!p || typeof p !== 'object') return;\n"
                 "  if (p.type === 'image' && p.url) {\n"
                 "    attachments.push({ type: 'image', url: p.url, caption: p.caption });\n"
+                "  } else if (p.type === 'image_floating' && p.url) {\n"
+                "    attachments.push({ type: 'image_floating', url: p.url, caption: p.caption, title: p.title });\n"
                 "  } else if (p.type === 'gallery' && Array.isArray(p.images)) {\n"
                 "    attachments.push({ type: 'gallery', images: p.images });\n"
                 "  } else if (p.type === 'gallery_floating' && Array.isArray(p.images)) {\n"
