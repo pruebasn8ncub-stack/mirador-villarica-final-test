@@ -1,6 +1,6 @@
 import type { ChatRequest, ChatResponse } from './types';
 
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 export class ChatApiError extends Error {
   readonly code: string;

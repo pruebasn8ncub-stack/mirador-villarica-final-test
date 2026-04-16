@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Simplifica el workflow principal: elimina 3 nodos HTTP a Supabase y reemplaza
-Window Memory por Postgres Chat Memory persistente.
+"""Build and deploy the main Mirador chatbot workflow.
 
-Flujo final: Webhook -> Validate -> AI Agent -> Extract Attachments -> Respond
+Flow: Webhook -> Validate -> AI Agent -> Extract Attachments -> Respond
+Tools: mostrar_master_plan, mostrar_galeria, consultar_disponibilidad,
+       enviar_brochure, calificar_lead
 """
 import json
 import urllib.request
@@ -20,7 +21,7 @@ WEBHOOK_AUTH_CRED_ID = "IkWeji0O7NPCXFdd"
 with open("/tmp/subworkflow_ids.json") as f:
     WF_IDS = json.load(f)
 
-with open("/home/hugo/Escritorio/proyectos/busqueda de proyectos/mirador-villarrica-chatbot/n8n-workflows/system-prompt-v1.md") as f:
+with open("/home/hugo/Escritorio/proyectos/busqueda de proyectos/mirador-villarrica-chatbot/n8n-workflows/system-prompt-v2.md") as f:
     SYSTEM_PROMPT = f.read()
 
 
@@ -126,6 +127,7 @@ nodes = [
             "postgres": {"id": POSTGRES_CRED_ID, "name": "Mirador Supabase Postgres"}
         },
     },
+    # ── Tools ──────────────────────────────────────────────────────────
     {
         "parameters": {
             "name": "mostrar_master_plan",
@@ -191,24 +193,53 @@ nodes = [
     },
     {
         "parameters": {
+            "name": "enviar_brochure",
+            "description": "Envia al lead el brochure PDF + inventario detallado en vivo + una recomendacion personalizada por WhatsApp o correo electronico. Usala cuando el lead acepte recibir el material. IMPORTANTE: antes de llamarla DEBES haber llamado consultar_disponibilidad al menos una vez en la conversacion para poder hacer la recomendacion. El parametro 'recomendacion' debe ser un texto personalizado de 2-4 oraciones que conecte lo que sabes del lead (intencion, plazo, presupuesto, tamano buscado) con 2-3 parcelas concretas del inventario (numeros, precios, destacadas). Requiere: canal (whatsapp|email) + contacto + nombre + recomendacion.",
+            "workflowId": {"__rl": True, "value": WF_IDS["enviar_brochure"], "mode": "id"},
+            "workflowInputs": {
+                "mappingMode": "defineBelow",
+                "value": {
+                    "canal": "={{ $fromAI('canal', \"Canal de envio: 'whatsapp' o 'email'\", 'string') }}",
+                    "contacto": "={{ $fromAI('contacto', 'Numero de telefono (con codigo pais +56...) si canal es whatsapp, o direccion de correo electronico si canal es email', 'string') }}",
+                    "nombre": "={{ $fromAI('nombre', 'Nombre del lead para personalizar el envio', 'string') }}",
+                    "recomendacion": "={{ $fromAI('recomendacion', 'Texto personalizado de 2-4 oraciones con tu recomendacion para este lead, basada en lo que sabes de el (intencion, plazo, presupuesto, tamano) y en las parcelas concretas del inventario que viste al llamar consultar_disponibilidad. Menciona 2-3 numeros de parcela especificos, precio y por que calzan con su perfil. Ej: \"Considerando su interes por inversion con presupuesto contado hasta $20M, le recomiendo especialmente las parcelas destacadas 9 y 16, ambas de 5.000 m2 con 17% de descuento ($14.49M contado). Si busca mas tamano, la parcela 47 de 10.000 m2 a $21.99M es una muy buena opcion premium.\"', 'string') }}"
+                },
+                "schema": [
+                    {"id": "canal", "type": "string", "required": True, "displayName": "canal", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "contacto", "type": "string", "required": True, "displayName": "contacto", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "nombre", "type": "string", "required": True, "displayName": "nombre", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "recomendacion", "type": "string", "required": True, "displayName": "recomendacion", "defaultMatch": False, "display": True, "canBeUsedToMatch": True}
+                ]
+            },
+        },
+        "id": "tool-enviar-brochure",
+        "name": "Tool enviar_brochure",
+        "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+        "typeVersion": 2.2,
+        "position": [1160, 520],
+    },
+    {
+        "parameters": {
             "name": "calificar_lead",
-            "description": "Califica y registra al lead en la base de datos. USALA UNA SOLA VEZ POR SESION, cuando tengas al menos: nombre + WhatsApp + 2 de las 3 variables (intencion, plazo, presupuesto). Valores validos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide explicitamente 'que me llamen YA'.",
+            "description": "Califica y registra al lead en la base de datos. USALA UNA SOLA VEZ POR SESION, cuando tengas al menos: nombre + algun dato de contacto (whatsapp o email) + 2 de las 3 variables (intencion, plazo, presupuesto). Valores validos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide explicitamente hablar con alguien del equipo YA.",
             "workflowId": {"__rl": True, "value": WF_IDS["calificar_lead"], "mode": "id"},
             "workflowInputs": {
                 "mappingMode": "defineBelow",
                 "value": {
                     "nombre": "={{ $fromAI('nombre', 'Nombre del lead', 'string') }}",
+                    "apellido": "={{ $fromAI('apellido', 'Apellido del lead o vacio si no se dio', 'string') }}",
                     "whatsapp": "={{ $fromAI('whatsapp', 'WhatsApp del lead con codigo pais (+56...) o vacio si no se dio', 'string') }}",
-                    "email": "={{ $fromAI('email', 'Email del lead o vacio', 'string') }}",
+                    "email": "={{ $fromAI('email', 'Email del lead o vacio si no se dio', 'string') }}",
                     "intencion": "={{ $fromAI('intencion', 'Uno de: inversion, segunda_vivienda, vivir_permanente, evaluando, no_definido', 'string') }}",
                     "plazo": "={{ $fromAI('plazo', 'Uno de: ahora, 1_a_3_meses, 3_a_6_meses, 6_a_12_meses, mas_de_1_ano, no_definido', 'string') }}",
                     "presupuesto": "={{ $fromAI('presupuesto', 'Uno de: contado, credito, no_definido', 'string') }}",
                     "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de 2-3 lineas de la conversacion y el interes del lead', 'string') }}",
                     "session_id": "={{ $('Validate Payload').first().json.session_id }}",
-                    "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidio hablar con Diego YA explicitamente', 'boolean') }}"
+                    "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidio hablar con alguien del equipo YA explicitamente', 'boolean') }}"
                 },
                 "schema": [
                     {"id": "nombre", "type": "string", "required": True, "displayName": "nombre", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "apellido", "type": "string", "required": False, "displayName": "apellido", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
                     {"id": "whatsapp", "type": "string", "required": False, "displayName": "whatsapp", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
                     {"id": "email", "type": "string", "required": False, "displayName": "email", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
                     {"id": "intencion", "type": "string", "required": True, "displayName": "intencion", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
@@ -224,8 +255,9 @@ nodes = [
         "name": "Tool calificar_lead",
         "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
         "typeVersion": 2.2,
-        "position": [1160, 520],
+        "position": [1280, 520],
     },
+    # ── Post-processing ────────────────────────────────────────────────
     {
         "parameters": {
             "jsCode": (
@@ -251,7 +283,7 @@ nodes = [
                 "  } else if (p.type === 'gallery_floating' && Array.isArray(p.images)) {\n"
                 "    attachments.push({ type: 'gallery_floating', images: p.images, caption: p.caption });\n"
                 "  } else if (p.type === 'whatsapp_link' && p.url) {\n"
-                "    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con Diego por WhatsApp' });\n"
+                "    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con equipo de ventas por WhatsApp' });\n"
                 "  }\n"
                 "}\n"
                 "\n"
@@ -303,6 +335,7 @@ connections = {
     "Tool mostrar_master_plan": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool mostrar_galeria": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool consultar_disponibilidad": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
+    "Tool enviar_brochure": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
     "Tool calificar_lead": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
 }
 
@@ -313,7 +346,7 @@ payload = {
     "settings": {"executionOrder": "v1"},
 }
 
-# Guardar JSON local para versionar
+# Save local JSON for version control
 out_path = "/home/hugo/Escritorio/proyectos/busqueda de proyectos/mirador-villarrica-chatbot/n8n-workflows/mirador_chat_main_simplified.json"
 with open(out_path, "w") as f:
     json.dump(payload, f, indent=2)
@@ -325,7 +358,7 @@ try:
 except Exception as e:
     print(f"  deactivate skip: {e}")
 
-print(f"Updating {WF_ID} with simplified flow...")
+print(f"Updating {WF_ID} with updated flow...")
 api("PUT", f"/workflows/{WF_ID}", payload)
 print("Update OK")
 

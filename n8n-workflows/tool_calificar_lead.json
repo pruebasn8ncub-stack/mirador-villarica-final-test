@@ -4,7 +4,7 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"nombre\": \"Juan\",\n  \"whatsapp\": \"+56912345678\",\n  \"email\": \"juan@ejemplo.cl\",\n  \"intencion\": \"inversion\",\n  \"plazo\": \"1_a_3_meses\",\n  \"presupuesto\": \"contado\",\n  \"resumen_conversacion\": \"Interesado en parcelas cerca del volcán\",\n  \"session_id\": \"uuid-del-session\",\n  \"override_caliente\": false\n}"
+        "jsonExample": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Perez\",\n  \"whatsapp\": \"+56912345678\",\n  \"email\": \"juan@ejemplo.cl\",\n  \"intencion\": \"inversion\",\n  \"plazo\": \"1_a_3_meses\",\n  \"presupuesto\": \"contado\",\n  \"resumen_conversacion\": \"Interesado en parcelas cerca del volcan\",\n  \"session_id\": \"uuid-del-session\",\n  \"override_caliente\": false\n}"
       },
       "id": "trigger",
       "name": "Execute Workflow Trigger",
@@ -14,7 +14,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Scoring determinista según spec §3.7.\nfunction computeScore({ intencion, plazo, presupuesto, override_caliente }) {\n  if (override_caliente) return 'CALIENTE';\n  const plazoHot = ['ahora', '1_a_3_meses'].includes(plazo);\n  const plazoWarm = ['3_a_6_meses', '6_a_12_meses'].includes(plazo);\n  const intencionDef = intencion && intencion !== 'no_definido' && intencion !== 'evaluando';\n  const presupuestoDef = presupuesto && presupuesto !== 'no_definido';\n  if (plazoHot && intencionDef && presupuestoDef) return 'CALIENTE';\n  if (plazoHot && (intencionDef || presupuestoDef)) return 'CALIENTE';\n  if (plazoWarm && intencionDef && presupuestoDef) return 'TIBIO';\n  if (plazoWarm) return 'TIBIO';\n  return 'FRIO';\n}\n\nconst d = $json;\nconst score = computeScore({\n  intencion: d.intencion,\n  plazo: d.plazo,\n  presupuesto: d.presupuesto,\n  override_caliente: !!d.override_caliente,\n});\n\n// Validaciones mínimas\nif (!d.nombre || typeof d.nombre !== 'string' || d.nombre.length < 1) {\n  throw new Error('nombre requerido');\n}\nif (!d.session_id) {\n  throw new Error('session_id requerido');\n}\n\nreturn [{ json: {\n  session_id: d.session_id,\n  nombre: d.nombre.slice(0, 100),\n  whatsapp: d.whatsapp ? d.whatsapp.toString().slice(0, 30) : null,\n  email: d.email ? d.email.toString().slice(0, 120) : null,\n  intencion: d.intencion || 'no_definido',\n  plazo: d.plazo || 'no_definido',\n  presupuesto: d.presupuesto || 'no_definido',\n  resumen: (d.resumen_conversacion || '').toString().slice(0, 800),\n  score,\n} }];"
+        "jsCode": "// Scoring determinista segun spec.\nfunction computeScore({ intencion, plazo, presupuesto, override_caliente }) {\n  if (override_caliente) return 'CALIENTE';\n  const plazoHot = ['ahora', '1_a_3_meses'].includes(plazo);\n  const plazoWarm = ['3_a_6_meses', '6_a_12_meses'].includes(plazo);\n  const intencionDef = intencion && intencion !== 'no_definido' && intencion !== 'evaluando';\n  const presupuestoDef = presupuesto && presupuesto !== 'no_definido';\n  if (plazoHot && intencionDef && presupuestoDef) return 'CALIENTE';\n  if (plazoHot && (intencionDef || presupuestoDef)) return 'CALIENTE';\n  if (plazoWarm && intencionDef && presupuestoDef) return 'TIBIO';\n  if (plazoWarm) return 'TIBIO';\n  return 'FRIO';\n}\n\nconst d = $json;\nconst score = computeScore({\n  intencion: d.intencion,\n  plazo: d.plazo,\n  presupuesto: d.presupuesto,\n  override_caliente: !!d.override_caliente,\n});\n\n// Validaciones minimas\nif (!d.nombre || typeof d.nombre !== 'string' || d.nombre.length < 1) {\n  throw new Error('nombre requerido');\n}\nif (!d.session_id) {\n  throw new Error('session_id requerido');\n}\n\n// Concatenar nombre + apellido para almacenamiento\nconst nombreCompleto = [d.nombre, d.apellido].filter(Boolean).join(' ').trim().slice(0, 150);\n\nreturn [{ json: {\n  session_id: d.session_id,\n  nombre: nombreCompleto,\n  whatsapp: d.whatsapp ? d.whatsapp.toString().slice(0, 30) : null,\n  email: d.email ? d.email.toString().slice(0, 120) : null,\n  intencion: d.intencion || 'no_definido',\n  plazo: d.plazo || 'no_definido',\n  presupuesto: d.presupuesto || 'no_definido',\n  resumen: (d.resumen_conversacion || '').toString().slice(0, 800),\n  score,\n} }];"
       },
       "id": "score",
       "name": "Compute Score",
@@ -48,7 +48,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Supabase devuelve un array con el registro insertado (Prefer: return=representation).\n// Extraemos lead_id y preparamos payload para notificar_diego.\nconst scored = $('Compute Score').first().json;\nconst upsertResponse = $json;\n// upsertResponse puede ser un array de objetos si Prefer: return=representation, o {} si return=minimal\nlet lead_id = null;\nif (Array.isArray(upsertResponse) && upsertResponse.length > 0) {\n  lead_id = upsertResponse[0].id;\n} else if (upsertResponse.id) {\n  lead_id = upsertResponse.id;\n}\n\nreturn [{ json: {\n  lead_id,\n  score: scored.score,\n  nombre: scored.nombre,\n  whatsapp: scored.whatsapp,\n  email: scored.email,\n  intencion: scored.intencion,\n  plazo: scored.plazo,\n  presupuesto: scored.presupuesto,\n  resumen: scored.resumen,\n  session_id: scored.session_id,\n} }];"
+        "jsCode": "const scored = $('Compute Score').first().json;\nconst upsertResponse = $json;\nlet lead_id = null;\nif (Array.isArray(upsertResponse) && upsertResponse.length > 0) {\n  lead_id = upsertResponse[0].id;\n} else if (upsertResponse.id) {\n  lead_id = upsertResponse.id;\n}\n\nreturn [{ json: {\n  lead_id,\n  score: scored.score,\n  nombre: scored.nombre,\n  whatsapp: scored.whatsapp,\n  email: scored.email,\n  intencion: scored.intencion,\n  plazo: scored.plazo,\n  presupuesto: scored.presupuesto,\n  resumen: scored.resumen,\n  session_id: scored.session_id,\n} }];"
       },
       "id": "prep-notif",
       "name": "Prepare Notif Payload",
@@ -58,19 +58,19 @@
     },
     {
       "parameters": {
-        "workflowId": { "__rl": true, "value": "REPLACE_WITH_NOTIFICAR_DIEGO_ID", "mode": "id" },
+        "workflowId": { "__rl": true, "value": "9szkCBiLiSGJZMFz", "mode": "id" },
         "mode": "each",
         "options": {}
       },
       "id": "call-notif",
-      "name": "Call notificar_diego",
+      "name": "Call notificar_equipo",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [1120, 300]
     },
     {
       "parameters": {
-        "jsCode": "const scored = $('Compute Score').first().json;\nconst prepared = $('Prepare Notif Payload').first().json;\nconst notif = $json;\n\nreturn [{ json: {\n  lead_id: prepared.lead_id,\n  score: scored.score,\n  notificado: !!notif.notified,\n  tool_output_text: scored.score === 'CALIENTE'\n    ? `Listo, ${scored.nombre}. Ya le pasé tu información a Diego. Te va a escribir por WhatsApp en las próximas horas (lun-vie 9-19).`\n    : scored.score === 'TIBIO'\n      ? `Genial, ${scored.nombre}. Le paso tu info a Diego para que te mande la propuesta. Mientras tanto, te dejo el brochure: https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/brochure/mirador-villarrica-brochure.pdf`\n      : `Gracias ${scored.nombre}. Dejo tu info registrada. Aquí queda mi canal abierto — cuando estés más cerca de decidir, vuelves cuando quieras.`,\n} }];"
+        "jsCode": "const scored = $('Compute Score').first().json;\nconst prepared = $('Prepare Notif Payload').first().json;\nconst notif = $json;\n\nconst primerNombre = scored.nombre.split(' ')[0];\n\nreturn [{ json: {\n  lead_id: prepared.lead_id,\n  score: scored.score,\n  notificado: !!notif.notified,\n  tool_output_text: scored.score === 'CALIENTE'\n    ? `Listo, ${primerNombre}. Ya le pase tu informacion al equipo de ventas. Te van a escribir por WhatsApp en las proximas horas (lun-vie 9-19). Si quieres adelantarte, tambien puedes escribirles tu al +56 9 4032 9987.`\n    : scored.score === 'TIBIO'\n      ? `Genial, ${primerNombre}. Le paso tu info al equipo de ventas para que te envien la propuesta. Si aun no tienes el brochure, te lo puedo enviar por WhatsApp o correo ahora mismo.`\n      : `Gracias ${primerNombre}. Dejo tu info registrada. Aqui queda mi canal abierto — cuando estes mas cerca de decidir, vuelves cuando quieras.`,\n} }];"
       },
       "id": "final-output",
       "name": "Final Output",
@@ -83,8 +83,8 @@
     "Execute Workflow Trigger": { "main": [[{ "node": "Compute Score", "type": "main", "index": 0 }]] },
     "Compute Score": { "main": [[{ "node": "Upsert Lead", "type": "main", "index": 0 }]] },
     "Upsert Lead": { "main": [[{ "node": "Prepare Notif Payload", "type": "main", "index": 0 }]] },
-    "Prepare Notif Payload": { "main": [[{ "node": "Call notificar_diego", "type": "main", "index": 0 }]] },
-    "Call notificar_diego": { "main": [[{ "node": "Final Output", "type": "main", "index": 0 }]] }
+    "Prepare Notif Payload": { "main": [[{ "node": "Call notificar_equipo", "type": "main", "index": 0 }]] },
+    "Call notificar_equipo": { "main": [[{ "node": "Final Output", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" }
 }
