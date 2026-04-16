@@ -153,12 +153,12 @@ nodes = [
     {
         "parameters": {
             "name": "consultar_disponibilidad",
-            "description": "Consulta el inventario EN VIVO de parcelas (Google Sheet publico de Terra Segura). Usala cuando el lead pregunte por: precios especificos por parcela, disponibilidad (Disponible/Reservada/Vendida), que parcelas caben en su presupuesto, tamanos especificos, parcelas destacadas, o por una parcela puntual (ej: 'parcela 48', 'lote B5'). SIEMPRE llama esta tool antes de afirmar precio o disponibilidad. Si falla, deriva a Diego. Parametros (TODOS opcionales): numero='1'..'74' o 'B1'..'B20' para busqueda puntual; estado='disponible'|'reservado'|'vendido'|'todos' (default disponible); tamano_min/tamano_max en m2 (0=sin limite); presupuesto_contado_max o presupuesto_credito_max en CLP (0=sin limite); sector='numeradas'|'lote_b'|'todas'; solo_destacadas=true para parcelas con estrella; max_resultados entre 1 y 10 (default 5).",
+            "description": "Consulta el inventario EN VIVO (Google Sheet publico de Terra Segura, 94 parcelas). Devuelve tanto parcelas individuales como resumenes agregados (por tramo de precio, tamano, sector, destacadas) para que puedas razonar como un vendedor. Usala cuando el lead pregunte por: precios o disponibilidad por parcela, que entra en su presupuesto, tamanos especificos, parcelas destacadas, o para saber que hay disponible en general. SIEMPRE llamala antes de afirmar precio o disponibilidad. Parametros (TODOS opcionales): numero='1'..'74' o 'B1'..'B20' para busqueda puntual; estado='disponible'|'reservado'|'vendido'|'todos' (default disponible); tamano_min/tamano_max en m2 (0=sin limite); presupuesto_contado_max o presupuesto_credito_max en CLP (0=sin limite); sector='numeradas'|'lote_b'|'todas'; solo_destacadas=true para parcelas con estrella; orden='destacadas_primero' (default) | 'precio_asc' | 'precio_desc' | 'tamano_asc' | 'tamano_desc'; max_resultados entre 1 y 30 (default 5; usa 20-30 si el lead quiere ver todo lo disponible).",
             "workflowId": {"__rl": True, "value": WF_IDS["consultar_disponibilidad"], "mode": "id"},
             "workflowInputs": {
                 "mappingMode": "defineBelow",
                 "value": {
-                    "numero": "={{ $fromAI('numero', \"Numero de parcela especifica: '1'..'74' o 'B1'..'B20'. Vacio si es busqueda filtrada.\", 'string') }}",
+                    "numero": "={{ $fromAI('numero', \"SIEMPRE inclui este campo. Numero de parcela especifica: '1'..'74' o 'B1'..'B20' si buscas una parcela puntual; si no, pasa string vacio ''.\", 'string') }}",
                     "estado": "={{ $fromAI('estado', \"Estado buscado: 'disponible' (default), 'reservado', 'vendido' o 'todos'.\", 'string') }}",
                     "tamano_min": "={{ $fromAI('tamano_min', 'Tamano minimo en m2. 0 = sin limite.', 'number') }}",
                     "tamano_max": "={{ $fromAI('tamano_max', 'Tamano maximo en m2. 0 = sin limite.', 'number') }}",
@@ -166,18 +166,20 @@ nodes = [
                     "presupuesto_credito_max": "={{ $fromAI('presupuesto_credito_max', 'Presupuesto maximo credito (valor total) en CLP. 0 = sin limite.', 'number') }}",
                     "sector": "={{ $fromAI('sector', \"Sector: 'numeradas' (1-74), 'lote_b' (B1-B20) o 'todas' (default).\", 'string') }}",
                     "solo_destacadas": "={{ $fromAI('solo_destacadas', 'true para mostrar solo parcelas destacadas (estrella).', 'boolean') }}",
-                    "max_resultados": "={{ $fromAI('max_resultados', 'Cantidad maxima de parcelas a devolver (1-10, default 5).', 'number') }}"
+                    "orden": "={{ $fromAI('orden', \"Orden del resultado: 'destacadas_primero' (default), 'precio_asc' (mas baratas primero), 'precio_desc' (mas caras primero), 'tamano_asc' o 'tamano_desc'.\", 'string') }}",
+                    "max_resultados": "={{ $fromAI('max_resultados', 'Cantidad maxima de parcelas a devolver (1-30, default 5; usa 20-30 si el lead quiere ver todo).', 'number') }}"
                 },
                 "schema": [
-                    {"id": "numero", "type": "string", "required": False, "displayName": "numero", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "estado", "type": "string", "required": False, "displayName": "estado", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "tamano_min", "type": "number", "required": False, "displayName": "tamano_min", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "tamano_max", "type": "number", "required": False, "displayName": "tamano_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "presupuesto_contado_max", "type": "number", "required": False, "displayName": "presupuesto_contado_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "presupuesto_credito_max", "type": "number", "required": False, "displayName": "presupuesto_credito_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "sector", "type": "string", "required": False, "displayName": "sector", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "solo_destacadas", "type": "boolean", "required": False, "displayName": "solo_destacadas", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
-                    {"id": "max_resultados", "type": "number", "required": False, "displayName": "max_resultados", "defaultMatch": False, "display": True, "canBeUsedToMatch": True}
+                    {"id": "numero", "type": "string", "required": True, "displayName": "numero", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "estado", "type": "string", "required": True, "displayName": "estado", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "tamano_min", "type": "number", "required": True, "displayName": "tamano_min", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "tamano_max", "type": "number", "required": True, "displayName": "tamano_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "presupuesto_contado_max", "type": "number", "required": True, "displayName": "presupuesto_contado_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "presupuesto_credito_max", "type": "number", "required": True, "displayName": "presupuesto_credito_max", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "sector", "type": "string", "required": True, "displayName": "sector", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "solo_destacadas", "type": "boolean", "required": True, "displayName": "solo_destacadas", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "orden", "type": "string", "required": True, "displayName": "orden", "defaultMatch": False, "display": True, "canBeUsedToMatch": True},
+                    {"id": "max_resultados", "type": "number", "required": True, "displayName": "max_resultados", "defaultMatch": False, "display": True, "canBeUsedToMatch": True}
                 ]
             },
         },
