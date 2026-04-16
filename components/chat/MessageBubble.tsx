@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { Message } from '@/lib/chat/types';
 import { AttachmentImage } from './AttachmentImage';
+import { AttachmentFloatingImage } from './AttachmentFloatingImage';
 import { AttachmentGallery } from './AttachmentGallery';
 import { AttachmentFloatingGallery } from './AttachmentFloatingGallery';
 import { AttachmentWhatsAppLink } from './AttachmentWhatsAppLink';
@@ -28,6 +29,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           if (att.type === 'image') {
             return <AttachmentImage key={key} url={att.url} caption={att.caption} />;
           }
+          if (att.type === 'image_floating') {
+            return (
+              <AttachmentFloatingImage
+                key={key}
+                url={att.url}
+                caption={att.caption}
+                title={att.title}
+              />
+            );
+          }
           if (att.type === 'gallery') {
             return <AttachmentGallery key={key} images={att.images} />;
           }
@@ -40,7 +51,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               />
             );
           }
-          return <AttachmentWhatsAppLink key={key} url={att.url} label={att.label} />;
+          if (att.type === 'whatsapp_link') {
+            return <AttachmentWhatsAppLink key={key} url={att.url} label={att.label} />;
+          }
+          return null;
         })}
       </div>
     </div>
