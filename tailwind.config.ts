@@ -61,6 +61,12 @@ const config: Config = {
         'pulse-ring': 'pulseRing 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-dot': 'pulseDot 2s ease-in-out infinite',
         'preview-in': 'previewIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        // Launcher "attention": breathe + wiggle periódico (8s ciclo)
+        'launcher-attention': 'launcherAttention 8s ease-in-out infinite',
+        // Burbuja de mensaje flotando suave
+        'bubble-float': 'bubbleFloat 3.5s ease-in-out infinite',
+        // Halo concéntrico doble (bosque + mostaza)
+        'pulse-glow': 'pulseGlow 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
         fadeIn: {
@@ -87,6 +93,39 @@ const config: Config = {
         previewIn: {
           '0%': { transform: 'translateY(12px) scale(0.92)', opacity: '0' },
           '100%': { transform: 'translateY(0) scale(1)', opacity: '1' },
+        },
+        // Breathe continuo + wiggle al final del ciclo (simula que llama la atención)
+        launcherAttention: {
+          '0%, 62%, 100%': { transform: 'scale(1) rotate(0deg)' },
+          '30%': { transform: 'scale(1.04) rotate(0deg)' },
+          '66%': { transform: 'scale(1.05) rotate(-7deg)' },
+          '70%': { transform: 'scale(1.05) rotate(7deg)' },
+          '74%': { transform: 'scale(1.05) rotate(-4deg)' },
+          '78%': { transform: 'scale(1.05) rotate(4deg)' },
+          '82%': { transform: 'scale(1) rotate(0deg)' },
+        },
+        // Burbuja de mensaje flotando suave (translateY + rotación mínima)
+        bubbleFloat: {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '50%': { transform: 'translateY(-4px) rotate(-0.5deg)' },
+        },
+        // Halo concéntrico con dos "capas" de escala
+        pulseGlow: {
+          '0%': {
+            transform: 'scale(1)',
+            opacity: '0.45',
+            boxShadow: '0 0 0 0 rgba(244, 168, 75, 0.55)',
+          },
+          '60%': {
+            transform: 'scale(1.35)',
+            opacity: '0',
+            boxShadow: '0 0 0 14px rgba(244, 168, 75, 0)',
+          },
+          '100%': {
+            transform: 'scale(1.35)',
+            opacity: '0',
+            boxShadow: '0 0 0 14px rgba(244, 168, 75, 0)',
+          },
         },
       },
     },

@@ -103,7 +103,23 @@ body {
   pointer-events: none;
 }
 
-/* Preview bubble tail (launcher) */
+/* Preview bubble tail (launcher) — apunta a la derecha hacia el launcher */
+.preview-tail-right::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  background: white;
+  transform: translateY(-50%) rotate(45deg);
+  border-top: 1px solid rgba(26, 61, 46, 0.08);
+  border-right: 1px solid rgba(26, 61, 46, 0.08);
+  border-bottom: none;
+  border-left: none;
+}
+
+/* Tail vertical (preview bubble bajo el launcher — legacy) */
 .preview-tail::after {
   content: '';
   position: absolute;
@@ -115,6 +131,22 @@ body {
   transform: rotate(45deg);
   border-right: 1px solid rgba(26, 61, 46, 0.08);
   border-bottom: 1px solid rgba(26, 61, 46, 0.08);
+}
+
+/* Hand wave keyframes (usado inline en LuciaCharacter SVG) */
+@keyframes handWave {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(18deg); }
+}
+
+/* Respetar prefers-reduced-motion — desactiva animaciones llamativas */
+@media (prefers-reduced-motion: reduce) {
+  .animate-launcher-attention,
+  .animate-bubble-float,
+  .animate-pulse-glow,
+  .animate-pulse-ring {
+    animation: none !important;
+  }
 }
 
 /* Status dot (online) — pulse ring alrededor del dot sin escapar del avatar */
