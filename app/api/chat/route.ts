@@ -7,6 +7,12 @@ export const dynamic = 'force-dynamic';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const leadSchema = z.object({
+  nombre: z.string().trim().min(2).max(120),
+  whatsapp: z.string().trim().min(7).max(30),
+  email: z.string().trim().email().max(150),
+});
+
 const chatRequestSchema = z.object({
   session_id: z.string().regex(UUID_RE, 'session_id debe ser UUID'),
   message: z.string().min(1).max(1000),
@@ -14,6 +20,8 @@ const chatRequestSchema = z.object({
     .object({
       referrer: z.string().max(500).optional(),
       user_agent: z.string().max(500).optional(),
+      lead: leadSchema.optional(),
+      first_message: z.boolean().optional(),
     })
     .optional(),
 });
