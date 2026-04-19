@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mirador de Villarrica — Entregable Asistente Virtual</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #222;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* PORTADA */
+  .portada {
+    height: 257mm;
+    background: linear-gradient(135deg, #1a3d2e 0%, #0f2a1f 100%);
+    color: #faf6ee;
+    padding: 45mm 20mm 20mm 20mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .portada::before {
+    content: "";
+    position: absolute;
+    top: -80mm; right: -80mm;
+    width: 220mm; height: 220mm;
+    background: radial-gradient(circle, rgba(244,168,75,0.25) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .portada .badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: #f4a84b;
+    color: #1a3d2e;
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border-radius: 3px;
+    margin-bottom: 25mm;
+  }
+  .portada h1 {
+    font-size: 36pt;
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0 0 14px 0;
+    letter-spacing: -0.5px;
+  }
+  .portada h2 {
+    font-size: 18pt;
+    font-weight: 300;
+    color: #f4a84b;
+    margin: 0 0 40px 0;
+  }
+  .portada .subtitle {
+    font-size: 13pt;
+    line-height: 1.6;
+    color: #d9d0bb;
+    max-width: 140mm;
+    margin-bottom: 60mm;
+  }
+  .portada .meta {
+    position: absolute;
+    bottom: 22mm;
+    left: 20mm;
+    right: 20mm;
+    border-top: 1px solid rgba(244,168,75,0.35);
+    padding-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10pt;
+    color: #d9d0bb;
+  }
+  .portada .meta strong { color: #faf6ee; display: block; font-size: 11pt; margin-bottom: 2px; }
+
+  /* HEADER DE PÁGINAS INTERNAS */
+  .section {
+    page-break-before: always;
+  }
+  .section:first-of-type { page-break-before: avoid; }
+
+  h1.section-title {
+    font-size: 22pt;
+    color: #1a3d2e;
+    margin: 0 0 4px 0;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .section-kicker {
+    color: #f4a84b;
+    font-size: 9.5pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .section-lead {
+    font-size: 11.5pt;
+    color: #555;
+    margin: 0 0 22px 0;
+    max-width: 160mm;
+  }
+  hr.divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, #1a3d2e 0%, #f4a84b 50%, transparent 100%);
+    margin: 0 0 22px 0;
+  }
+
+  h2 {
+    font-size: 14pt;
+    color: #1a3d2e;
+    margin: 22px 0 8px 0;
+    font-weight: 700;
+  }
+  h3 {
+    font-size: 11.5pt;
+    color: #1a3d2e;
+    margin: 16px 0 6px 0;
+    font-weight: 700;
+  }
+  p { margin: 0 0 10px 0; }
+  ul, ol { margin: 0 0 12px 0; padding-left: 20px; }
+  li { margin-bottom: 5px; }
+
+  /* TARJETAS DE CAPACIDADES */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .card {
+    border: 1px solid #e5dfd0;
+    border-left: 4px solid #f4a84b;
+    background: #faf6ee55;
+    padding: 12px 14px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  .card .num {
+    display: inline-block;
+    background: #1a3d2e;
+    color: #f4a84b;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 10pt;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .card h4 {
+    font-size: 11pt;
+    color: #1a3d2e;
+    margin: 0 0 4px 0;
+    font-weight: 700;
+    display: inline-block;
+  }
+  .card p {
+    font-size: 9.5pt;
+    margin: 0;
+    color: #444;
+  }
+
+  /* TOOLS */
+  .tool {
+    border: 1px solid #e5dfd0;
+    background: #fff;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .tool .tool-name {
+    background: #1a3d2e;
+    color: #faf6ee;
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-family: "Monaco", "Courier New", monospace;
+    font-size: 9.5pt;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .tool .tool-name small {
+    display: block;
+    color: #f4a84b;
+    font-size: 8pt;
+    font-weight: 400;
+    margin-top: 3px;
+    font-family: Helvetica, Arial, sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .tool .tool-desc { font-size: 10pt; color: #333; }
+  .tool .tool-desc strong { color: #1a3d2e; }
+  .tool .tool-desc ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tool .tool-desc li { font-size: 9.5pt; margin-bottom: 2px; }
+
+  /* STATUS BOX */
+  .status-box {
+    background: #1a3d2e;
+    color: #faf6ee;
+    padding: 20px 24px;
+    border-radius: 6px;
+    margin: 16px 0;
+    position: relative;
+  }
+  .status-box::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 6px; height: 100%;
+    background: #f4a84b;
+    border-radius: 6px 0 0 6px;
+  }
+  .status-box h3 {
+    color: #f4a84b;
+    margin: 0 0 6px 0;
+    font-size: 14pt;
+  }
+  .status-box p { color: #d9d0bb; margin: 0; }
+
+  /* CHECK LIST */
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li {
+    padding-left: 26px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .checklist li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 3px;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: #1a3d2e;
+  }
+  .checklist li::after {
+    content: "";
+    position: absolute;
+    left: 5px; top: 7px;
+    width: 8px; height: 4px;
+    border-left: 2px solid #f4a84b;
+    border-bottom: 2px solid #f4a84b;
+    transform: rotate(-45deg);
+  }
+  .checklist.pending li::before { background: #f4a84b; }
+  .checklist.pending li::after {
+    content: "!";
+    border: none;
+    color: #1a3d2e;
+    font-weight: 800;
+    font-size: 11pt;
+    left: 7px; top: 0;
+    transform: none;
+    width: auto; height: auto;
+  }
+
+  /* LINKS */
+  .link-block {
+    border: 1px solid #e5dfd0;
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    page-break-inside: avoid;
+  }
+  .link-block .link-label {
+    font-size: 9pt;
+    color: #f4a84b;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .link-block .link-title {
+    font-weight: 700;
+    color: #1a3d2e;
+    margin-bottom: 4px;
+    font-size: 11pt;
+  }
+  .link-block .link-url {
+    font-family: "Monaco", monospace;
+    font-size: 8.5pt;
+    color: #555;
+    word-break: break-all;
+  }
+
+  /* FLOW */
+  .flow {
+    counter-reset: step;
+    margin: 12px 0;
+  }
+  .flow-step {
+    counter-increment: step;
+    position: relative;
+    padding: 10px 14px 10px 44px;
+    margin-bottom: 6px;
+    background: #faf6ee;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+  .flow-step::before {
+    content: counter(step);
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    width: 26px; height: 26px;
+    background: #1a3d2e;
+    color: #f4a84b;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 26px;
+    font-weight: 800;
+    font-size: 11pt;
+  }
+  .flow-step strong { color: #1a3d2e; }
+
+  /* TABLA */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 10pt;
+  }
+  th {
+    background: #1a3d2e;
+    color: #faf6ee;
+    text-align: left;
+    padding: 8px 10px;
+    font-weight: 700;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e5dfd0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #faf6ee55; }
+
+  /* ALERT */
+  .alert {
+    border-left: 4px solid #f4a84b;
+    background: #fdf3e0;
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    margin: 12px 0;
+    font-size: 10pt;
+  }
+  .alert strong { color: #b8740b; }
+
+  /* FOOTER */
+  .footer-note {
+    margin-top: 28px;
+    padding-top: 14px;
+    border-top: 1px solid #e5dfd0;
+    font-size: 9pt;
+    color: #888;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="portada">
+  <div class="badge">ENTREGABLE — FASE 1 MVP</div>
+  <h1>Asistente Virtual<br/>Mirador de Villarrica</h1>
+  <h2>Terra Segura Inmobiliaria</h2>
+  <p class="subtitle">
+    Sistema conversacional con inteligencia artificial diseñado para atender,
+    informar y calificar leads del proyecto inmobiliario Mirador de Villarrica
+    en Colico, Región de La Araucanía.
+  </p>
+
+  <div class="meta">
+    <div>
+      <strong>Preparado por</strong>
+      Hugo Vargas Cubelli
+    </div>
+    <div>
+      <strong>Estado</strong>
+      Listo para producción
+    </div>
+    <div>
+      <strong>Fecha</strong>
+      Abril 2026
+    </div>
+  </div>
+</div>
+
+
+<!-- SECCIÓN 1 — RESUMEN EJECUTIVO -->
+<div class="section">
+  <div class="section-kicker">01 — Resumen Ejecutivo</div>
+  <h1 class="section-title">¿Qué es este asistente?</h1>
+  <hr class="divider"/>
+  <p class="section-lead">
+    Un vendedor virtual disponible 24/7 en el sitio web de Mirador de Villarrica que
+    conversa con cada visitante, responde sus dudas sobre el proyecto, califica su
+    intención de compra y entrega los datos del lead al equipo de ventas listos para
+    contactar.
+  </p>
+
+  <div class="status-box">
+    <h3>Estado actual: listo para producción</h3>
+    <p>El sistema está desplegado, probado y operando de extremo a extremo. Solo restan
+    tareas de configuración de credenciales propias de la empresa para salir en vivo.</p>
+  </div>
+
+  <h2>Qué hace el bot, en una línea</h2>
+  <p>Convierte visitas del sitio web en leads calificados, entregando al equipo de ventas
+  contactos con nombre, apellido, teléfono, correo, temperatura (caliente / tibio / frío)
+  y contexto completo de la conversación.</p>
+
+  <h2>Beneficios directos para Terra Segura</h2>
+  <ul>
+    <li><strong>Disponibilidad 24/7</strong> — atiende consultas fuera de horario, fines de semana y feriados.</li>
+    <li><strong>Calificación automática</strong> — filtra curiosos de compradores reales antes de pasar el lead al equipo humano.</li>
+    <li><strong>Respuestas consistentes</strong> — trabaja siempre con información oficial, nunca inventa precios ni disponibilidad.</li>
+    <li><strong>Captura de contacto orgánica</strong> — pide datos de forma natural durante la conversación, no como formulario frío.</li>
+    <li><strong>Envío inmediato de material</strong> — despacha el brochure al lead por WhatsApp o correo en segundos.</li>
+    <li><strong>Alerta en tiempo real</strong> — notifica al equipo de ventas apenas detecta un lead caliente.</li>
+  </ul>
+</div>
+
+
+<!-- SECCIÓN 2 — CAPACIDADES -->
+<div class="section">
+  <div class="section-kicker">02 — Capacidades</div>
+  <h1 class="section-title">Las 5 funciones principales</h1>
+  <hr class="divider"/>
+  <p class="section-lead">
+    El asistente cumple simultáneamente cinco responsabilidades durante cada conversación
+    con un posible comprador.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <div><span class="num">1</span><h4>Entrevistar al lead</h4></div>
+      <p>Extrae nombre, apellido, teléfono y correo de forma natural durante la conversación,
+      sin formularios ni interrogatorios.</p>
+    </div>
+    <div class="card">
+      <div><span class="num">2</span><h4>Orientar sobre el proyecto</h4></div>
+      <p>Informa sobre precios, tamaños, condiciones de pago, ubicación, características
+      técnicas y el entorno del proyecto.</p>
+    </div>
+    <div class="card">
+      <div><span class="num">3</span><h4>Guardar y catalogar</h4></div>
+      <p>Registra cada lead en la base de datos con su temperatura (caliente / tibio / frío)
+      según intención, plazo y presupuesto.</p>
+    </div>
+    <div class="card">
+      <div><span class="num">4</span><h4>Avisar al equipo</h4></div>
+      <p>Envía una notificación por WhatsApp al equipo de ventas apenas detecta un lead
+      caliente o tibio, con todos los datos.</p>
+    </div>
+    <div class="card" style="grid-column: span 2;">
+      <div><span class="num">5</span><h4>Enviar el brochure al lead</h4></div>
+      <p>Envía el PDF oficial del proyecto por WhatsApp o correo — junto al inventario en vivo,
+      ubicación exacta, tour 360° y una recomendación personalizada de parcelas elaborada por
+      el propio asistente.</p>
+    </div>
+  </div>
+
+  <h2>Cómo se comporta en la conversación</h2>
+  <ul>
+    <li><strong>Tono formal y cercano.</strong> Empieza tratando de "usted"; si el lead tutea, cambia a tutear.</li>
+    <li><strong>Respuestas breves.</strong> Máximo 4 líneas por mensaje — evita respuestas abrumadoras.</li>
+    <li><strong>Calificación tejida, no interrogada.</strong> Una pregunta de calificación por turno, siempre después de responder la duda del lead.</li>
+    <li><strong>Multiidioma.</strong> Si el lead escribe en inglés o portugués, responde en ese idioma.</li>
+    <li><strong>Sin invenciones.</strong> Nunca promete precios, disponibilidad, plazos o descuentos sin verificarlo contra la fuente de datos oficial.</li>
+  </ul>
+</div>
+
+
+<!-- SECCIÓN 3 — HERRAMIENTAS -->
+<div class="section">
+  <div class="section-kicker">03 — Herramientas internas</div>
+  <h1 class="section-title">Las 5 herramientas del asistente</h1>
+  <hr class="divider"/>
+  <p class="section-lead">
+    Para cumplir sus funciones, el bot tiene acceso a herramientas especializadas que invoca
+    automáticamente según el contexto de la conversación.
+  </p>
+
+  <div class="tool">
+    <div class="tool-name">consultar_<br/>disponibilidad<small>Inventario en vivo</small></div>
+    <div class="tool-desc">
+      <strong>Qué hace:</strong> consulta el inventario real de las 94 parcelas en tiempo real desde la planilla oficial.
+      <ul>
+        <li>Devuelve precio contado y crédito, tamaño, sector, estado (disponible / reservada / vendida) y video individual por parcela.</li>
+        <li>Filtra por presupuesto, tamaño, sector o número específico.</li>
+        <li>Garantiza que el bot nunca hable de una parcela vendida ni invente un precio.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tool">
+    <div class="tool-name">calificar_lead<small>Clasificación</small></div>
+    <div class="tool-desc">
+      <strong>Qué hace:</strong> toma los datos del lead (nombre, apellido, contacto, intención, plazo, presupuesto) y los guarda catalogados en la base de datos.
+      <ul>
+        <li>Calcula automáticamente la temperatura del lead: <strong>caliente</strong>, <strong>tibio</strong> o <strong>frío</strong>.</li>
+        <li>Si es caliente o tibio, dispara una notificación al equipo de ventas.</li>
+        <li>Devuelve al bot el mensaje de cierre correcto según la temperatura.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tool">
+    <div class="tool-name">enviar_brochure<small>Material comercial</small></div>
+    <div class="tool-desc">
+      <strong>Qué hace:</strong> despacha el brochure oficial del proyecto al lead por el canal que prefiera.
+      <ul>
+        <li><strong>Por WhatsApp:</strong> envía el PDF como documento y un segundo mensaje con ubicación, inventario en vivo, tour 360° y recomendación personalizada.</li>
+        <li><strong>Por correo electrónico:</strong> envía un correo HTML profesional con el PDF adjunto, botones de acceso a los recursos y la recomendación destacada.</li>
+        <li><strong>Recomendación personalizada:</strong> el bot genera un párrafo con 2-3 parcelas específicas que calzan con el perfil del lead, redactado en el momento.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tool">
+    <div class="tool-name">mostrar_<br/>master_plan<small>Plano</small></div>
+    <div class="tool-desc">
+      <strong>Qué hace:</strong> entrega el plano maestro del proyecto al lead dentro del chat, con la distribución de las 94 parcelas.
+      <ul>
+        <li>Se activa cuando el lead pide el plano, la distribución o "dónde están las parcelas".</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tool">
+    <div class="tool-name">mostrar_galeria<small>Fotos entorno</small></div>
+    <div class="tool-desc">
+      <strong>Qué hace:</strong> muestra una galería de 6 fotos del entorno del proyecto (volcán Villarrica, Lago Colico, bosque nativo, atardecer).
+      <ul>
+        <li>Se activa cuando el lead pide fotos, imágenes o referencias visuales del lugar.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Notificación interna al equipo de ventas</h3>
+  <p>Además de las 5 herramientas visibles al lead, existe una herramienta interna (<em>notificar_equipo</em>)
+  que se dispara automáticamente desde <em>calificar_lead</em> cuando un lead es caliente o tibio.
+  Envía un mensaje de WhatsApp al equipo con:</p>
+  <ul>
+    <li>Nombre y apellido del lead</li>
+    <li>Número de teléfono y correo electrónico</li>
+    <li>Intención (inversión / segunda vivienda / evaluando)</li>
+    <li>Plazo estimado de decisión</li>
+    <li>Presupuesto declarado</li>
+    <li>Temperatura (caliente / tibio)</li>
+  </ul>
+</div>
+
+
+<!-- SECCIÓN 4 — FLUJO DE CONVERSACIÓN -->
+<div class="section">
+  <div class="section-kicker">04 — Cómo funciona</div>
+  <h1 class="section-title">Recorrido típico de una conversación</h1>
+  <hr class="divider"/>
+  <p class="section-lead">
+    Desde que el visitante hace clic en el widget hasta que el lead queda registrado y el
+    equipo es notificado.
+  </p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <strong>El visitante abre el chat.</strong> El botón flotante aparece en todas las
+      páginas del sitio. Al hacer clic, el bot saluda con un mensaje de apertura cordial.
+    </div>
+    <div class="flow-step">
+      <strong>Responde las dudas iniciales.</strong> El bot informa sobre precios, tamaños,
+      ubicación, condiciones de pago — siempre con datos oficiales.
+    </div>
+    <div class="flow-step">
+      <strong>Consulta el inventario en vivo.</strong> Cuando el lead pregunta por precios
+      específicos o disponibilidad, el bot llama automáticamente a la planilla oficial
+      para traer datos reales.
+    </div>
+    <div class="flow-step">
+      <strong>Califica al lead de forma natural.</strong> Durante la conversación introduce
+      tres preguntas clave una por turno: intención, plazo de decisión y presupuesto.
+    </div>
+    <div class="flow-step">
+      <strong>Ofrece el brochure como gancho.</strong> Propone enviar el material oficial por
+      WhatsApp o correo — es el pretexto perfecto para pedir los datos de contacto.
+    </div>
+    <div class="flow-step">
+      <strong>Envía el brochure personalizado.</strong> Despacha el PDF + inventario + ubicación
+      + tour 360° + recomendación de parcelas específicas para el lead.
+    </div>
+    <div class="flow-step">
+      <strong>Registra y clasifica.</strong> Guarda al lead en la base de datos con temperatura
+      calculada automáticamente.
+    </div>
+    <div class="flow-step">
+      <strong>Avisa al equipo si corresponde.</strong> Si el lead es caliente o tibio, manda
+      un WhatsApp al equipo de ventas con todos los datos para hacer seguimiento.
+    </div>
+  </div>
+
+  <h2>Escenarios que el bot maneja bien</h2>
+  <table>
+    <tr><th style="width: 40%;">Situación</th><th>Comportamiento</th></tr>
+    <tr><td>Lead serio con presupuesto y plazo corto</td><td>Captura datos, califica <strong>caliente</strong>, notifica al equipo.</td></tr>
+    <tr><td>Lead evaluando a +1 año</td><td>Captura datos, califica <strong>frío</strong>, NO notifica.</td></tr>
+    <tr><td>Lead pide ver el plano</td><td>Muestra el master plan dentro del chat.</td></tr>
+    <tr><td>Lead pide fotos del volcán o el lago</td><td>Muestra la galería del entorno.</td></tr>
+    <tr><td>Lead pregunta por parcela específica</td><td>Consulta disponibilidad en vivo antes de responder.</td></tr>
+    <tr><td>Lead pide hablar con un humano</td><td>Deriva al WhatsApp del equipo con resumen.</td></tr>
+    <tr><td>Lead escribe en inglés o portugués</td><td>Responde en ese idioma manteniendo el tono.</td></tr>
+    <tr><td>Lead intenta negociar descuentos</td><td>Deriva al equipo — nunca ofrece descuentos.</td></tr>
+    <tr><td>Lead pregunta algo fuera del KB</td><td>Reconoce el límite y ofrece derivar al equipo.</td></tr>
+    <tr><td>Spam o groserías</td><td>Responde educadamente y no califica.</td></tr>
+  </table>
+</div>
+
+
+<!-- SECCIÓN 5 — ENLACES -->
+<div class="section">
+  <div class="section-kicker">05 — Enlaces del proyecto</div>
+  <h1 class="section-title">Dónde ver el sistema funcionando</h1>
+  <hr class="divider"/>
+  <p class="section-lead">
+    Todos los recursos del entregable están disponibles online para que el equipo pueda
+    revisarlos y probarlos.
+  </p>
+
+  <div class="link-block">
+    <div class="link-label">Sitio web replicado + chat embebido</div>
+    <div class="link-title">Demo funcional del asistente</div>
+    <div class="link-url">https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app</div>
+    <p style="margin: 8px 0 0 0; font-size: 9.5pt; color: #555;">
+      Réplica del sitio original <strong>miradordevillarrica.cl</strong> con el widget de chat
+      integrado en la esquina inferior derecha. Funciona en desktop y móvil.
+    </p>
+  </div>
+
+  <div class="link-block">
+    <div class="link-label">Brochure PDF oficial</div>
+    <div class="link-title">Material comercial que envía el bot</div>
+    <div class="link-url">https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/brochure/mirador-villarrica-brochure.pdf</div>
+  </div>
+
+  <div class="link-block">
+    <div class="link-label">Inventario en vivo</div>
+    <div class="link-title">Planilla con las 94 parcelas, precios y videos</div>
+    <div class="link-url">https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/edit</div>
+    <p style="margin: 8px 0 0 0; font-size: 9.5pt; color: #555;">
+      Fuente de verdad del inventario. El bot consulta esta planilla cada vez que un lead
+      pregunta por precios o disponibilidad.
+    </p>
+  </div>
+
+  <div class="link-block">
+    <div class="link-label">Ubicación exacta</div>
+    <div class="link-title">Google Maps — Colico, La Araucanía</div>
+    <div class="link-url">https://www.google.com/maps/place/39°00'52.4"S+72°07'40.8"W</div>
+  </div>
+
+  <div class="link-block">
+    <div class="link-label">Tour 360°</div>
+    <div class="link-title">Recorrido virtual del proyecto</div>
+    <div class="link-url">https://lanube360.com/mirador-de-villarrica/</div>
+  </div>
+
+  <h2>Cómo probar el chat</h2>
+  <ol>
+    <li>Abrir el enlace de la demo en cualquier dispositivo.</li>
+    <li>Hacer clic en el botón flotante verde (esquina inferior derecha).</li>
+    <li>Saludar y hacer preguntas reales sobre el proyecto (ej: "¿Qué parcela puedo comprar con 18 millones?").</li>
+    <li>Seguir la conversación entregando datos como lo haría un cliente real.</li>
+    <li>Pedir el brochure por correo electrónico para recibir el envío de prueba.</li>
+  </ol>
+</div>
+
+
+<!-- SECCIÓN 6 — ESTADO Y PENDIENTES -->
+<div class="section">
+  <div class="section-kicker">06 — Estado para producción</div>
+  <h1 class="section-title">Lo que está listo y lo que falta</h1>
+  <hr class="divider"/>
+  <p class="section-lead">
+    El sistema es funcional de extremo a extremo. Los pendientes son exclusivamente de
+    configuración propia de Terra Segura.
+  </p>
+
+  <h2>Ya está implementado y funcionando</h2>
+  <ul class="checklist">
+    <li>Sitio web replicado y desplegado con URL pública.</li>
+    <li>Widget de chat embebido en todas las páginas (desktop + móvil).</li>
+    <li>Asistente virtual con las 5 capacidades principales operativas.</li>
+    <li>Las 5 herramientas del bot implementadas y probadas en producción.</li>
+    <li>Conexión a la planilla oficial de inventario (Google Sheets) en vivo.</li>
+    <li>Envío de brochure por WhatsApp y correo electrónico validado end-to-end.</li>
+    <li>Sistema de calificación automática de leads (caliente / tibio / frío).</li>
+    <li>Notificación automática al equipo de ventas para leads calientes y tibios.</li>
+    <li>Base de datos con historial de conversaciones y leads capturados.</li>
+    <li>Correo electrónico con diseño HTML profesional y recomendación personalizada.</li>
+    <li>Manejo de errores y timeouts para garantizar respuesta al usuario.</li>
+  </ul>
+
+  <h2>Pendiente para salir a producción</h2>
+  <p>Son tareas de configuración propias del cliente — el sistema ya espera estas credenciales.</p>
+  <ul class="checklist pending">
+    <li><strong>Credenciales de correo corporativo.</strong> Conectar la cuenta de Gmail / Google Workspace oficial de Terra Segura (actualmente usa cuenta de desarrollo).</li>
+    <li><strong>Número de WhatsApp oficial.</strong> Cambiar el número de destino de las notificaciones del equipo de ventas al número real que use Terra Segura.</li>
+    <li><strong>Instancia de WhatsApp Business.</strong> Definir si se usa la API dedicada del cliente o la instancia compartida existente.</li>
+    <li><strong>API key del modelo de lenguaje para producción.</strong> Hoy el bot corre con una API key de desarrollo; debe configurarse una cuenta productiva para el facturación a nombre del cliente (OpenAI, Anthropic o OpenRouter).</li>
+    <li><strong>Modelo de lenguaje definitivo.</strong> Validar si se mantiene el modelo actual (balance costo / calidad) o se sube a un modelo premium según presupuesto.</li>
+    <li><strong>Dominio definitivo.</strong> Configurar el subdominio oficial (ej: <em>chat.miradordevillarrica.cl</em>) en lugar del dominio actual de Vercel.</li>
+    <li><strong>Ajustes solicitados por el equipo.</strong> Cualquier modificación al tono, preguntas de calificación, copies o flujo que el cliente quiera sumar antes del lanzamiento.</li>
+  </ul>
+
+  <div class="alert">
+    <strong>Tiempo estimado de puesta en marcha:</strong> una vez recibidas las credenciales
+    y definiciones del cliente, el sistema puede estar en producción en el sitio oficial
+    en menos de un día hábil.
+  </div>
+
+  <h2>Próximos pasos sugeridos</h2>
+  <ol>
+    <li><strong>Sesión de revisión con el equipo de Terra Segura</strong> — recorrido del demo + feedback sobre tono, preguntas y flujos.</li>
+    <li><strong>Entrega de credenciales</strong> — correo corporativo, número WhatsApp oficial, cuenta del modelo de lenguaje.</li>
+    <li><strong>Ajustes sugeridos</strong> — aplicación de las modificaciones acordadas.</li>
+    <li><strong>Pruebas finales</strong> — ciclo completo con credenciales reales y 5-10 conversaciones de prueba.</li>
+    <li><strong>Publicación en sitio oficial</strong> — embeber el widget en <em>miradordevillarrica.cl</em>.</li>
+    <li><strong>Monitoreo primera semana</strong> — seguimiento de conversaciones reales, ajustes finos según comportamiento de leads reales.</li>
+  </ol>
+
+  <div class="footer-note">
+    Documento preparado por Hugo Vargas Cubelli · Abril 2026 · Mirador de Villarrica — Terra Segura Inmobiliaria
+  </div>
+</div>
+
+</body>
+</html>

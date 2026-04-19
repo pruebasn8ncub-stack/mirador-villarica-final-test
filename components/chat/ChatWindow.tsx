@@ -11,10 +11,11 @@ import {
 } from 'react';
 import { motion } from 'framer-motion';
 import { Send, X, RefreshCw, Minus } from 'lucide-react';
-import type { Message } from '@/lib/chat/types';
+import type { LeadGateData, Message } from '@/lib/chat/types';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { AssistantAvatar } from './AssistantAvatar';
+import { GateForm } from './GateForm';
 import { cn } from '@/lib/utils';
 
 interface ChatWindowProps {
@@ -25,15 +26,18 @@ interface ChatWindowProps {
   onMinimize?: () => void;
   isSending: boolean;
   error: string | null;
+  /** Si true, bloquea el chat y muestra el gate form. */
+  gateRequired?: boolean;
+  onGateSubmit?: (data: LeadGateData) => Promise<void> | void;
+  gateError?: string | null;
 }
 
 const MAX_MESSAGE_LENGTH = 1000;
 
 const QUICK_REPLIES = [
-  { label: 'Ver master plan', value: 'Muéstrame el master plan del proyecto' },
-  { label: 'Ver fotos', value: 'Quiero ver fotos del entorno' },
-  { label: 'Precios y financiamiento', value: '¿Cuáles son los precios y formas de pago?' },
-  { label: 'Hablar con Diego', value: 'Quiero hablar con Diego por WhatsApp' },
+  { label: 'Ya tengo información', value: 'Ya tengo información del proyecto' },
+  { label: 'Quiero un tour guiado', value: 'Quiero un tour guiado del proyecto' },
+  { label: 'Quiero comprar', value: 'Quiero comprar una parcela' },
 ];
 
 /**
@@ -56,6 +60,9 @@ export function ChatWindow({
   onMinimize,
   isSending,
   error,
+  gateRequired = false,
+  onGateSubmit,
+  gateError,
 }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const [scrolledTop, setScrolledTop] = useState(true);
@@ -65,7 +72,9 @@ export function ChatWindow({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const showAvatarMap = useMemo(() => computeShowAvatar(messages), [messages]);
-  const isFirstExchange = messages.length === 1 && messages[0]?.role === 'assistant';
+  // Quick replies visibles mientras el usuario aún no haya respondido.
+  const isFirstExchange =
+    messages.length > 0 && messages.every((m) => m.role === 'assistant');
   const showCounter = input.length > 800;
 
   // Auto-scroll al recibir mensaje o typing
@@ -208,6 +217,10 @@ export function ChatWindow({
         </div>
       </header>
 
+      {gateRequired && onGateSubmit ? (
+        <GateForm onSubmit={onGateSubmit} error={gateError} />
+      ) : (
+      <>
       {/* Área de mensajes con scroll shadows */}
       <div
         ref={scrollContainerRef}
@@ -220,7 +233,12 @@ export function ChatWindow({
           className="chat-scroll h-full space-y-3 overflow-y-auto px-4 py-4"
         >
           {messages.map((m, i) => (
-            <MessageBubble key={m.id} message={m} showAvatar={showAvatarMap[i]} />
+            <MessageBubble
+              key={m.id}
+              message={m}
+              showAvatar={showAvatarMap[i]}
+              onAction={submitText}
+            />
           ))}
 
           {/* Quick replies después del primer mensaje de bienvenida */}
@@ -308,10 +326,11 @@ export function ChatWindow({
         </div>
 
         <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
-          <p className="text-[10px] leading-tight text-bosque-400">
-            Asistente virtual · Respuestas validadas por Diego Cavagnaro
+          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-bosque-400">
+            <span aria-hidden>🔒</span>
+            Conversación privada
           </p>
-          {showCounter && (
+          {showCounter ? (
             <p
               className={cn(
                 'text-[10px] tabular-nums',
@@ -320,9 +339,15 @@ export function ChatWindow({
             >
               {input.length}/{MAX_MESSAGE_LENGTH}
             </p>
+          ) : (
+            <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-bosque-400">
+              Powered by Terra Segura Inmobiliaria
+            </p>
           )}
         </div>
       </form>
+      </>
+      )}
     </motion.div>
   );
 }
