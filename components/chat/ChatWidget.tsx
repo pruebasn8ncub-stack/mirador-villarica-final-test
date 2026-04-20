@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ChatLauncher } from './ChatLauncher';
 import { ChatWindow } from './ChatWindow';
+import { GateModal } from './GateModal';
 import {
   getOrCreateSessionId,
   loadLead,
@@ -462,17 +463,25 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !gatePassed && (
+          <GateModal
+            key="gate-modal"
+            onSubmit={handleGateSubmit}
+            onClose={() => setIsOpen(false)}
+            error={gateError}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isOpen && gatePassed && (
           <ChatWindow
+            key="chat-window"
             messages={messages}
             onSend={handleSend}
             onClose={() => setIsOpen(false)}
             onReset={handleReset}
             isSending={isSending}
             error={error}
-            gateRequired={!gatePassed}
-            onGateSubmit={handleGateSubmit}
-            gateError={gateError}
           />
         )}
       </AnimatePresence>

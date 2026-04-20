@@ -79,10 +79,26 @@ export interface Message {
   timestamp: number;
 }
 
+export type LeadGatePlazo =
+  | 'inmediato'
+  | '1-3m'
+  | '3-6m'
+  | '6-12m'
+  | '12m+';
+
+export const LEAD_GATE_PLAZO_LABELS: Record<LeadGatePlazo, string> = {
+  inmediato: 'Inmediatamente',
+  '1-3m': '1 a 3 meses',
+  '3-6m': '3 a 6 meses',
+  '6-12m': '6 a 12 meses',
+  '12m+': 'Más de 1 año',
+};
+
 export interface LeadGateData {
   nombre: string;
   whatsapp: string;
   email: string;
+  plazo: LeadGatePlazo;
 }
 
 export interface ChatRequest {

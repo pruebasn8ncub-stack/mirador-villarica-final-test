@@ -13,6 +13,7 @@ const leadGateSchema = z.object({
   nombre: z.string().trim().min(2).max(120),
   whatsapp: z.string().trim().min(7).max(30),
   email: z.string().trim().email().max(150),
+  plazo: z.enum(['inmediato', '1-3m', '3-6m', '6-12m', '12m+']),
 });
 
 async function notifyN8n(payload: z.infer<typeof leadGateSchema>) {
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
         nombre: parsed.data.nombre,
         whatsapp: parsed.data.whatsapp,
         email: parsed.data.email,
+        plazo: parsed.data.plazo,
         score: 'FRIO',
         project_slug: 'mirador-villarrica',
       },

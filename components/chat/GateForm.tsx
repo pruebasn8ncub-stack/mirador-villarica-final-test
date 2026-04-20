@@ -2,10 +2,18 @@
 
 import { useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Loader2, Lock } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, Lock, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LeadGateData } from '@/lib/chat/types';
+import type { LeadGateData, LeadGatePlazo } from '@/lib/chat/types';
+import { LEAD_GATE_PLAZO_LABELS } from '@/lib/chat/types';
 import { FormField } from './FormField';
+
+type Channel = 'web' | 'whatsapp';
+
+/** Hugo Vargas Cubelli — receptor directo de leads via WhatsApp. */
+const WHATSAPP_TO = '56992533044';
+
+const PLAZO_ORDER: LeadGatePlazo[] = ['inmediato', '1-3m', '3-6m', '6-12m', '12m+'];
 
 interface GateFormProps {
   onSubmit: (data: LeadGateData) => Promise<void> | void;
@@ -29,6 +37,9 @@ function validate(values: LeadGateData): Errors {
   if (!EMAIL_RE.test(values.email.trim())) {
     errors.email = 'Revisa que el correo esté completo.';
   }
+  if (!PLAZO_ORDER.includes(values.plazo)) {
+    errors.plazo = 'Elige cuándo te gustaría comprar.';
+  }
   return errors;
 }
 
@@ -37,9 +48,10 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
     nombre: defaultValues?.nombre ?? '',
     whatsapp: defaultValues?.whatsapp ?? '',
     email: defaultValues?.email ?? '',
+    plazo: defaultValues?.plazo ?? ('' as LeadGatePlazo),
   });
   const [errors, setErrors] = useState<Errors>({});
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<Channel | null>(null);
   const [touched, setTouched] = useState(false);
 
   const setField = <K extends keyof LeadGateData>(key: K, value: LeadGateData[K]) => {
@@ -49,50 +61,70 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const buildWhatsAppUrl = (data: LeadGateData) => {
+    const text =
+      `Hola, soy ${data.nombre}.\n` +
+      `Vi el proyecto Mirador de Villarrica y me gustaría recibir más información.\n\n` +
+      `Cuándo me gustaría comprar: ${LEAD_GATE_PLAZO_LABELS[data.plazo]}\n` +
+      `Mi correo: ${data.email}`;
+    return `https://wa.me/${WHATSAPP_TO}?text=${encodeURIComponent(text)}`;
+  };
+
+  const runSubmit = async (channel: Channel) => {
     setTouched(true);
     const nextErrors = validate(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0 || submitting) return;
-    setSubmitting(true);
-    try {
-      await onSubmit({
-        nombre: values.nombre.trim(),
-        whatsapp: values.whatsapp.trim(),
-        email: values.email.trim(),
-      });
-    } finally {
-      setSubmitting(false);
+    const payload: LeadGateData = {
+      nombre: values.nombre.trim(),
+      whatsapp: values.whatsapp.trim(),
+      email: values.email.trim(),
+      plazo: values.plazo,
+    };
+    // Abrir wa.me ANTES del await para no ser bloqueado por el popup blocker
+    // (sólo un click directo cuenta como gesto de usuario).
+    let waWindow: Window | null = null;
+    if (channel === 'whatsapp') {
+      waWindow = window.open('about:blank', '_blank');
     }
+    setSubmitting(channel);
+    try {
+      await onSubmit(payload);
+      if (channel === 'whatsapp') {
+        const url = buildWhatsAppUrl(payload);
+        if (waWindow) waWindow.location.href = url;
+        else window.location.href = url;
+      }
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    runSubmit('web');
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="chat-dotgrid flex flex-1 min-h-0 flex-col overflow-y-auto px-5 pb-6 pt-5"
+      className="chat-dotgrid flex flex-1 min-h-0 flex-col overflow-hidden px-5 pb-4 pt-4"
       noValidate
     >
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className={cn(
-          'relative mb-3 overflow-hidden rounded-2xl border border-mostaza-100 px-5 pb-4 pt-5 text-center',
-          'bg-gradient-to-b from-mostaza-50 to-white shadow-sm'
-        )}
+        className="relative mb-2 rounded-xl bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(26,61,46,0.04),0_4px_16px_rgba(26,61,46,0.06)] ring-1 ring-bosque-100/60"
       >
-        <h3 className="text-[16px] font-semibold leading-snug tracking-tight text-bosque-900">
-          ¡Hola! Soy Lucía <span aria-hidden>👋</span>
-        </h3>
-        <p className="mx-auto mt-1 max-w-[280px] text-[13px] leading-relaxed text-bosque-600">
-          Para darte una{' '}
+        <p className="text-[12.5px] leading-snug text-bosque-700">
+          Antes de continuar, necesito algunos datos para darte una{' '}
           <strong className="font-semibold text-bosque-900">atención personalizada</strong>{' '}
-          y enviarte información exclusiva del proyecto, necesito algunos datos:
+          y enviarte <strong className="font-semibold text-bosque-900">información exclusiva del proyecto</strong>.
         </p>
       </motion.div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <FormField
           label="Nombre y apellido"
           icon="user"
@@ -125,6 +157,42 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
           error={errors.email}
         />
 
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bosque-700">
+            ¿Cuándo te gustaría comprar?
+          </label>
+          <div
+            role="radiogroup"
+            aria-label="Cuándo te gustaría comprar"
+            className="grid grid-cols-2 gap-1.5"
+          >
+            {PLAZO_ORDER.map((p) => {
+              const selected = values.plazo === p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setField('plazo', p)}
+                  className={cn(
+                    'rounded-lg border px-2 py-1 text-[11.5px] font-medium transition-all',
+                    selected
+                      ? 'border-bosque-600 bg-bosque-600 text-crema shadow-sm'
+                      : 'border-bosque-200 bg-white text-bosque-700 hover:border-bosque-400 hover:bg-bosque-50',
+                    p === '12m+' && 'col-span-2'
+                  )}
+                >
+                  {LEAD_GATE_PLAZO_LABELS[p]}
+                </button>
+              );
+            })}
+          </div>
+          {errors.plazo && (
+            <p className="mt-0.5 text-[11px] text-red-600">{errors.plazo}</p>
+          )}
+        </div>
+
         {error && (
           <div
             role="alert"
@@ -134,33 +202,75 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'mt-1 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
-            submitting
-              ? 'cursor-wait bg-bosque-400 text-crema'
-              : 'bg-gradient-launcher text-crema shadow-md hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]'
-          )}
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Conectando…
-            </>
-          ) : (
-            <>
-              Iniciar conversación
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+        <div className="mt-0.5 flex flex-col gap-1.5">
+          <button
+            type="submit"
+            disabled={submitting !== null}
+            className={cn(
+              'flex items-center justify-center gap-2 rounded-xl border-2 border-transparent px-4 py-2.5 text-sm font-semibold transition-all',
+              submitting === 'web'
+                ? 'cursor-wait bg-bosque-400 text-crema'
+                : 'bg-gradient-launcher text-crema shadow-md hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]',
+              submitting && submitting !== 'web' && 'opacity-60'
+            )}
+          >
+            {submitting === 'web' ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Conectando…
+              </>
+            ) : (
+              <>
+                Continuar aquí en el chat
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
 
-        <p className="mt-1 flex items-center justify-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bosque-400">
-          <Lock className="h-3 w-3" aria-hidden="true" />
-          Tus datos son privados · No spam
-        </p>
+          <button
+            type="button"
+            onClick={() => runSubmit('whatsapp')}
+            disabled={submitting !== null}
+            className={cn(
+              'flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold transition-all',
+              submitting === 'whatsapp'
+                ? 'cursor-wait border-emerald-400 bg-emerald-50 text-emerald-700'
+                : 'border-emerald-500 bg-white text-emerald-700 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md active:scale-[0.98]',
+              submitting && submitting !== 'whatsapp' && 'opacity-60'
+            )}
+          >
+            {submitting === 'whatsapp' ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Abriendo WhatsApp…
+              </>
+            ) : (
+              <>
+                <MessageCircle className="h-4 w-4" strokeWidth={2.5} />
+                Continuar por WhatsApp
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
+          <p className="flex h-4 items-center gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-bosque-800">
+            <Lock aria-hidden className="h-3 w-3 shrink-0" strokeWidth={2.5} />
+            <span>Conversación privada</span>
+          </p>
+          <p className="flex h-4 items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-bosque-800">
+            <span>Powered by</span>
+            <img
+              src="/assets/terra-segura-logo.webp"
+              alt="Terra Segura"
+              className="h-4 w-auto object-contain"
+              style={{
+                filter:
+                  'brightness(0) saturate(100%) invert(17%) sepia(44%) saturate(626%) hue-rotate(108deg) brightness(94%) contrast(92%)',
+              }}
+            />
+          </p>
+        </div>
       </div>
     </form>
   );
