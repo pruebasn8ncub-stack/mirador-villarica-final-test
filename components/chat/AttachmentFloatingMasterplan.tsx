@@ -89,12 +89,6 @@ export function AttachmentFloatingMasterplan({
     dragRef.current = null;
   };
 
-  const legendItems: { color: string; label: string }[] = [
-    { color: 'bg-red-500', label: 'Vendidas' },
-    { color: 'bg-blue-500', label: 'Reservadas' },
-    { color: 'bg-white ring-1 ring-bosque-300', label: 'Disponibles' },
-  ];
-
   const inlinePreview = (
     <div className="mt-2 flex flex-col gap-2 overflow-hidden rounded-xl border border-bosque-100 bg-white p-2 shadow-sm">
       <button
@@ -118,14 +112,6 @@ export function AttachmentFloatingMasterplan({
           Masterplan
         </span>
       </button>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
-        {legendItems.map((i) => (
-          <span key={i.label} className="flex items-center gap-1.5 text-[11px] font-medium text-bosque-700">
-            <span className={`h-2.5 w-2.5 rounded-sm ${i.color}`} aria-hidden />
-            {i.label}
-          </span>
-        ))}
-      </div>
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -229,17 +215,6 @@ export function AttachmentFloatingMasterplan({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-bosque-100 bg-crema px-4 py-2.5">
-                {legendItems.map((i) => (
-                  <span
-                    key={i.label}
-                    className="flex items-center gap-1.5 text-[11.5px] font-semibold text-bosque-800"
-                  >
-                    <span className={`h-3 w-3 rounded-sm ${i.color}`} aria-hidden />
-                    {i.label}
-                  </span>
-                ))}
-              </div>
             </motion.div>
           </AnimatePresence>,
           document.body
