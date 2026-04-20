@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LuciaCharacter } from './LuciaCharacter';
 
@@ -20,7 +20,7 @@ interface ChatLauncherProps {
 }
 
 const DEFAULT_BUBBLE =
-  'Habla con nuestra asesora virtual 24/7 y resuelve todas tus dudas';
+  '¿Te interesa un sitio en Mirador? Te muestro precios, planos y disponibilidad al instante.';
 
 export function ChatLauncher({
   isOpen,
@@ -31,42 +31,24 @@ export function ChatLauncher({
   bubbleMessage = DEFAULT_BUBBLE,
 }: ChatLauncherProps) {
   const [bubbleVisible, setBubbleVisible] = useState(false);
-  const [bubbleDismissed, setBubbleDismissed] = useState(false);
 
-  // La burbuja aparece tras un delay corto la primera vez de la sesión y
-  // se mantiene hasta que el usuario la cierra o abra el chat.
+  // La burbuja aparece tras un delay corto y permanece visible hasta que
+  // el usuario abra el chat (no es descartable — es el CTA principal).
   useEffect(() => {
     if (!showBubble || isOpen) return;
-    if (typeof window === 'undefined') return;
-
-    const DISMISS_KEY = 'mirador-chat-bubble-dismissed';
-    if (sessionStorage.getItem(DISMISS_KEY) === '1') {
-      setBubbleDismissed(true);
-      return;
-    }
     const t = setTimeout(() => setBubbleVisible(true), bubbleDelayMs);
     return () => clearTimeout(t);
   }, [showBubble, isOpen, bubbleDelayMs]);
 
-  // Al abrir el chat, esconder la burbuja
   useEffect(() => {
     if (isOpen) setBubbleVisible(false);
   }, [isOpen]);
 
-  const dismissBubble = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setBubbleVisible(false);
-    setBubbleDismissed(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('mirador-chat-bubble-dismissed', '1');
-    }
-  };
-
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex items-end gap-3 md:bottom-6 md:right-6">
-      {/* Burbuja de mensaje lateral — a la izquierda del launcher */}
+    <div className="fixed bottom-5 right-5 z-40 flex items-center gap-3 md:bottom-6 md:right-6">
+      {/* Burbuja de mensaje lateral — CTA persistente a la izquierda del launcher */}
       <AnimatePresence>
-        {bubbleVisible && !isOpen && !bubbleDismissed && (
+        {bubbleVisible && !isOpen && (
           <motion.button
             type="button"
             onClick={onClick}
@@ -75,36 +57,33 @@ export function ChatLauncher({
             exit={{ opacity: 0, x: 8, scale: 0.95, transition: { duration: 0.18 } }}
             transition={{ type: 'spring', stiffness: 240, damping: 20, delay: 0.1 }}
             className={cn(
-              'preview-tail-right relative mb-2 max-w-[260px] rounded-2xl bg-white',
-              'border border-bosque-100 px-4 py-3 pr-9 text-left shadow-preview',
-              'hover:shadow-lg transition-all hover:-translate-y-0.5',
+              'preview-tail-right group relative max-w-[230px] rounded-2xl bg-white text-left',
+              'border border-bosque-100 shadow-preview',
+              'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:border-mostaza-300',
               'animate-bubble-float'
             )}
-            aria-label="Abrir chat con el mensaje de bienvenida"
+            aria-label="Abrir chat con Lucía, asesora virtual"
           >
-            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-mostaza-500">
-              Asesora virtual · Lucía
-            </p>
-            <p className="mt-1 text-[13.5px] font-medium leading-snug text-bosque-800">
-              👋 {bubbleMessage}
-            </p>
-
-            {/* Botón cerrar */}
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={dismissBubble}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  dismissBubble(e as unknown as React.MouseEvent);
-                }
-              }}
-              className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-bosque-400 hover:bg-bosque-50 hover:text-bosque-700"
-              aria-label="Cerrar sugerencia"
-            >
-              <X className="h-3 w-3" />
-            </span>
+            <div className="px-3.5 py-2.5">
+              <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-mostaza-500">
+                <span className="relative inline-flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-70" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                </span>
+                Asesora virtual · Lucía
+              </p>
+              <p className="mt-1 text-[12.5px] font-medium leading-snug text-bosque-900">
+                👋 {bubbleMessage}
+              </p>
+              <p className="mt-1.5 flex items-center gap-1 text-[10.5px] font-semibold text-bosque-700 transition-colors group-hover:text-mostaza-500">
+                <span>Toca para conversar</span>
+                <ArrowRight
+                  className="h-2.5 w-2.5 transition-transform group-hover:translate-x-0.5"
+                  strokeWidth={2.5}
+                  aria-hidden
+                />
+              </p>
+            </div>
           </motion.button>
         )}
       </AnimatePresence>
