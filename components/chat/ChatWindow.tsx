@@ -318,6 +318,10 @@ export function ChatWindow({
                 src="/assets/terra-segura-logo.webp"
                 alt="Terra Segura"
                 className="h-4 w-auto object-contain"
+                style={{
+                  filter:
+                    'brightness(0) saturate(100%) invert(18%) sepia(40%) saturate(600%) hue-rotate(90deg) brightness(95%) contrast(95%)',
+                }}
               />
             </p>
           )}
