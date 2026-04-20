@@ -298,7 +298,7 @@ export function ChatWindow({
         </div>
 
         <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
-          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-bosque-400">
+          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-bosque-800">
             <span aria-hidden>🔒</span>
             Conversación privada
           </p>
@@ -312,7 +312,7 @@ export function ChatWindow({
               {input.length}/{MAX_MESSAGE_LENGTH}
             </p>
           ) : (
-            <p className="flex items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-bosque-400">
+            <p className="flex items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-bosque-800">
               <span>Powered by</span>
               <img
                 src="/assets/terra-segura-logo.webp"
@@ -320,7 +320,7 @@ export function ChatWindow({
                 className="h-4 w-auto object-contain"
                 style={{
                   filter:
-                    'brightness(0) saturate(100%) invert(18%) sepia(40%) saturate(600%) hue-rotate(90deg) brightness(95%) contrast(95%)',
+                    'brightness(0) saturate(100%) invert(17%) sepia(44%) saturate(626%) hue-rotate(108deg) brightness(94%) contrast(92%)',
                 }}
               />
             </p>
