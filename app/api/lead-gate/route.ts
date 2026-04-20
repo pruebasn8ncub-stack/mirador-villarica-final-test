@@ -16,7 +16,33 @@ const leadGateSchema = z.object({
   plazo: z.enum(['inmediato', '1-3m', '3-6m', '6-12m', '12m+']),
 });
 
-async function notifyN8n(payload: z.infer<typeof leadGateSchema>) {
+type LeadGatePayload = z.infer<typeof leadGateSchema>;
+
+// Normaliza el valor del formulario al valor canónico BANT+ usado en DB.
+const PLAZO_GATE_TO_CANONICAL: Record<LeadGatePayload['plazo'], string> = {
+  inmediato: 'ahora',
+  '1-3m': '1_a_3_meses',
+  '3-6m': '3_a_6_meses',
+  '6-12m': '6_a_12_meses',
+  '12m+': 'mas_de_1_ano',
+};
+
+// Puntos de la columna "plazo" del framework BANT+ (ver n8n-workflows/scoring-spec.md).
+const PLAZO_POINTS: Record<LeadGatePayload['plazo'], number> = {
+  inmediato: 22,
+  '1-3m': 22,
+  '3-6m': 15,
+  '6-12m': 8,
+  '12m+': 3,
+};
+
+// Score inicial: plazo + contacto (whatsapp && email = 10). Nombre alcanzaría para 3.
+// Con los 3 contactos que pide el gate, contacto vale 10.
+function computeInitialScoreNumeric(plazo: LeadGatePayload['plazo']): number {
+  return PLAZO_POINTS[plazo] + 10;
+}
+
+async function notifyN8n(payload: LeadGatePayload, scoreNumeric: number) {
   const webhookUrl = process.env.N8N_LEAD_GATE_WEBHOOK_URL;
   const webhookToken = process.env.N8N_WEBHOOK_TOKEN;
   if (!webhookUrl) return;
@@ -29,7 +55,12 @@ async function notifyN8n(payload: z.infer<typeof leadGateSchema>) {
         'Content-Type': 'application/json',
         ...(webhookToken ? { Authorization: `Bearer ${webhookToken}` } : {}),
       },
-      body: JSON.stringify({ ...payload, score: 'FRIO', source: 'lead_gate' }),
+      body: JSON.stringify({
+        ...payload,
+        score: 'FRIO',
+        score_numeric: scoreNumeric,
+        source: 'lead_gate',
+      }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -54,9 +85,12 @@ export async function POST(req: Request) {
     );
   }
 
+  const scoreNumeric = computeInitialScoreNumeric(parsed.data.plazo);
+  const plazoCanonical = PLAZO_GATE_TO_CANONICAL[parsed.data.plazo];
+
   const config = getSupabaseConfig();
   if (!config) {
-    await notifyN8n(parsed.data);
+    await notifyN8n(parsed.data, scoreNumeric);
     return NextResponse.json({ ok: true, persisted: false });
   }
 
@@ -68,14 +102,25 @@ export async function POST(req: Request) {
         nombre: parsed.data.nombre,
         whatsapp: parsed.data.whatsapp,
         email: parsed.data.email,
-        plazo: parsed.data.plazo,
+        plazo: plazoCanonical,
         score: 'FRIO',
+        score_numeric: scoreNumeric,
+        score_history: [
+          {
+            at: new Date().toISOString(),
+            action: 'gate_submit',
+            source: 'form',
+            plazo_raw: parsed.data.plazo,
+            plazo_canonical: plazoCanonical,
+            score_numeric: scoreNumeric,
+          },
+        ],
         project_slug: 'mirador-villarrica',
       },
       { onConflict: 'session_id' },
       config
     );
-    await notifyN8n(parsed.data);
+    await notifyN8n(parsed.data, scoreNumeric);
     return NextResponse.json({ ok: true, persisted: true, lead_id: rows[0]?.id });
   } catch (err) {
     return NextResponse.json(

@@ -1,0 +1,157 @@
+{
+  "name": "[Tool] Mirador - solicitar_broker",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"session_id\": \"uuid-del-session\",\n  \"motivo\": \"lead_solicito\",\n  \"contexto\": \"Pidio explicitamente hablar con un asesor porque quiere coordinar visita presencial\"\n}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Valida inputs y normaliza motivo.\nconst d = $json;\n\nif (!d.session_id || typeof d.session_id !== 'string') {\n  throw new Error('session_id requerido');\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) {\n  throw new Error('session_id debe ser UUID valido');\n}\n\nconst MOTIVO_ENUM = new Set(['lead_solicito', 'bot_no_pudo_resolver', 'score_alto_proactivo']);\nconst motivo = MOTIVO_ENUM.has(d.motivo) ? d.motivo : 'lead_solicito';\nconst contexto = (d.contexto || '').toString().slice(0, 500);\n\nreturn [{ json: {\n  session_id: d.session_id,\n  motivo,\n  contexto,\n} }];"
+      },
+      "id": "validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $json.session_id }}&select=id,nombre,whatsapp,email,intencion,plazo,presupuesto,uso,forma_pago,rango_presupuesto,decisor,pre_aprobacion,resumen,score,score_numeric,score_history",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+          ]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "fetch-current",
+      "name": "Fetch current lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construye PATCH body y payload para notificar.\nconst input = $('Validate Input').first().json;\nconst current = $json;\n\nif (!Array.isArray(current) || current.length === 0) {\n  return [{ json: {\n    ok: false,\n    reason: 'lead_no_existe',\n    session_id: input.session_id,\n    tool_output_text: 'No encontre tu registro de sesion. Por favor escribeme tu nombre, WhatsApp y correo para pasarle tus datos al equipo.',\n  } }];\n}\n\nconst lead = current[0];\nconst prevHistory = Array.isArray(lead.score_history) ? lead.score_history : [];\nconst prevScoreNumeric = typeof lead.score_numeric === 'number' ? lead.score_numeric : 0;\nconst newScoreNumeric = Math.max(prevScoreNumeric, 75);\n\nconst historyEntry = {\n  at: new Date().toISOString(),\n  action: 'broker_requested',\n  motivo: input.motivo,\n  contexto: input.contexto,\n  score_numeric_before: prevScoreNumeric,\n  score_numeric_after: newScoreNumeric,\n};\n\nconst patchBody = {\n  broker_requested_at: new Date().toISOString(),\n  broker_request_reason: input.motivo,\n  score: 'CALIENTE',\n  score_numeric: newScoreNumeric,\n  score_history: [...prevHistory, historyEntry],\n};\n\nconst notifPayload = {\n  lead_id: lead.id,\n  session_id: input.session_id,\n  score: 'CALIENTE',\n  score_numeric: newScoreNumeric,\n  nombre: lead.nombre,\n  whatsapp: lead.whatsapp,\n  email: lead.email,\n  intencion: lead.intencion,\n  plazo: lead.plazo,\n  presupuesto: lead.presupuesto,\n  uso: lead.uso,\n  forma_pago: lead.forma_pago,\n  rango_presupuesto: lead.rango_presupuesto,\n  decisor: lead.decisor,\n  pre_aprobacion: lead.pre_aprobacion,\n  resumen: lead.resumen,\n  motivo: input.motivo,\n  contexto: input.contexto,\n  broker_request: true,\n};\n\nreturn [{ json: {\n  ok: true,\n  session_id: input.session_id,\n  lead_id: lead.id,\n  patchBody,\n  notifPayload,\n  nombre: lead.nombre,\n} }];"
+      },
+      "id": "build-payloads",
+      "name": "Build payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "caseSensitive": true, "typeValidation": "strict" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "check-exists",
+      "name": "Lead existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" },
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patchBody) }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "patch-lead",
+      "name": "PATCH lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pasa solo el notifPayload al siguiente node (subworkflow notificar_diego).\nconst prev = $('Build payloads').first().json;\nreturn [{ json: prev.notifPayload }];"
+      },
+      "id": "prep-notif",
+      "name": "Prep notif payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": { "__rl": true, "value": "9szkCBiLiSGJZMFz", "mode": "id" },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "call-notif",
+      "name": "Call notificar_diego",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Build payloads').first().json;\nconst notif = $json;\n\nconst primerNombre = (prepared.nombre || '').split(' ')[0] || 'hola';\n\nreturn [{ json: {\n  ok: true,\n  lead_id: prepared.lead_id,\n  session_id: prepared.session_id,\n  broker_notificado: !!(notif && notif.notified),\n  tool_output_text: `Listo ${primerNombre}, le paso tu solicitud al equipo. Te van a contactar por WhatsApp en horario lun-vie 9-19 hrs. Si es urgente, tambien podes escribir al +56 9 4032 9987.`,\n} }];"
+      },
+      "id": "final-output",
+      "name": "Final Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rama lead_no_existe: devuelve sin tocar nada.\nconst v = $json;\nreturn [{ json: {\n  ok: false,\n  reason: v.reason,\n  session_id: v.session_id,\n  tool_output_text: v.tool_output_text,\n} }];"
+      },
+      "id": "missing-output",
+      "name": "Missing Lead Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Fetch current lead", "type": "main", "index": 0 }]] },
+    "Fetch current lead": { "main": [[{ "node": "Build payloads", "type": "main", "index": 0 }]] },
+    "Build payloads": { "main": [[{ "node": "Lead existe?", "type": "main", "index": 0 }]] },
+    "Lead existe?": {
+      "main": [
+        [{ "node": "PATCH lead", "type": "main", "index": 0 }],
+        [{ "node": "Missing Lead Output", "type": "main", "index": 0 }]
+      ]
+    },
+    "PATCH lead": { "main": [[{ "node": "Prep notif payload", "type": "main", "index": 0 }]] },
+    "Prep notif payload": { "main": [[{ "node": "Call notificar_diego", "type": "main", "index": 0 }]] },
+    "Call notificar_diego": { "main": [[{ "node": "Final Output", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -356,7 +356,7 @@
     {
       "parameters": {
         "name": "calificar_lead",
-        "description": "Califica y registra al lead en la base de datos. USALA UNA SOLA VEZ POR SESION, cuando tengas al menos: nombre + algun dato de contacto (whatsapp o email) + 2 de las 3 variables (intencion, plazo, presupuesto). Valores validos: intencion=inversion|segunda_vivienda|vivir_permanente|evaluando|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | presupuesto=contado|credito|no_definido. override_caliente=true solo si el lead pide explicitamente hablar con alguien del equipo YA.",
+        "description": "Califica y registra al lead con score BANT+ 0-100. USALA UNA SOLA VEZ POR SESION, cuando tengas TODOS los datos minimos: nombre + (whatsapp o email) + al menos 3 de 4 senales (plazo, rango_presupuesto, forma_pago, uso). Si faltan datos, la tool retorna ok:false con la lista de faltantes — usa actualizar_datos_lead para ir guardando progresivamente antes de llamar a esta. Valores: uso=vivienda|segunda|inversion|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | forma_pago=contado|credito|subsidio|mixto|no_definido | rango_presupuesto='<20M'|'20-40M'|'40-60M'|'>60M'|no_definido | decisor=solo|pareja|familia|no_definido | pre_aprobacion=true|false.",
         "workflowId": {
           "__rl": true,
           "value": "ILXLExvJIJDu8KED",
@@ -369,104 +369,34 @@
             "apellido": "={{ $fromAI('apellido', 'Apellido del lead o vacio si no se dio', 'string') }}",
             "whatsapp": "={{ $fromAI('whatsapp', 'WhatsApp del lead con codigo pais (+56...) o vacio si no se dio', 'string') }}",
             "email": "={{ $fromAI('email', 'Email del lead o vacio si no se dio', 'string') }}",
-            "intencion": "={{ $fromAI('intencion', 'Uno de: inversion, segunda_vivienda, vivir_permanente, evaluando, no_definido', 'string') }}",
             "plazo": "={{ $fromAI('plazo', 'Uno de: ahora, 1_a_3_meses, 3_a_6_meses, 6_a_12_meses, mas_de_1_ano, no_definido', 'string') }}",
-            "presupuesto": "={{ $fromAI('presupuesto', 'Uno de: contado, credito, no_definido', 'string') }}",
+            "uso": "={{ $fromAI('uso', 'Uso previsto del terreno. Uno de: vivienda (vivir permanente), segunda (segunda vivienda/casa de descanso), inversion, no_definido', 'string') }}",
+            "forma_pago": "={{ $fromAI('forma_pago', 'Forma de pago prevista. Uno de: contado, credito, subsidio, mixto, no_definido', 'string') }}",
+            "pre_aprobacion": "={{ $fromAI('pre_aprobacion', 'true solo si el lead dijo explicitamente que tiene pre-aprobacion bancaria. Solo aplica si forma_pago=credito.', 'boolean') }}",
+            "decisor": "={{ $fromAI('decisor', 'Quien toma la decision de compra. Uno de: solo, pareja, familia, no_definido', 'string') }}",
+            "rango_presupuesto": "={{ $fromAI('rango_presupuesto', \"Rango de presupuesto en CLP. Uno de: '<20M', '20-40M', '40-60M', '>60M', 'no_definido'. Mapea segun lo que el lead dijo (ej: '30 millones' => '20-40M').\", 'string') }}",
+            "intencion": "={{ $fromAI('intencion', 'Legacy (compat v2). Uno de: inversion, segunda_vivienda, vivir_permanente, evaluando, no_definido. Si ya pasaste uso, puedes dejar vacio.', 'string') }}",
+            "presupuesto": "={{ $fromAI('presupuesto', 'Legacy (compat v2). Uno de: contado, credito, no_definido. Si ya pasaste forma_pago, puedes dejar vacio.', 'string') }}",
             "resumen_conversacion": "={{ $fromAI('resumen_conversacion', 'Resumen de 2-3 lineas de la conversacion y el interes del lead', 'string') }}",
             "session_id": "={{ $('Validate Payload').first().json.session_id }}",
-            "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidio hablar con alguien del equipo YA explicitamente', 'boolean') }}"
+            "override_caliente": "={{ $fromAI('override_caliente', 'true solo si el lead pidio hablar con alguien del equipo YA explicitamente. Preferi usar solicitar_broker en vez de este.', 'boolean') }}"
           },
           "schema": [
-            {
-              "id": "nombre",
-              "type": "string",
-              "required": true,
-              "displayName": "nombre",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "apellido",
-              "type": "string",
-              "required": false,
-              "displayName": "apellido",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "whatsapp",
-              "type": "string",
-              "required": false,
-              "displayName": "whatsapp",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "email",
-              "type": "string",
-              "required": false,
-              "displayName": "email",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "intencion",
-              "type": "string",
-              "required": true,
-              "displayName": "intencion",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "plazo",
-              "type": "string",
-              "required": true,
-              "displayName": "plazo",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "presupuesto",
-              "type": "string",
-              "required": true,
-              "displayName": "presupuesto",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "resumen_conversacion",
-              "type": "string",
-              "required": true,
-              "displayName": "resumen_conversacion",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "session_id",
-              "type": "string",
-              "required": true,
-              "displayName": "session_id",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "override_caliente",
-              "type": "boolean",
-              "required": false,
-              "displayName": "override_caliente",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            }
+            { "id": "nombre", "type": "string", "required": true, "displayName": "nombre", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "apellido", "type": "string", "required": false, "displayName": "apellido", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "whatsapp", "type": "string", "required": false, "displayName": "whatsapp", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "email", "type": "string", "required": false, "displayName": "email", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "plazo", "type": "string", "required": true, "displayName": "plazo", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "uso", "type": "string", "required": true, "displayName": "uso", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "forma_pago", "type": "string", "required": true, "displayName": "forma_pago", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "pre_aprobacion", "type": "boolean", "required": false, "displayName": "pre_aprobacion", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "decisor", "type": "string", "required": false, "displayName": "decisor", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "rango_presupuesto", "type": "string", "required": true, "displayName": "rango_presupuesto", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "intencion", "type": "string", "required": false, "displayName": "intencion", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "presupuesto", "type": "string", "required": false, "displayName": "presupuesto", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "resumen_conversacion", "type": "string", "required": true, "displayName": "resumen_conversacion", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "session_id", "type": "string", "required": true, "displayName": "session_id", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "override_caliente", "type": "boolean", "required": false, "displayName": "override_caliente", "defaultMatch": false, "display": true, "canBeUsedToMatch": true }
           ]
         }
       },
@@ -476,6 +406,88 @@
       "typeVersion": 2.2,
       "position": [
         1280,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "name": "actualizar_datos_lead",
+        "description": "Guarda de forma incremental los datos del lead en la base de datos. USALA cada vez que el lead revele un dato nuevo del perfil (uso, plazo, presupuesto, forma_pago, decisor, pre_aprobacion, nombre, contacto). Puedes llamarla tantas veces como quieras durante la conversacion. Solo session_id es obligatorio, el resto son opcionales — pasa solo los campos que captaste en este turno. NO retorna texto al usuario (es silenciosa). Valores validos iguales a calificar_lead: uso=vivienda|segunda|inversion|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | forma_pago=contado|credito|subsidio|mixto|no_definido | rango_presupuesto='<20M'|'20-40M'|'40-60M'|'>60M'|no_definido | decisor=solo|pareja|familia|no_definido.",
+        "workflowId": {
+          "__rl": true,
+          "value": "Bj9iqnWSvtIyHyaA",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Validate Payload').first().json.session_id }}",
+            "nombre": "={{ $fromAI('nombre', 'Nombre del lead o vacio si no se capto en este turno', 'string') }}",
+            "apellido": "={{ $fromAI('apellido', 'Apellido del lead o vacio', 'string') }}",
+            "whatsapp": "={{ $fromAI('whatsapp', 'WhatsApp con codigo pais o vacio', 'string') }}",
+            "email": "={{ $fromAI('email', 'Email o vacio', 'string') }}",
+            "plazo": "={{ $fromAI('plazo', 'Plazo de compra si se menciono este turno. Uno de: ahora, 1_a_3_meses, 3_a_6_meses, 6_a_12_meses, mas_de_1_ano, no_definido. O vacio si no aplica.', 'string') }}",
+            "uso": "={{ $fromAI('uso', 'Uso del terreno si se menciono: vivienda, segunda, inversion, no_definido. O vacio.', 'string') }}",
+            "forma_pago": "={{ $fromAI('forma_pago', 'Forma de pago: contado, credito, subsidio, mixto, no_definido. O vacio.', 'string') }}",
+            "pre_aprobacion": "={{ $fromAI('pre_aprobacion', 'true solo si dijo explicitamente que tiene pre-aprobacion bancaria', 'boolean') }}",
+            "decisor": "={{ $fromAI('decisor', 'solo, pareja, familia, no_definido. O vacio.', 'string') }}",
+            "rango_presupuesto": "={{ $fromAI('rango_presupuesto', \"Rango en CLP: '<20M', '20-40M', '40-60M', '>60M', 'no_definido'. O vacio.\", 'string') }}",
+            "resumen": "={{ $fromAI('resumen', 'Notas breves sobre lo capturado este turno', 'string') }}"
+          },
+          "schema": [
+            { "id": "session_id", "type": "string", "required": true, "displayName": "session_id", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "nombre", "type": "string", "required": false, "displayName": "nombre", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "apellido", "type": "string", "required": false, "displayName": "apellido", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "whatsapp", "type": "string", "required": false, "displayName": "whatsapp", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "email", "type": "string", "required": false, "displayName": "email", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "plazo", "type": "string", "required": false, "displayName": "plazo", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "uso", "type": "string", "required": false, "displayName": "uso", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "forma_pago", "type": "string", "required": false, "displayName": "forma_pago", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "pre_aprobacion", "type": "boolean", "required": false, "displayName": "pre_aprobacion", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "decisor", "type": "string", "required": false, "displayName": "decisor", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "rango_presupuesto", "type": "string", "required": false, "displayName": "rango_presupuesto", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "resumen", "type": "string", "required": false, "displayName": "resumen", "defaultMatch": false, "display": true, "canBeUsedToMatch": true }
+          ]
+        }
+      },
+      "id": "tool-actualizar-datos",
+      "name": "Tool actualizar_datos_lead",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "name": "solicitar_broker",
+        "description": "Deriva al lead al equipo de ventas humano (broker). USALA cuando: (1) el lead pida explicitamente hablar con asesor/humano/vendedor; (2) no puedas resolver una duda con tu KB + tools (condiciones especiales, reglamentos, orientacion exacta de lotes, etc); (3) score alto + datos completos + interes claro de avanzar — ofreceselo proactivamente antes de invocar. La tool actualiza el lead como CALIENTE, marca broker_requested_at, notifica al equipo por WhatsApp con el perfil completo + motivo y contexto, y retorna el texto de cierre para el lead. motivo: 'lead_solicito' | 'bot_no_pudo_resolver' | 'score_alto_proactivo'. contexto: 1-2 oraciones explicando por que.",
+        "workflowId": {
+          "__rl": true,
+          "value": "dI5Sl4Zzl8AR8l0k",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Validate Payload').first().json.session_id }}",
+            "motivo": "={{ $fromAI('motivo', \"Motivo del handoff. Uno de: 'lead_solicito' (lead pidio explicito), 'bot_no_pudo_resolver' (no tengo info o herramienta para responder), 'score_alto_proactivo' (score alto + lead confirmo querer avanzar).\", 'string') }}",
+            "contexto": "={{ $fromAI('contexto', 'Contexto breve (1-2 oraciones) para que el asesor sepa por que se deriva y que prioridad hay. Ej: \"Quiere coordinar visita presencial en mayo, tiene presupuesto contado.\"', 'string') }}"
+          },
+          "schema": [
+            { "id": "session_id", "type": "string", "required": true, "displayName": "session_id", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "motivo", "type": "string", "required": true, "displayName": "motivo", "defaultMatch": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "contexto", "type": "string", "required": true, "displayName": "contexto", "defaultMatch": false, "display": true, "canBeUsedToMatch": true }
+          ]
+        }
+      },
+      "id": "tool-solicitar-broker",
+      "name": "Tool solicitar_broker",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1520,
         520
       ]
     },
@@ -619,6 +631,28 @@
       ]
     },
     "Tool calificar_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool actualizar_datos_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool solicitar_broker": {
       "ai_tool": [
         [
           {
