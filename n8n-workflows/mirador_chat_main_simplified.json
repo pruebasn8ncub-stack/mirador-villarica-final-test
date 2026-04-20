@@ -164,7 +164,7 @@
     {
       "parameters": {
         "name": "consultar_disponibilidad",
-        "description": "Consulta el inventario EN VIVO (Google Sheet publico de Terra Segura, 94 parcelas). Devuelve tanto parcelas individuales como resumenes agregados (por tramo de precio, tamano, sector, destacadas) para que puedas razonar como un vendedor. Usala cuando el lead pregunte por: precios o disponibilidad por parcela, que entra en su presupuesto, tamanos especificos, parcelas destacadas, o para saber que hay disponible en general. SIEMPRE llamala antes de afirmar precio o disponibilidad. Parametros (TODOS opcionales): numero='1'..'74' o 'B1'..'B20' para busqueda puntual; estado='disponible'|'reservado'|'vendido'|'todos' (default disponible); tamano_min/tamano_max en m2 (0=sin limite); presupuesto_contado_max o presupuesto_credito_max en CLP (0=sin limite); sector='numeradas'|'lote_b'|'todas'; solo_destacadas=true para parcelas con estrella; orden='destacadas_primero' (default) | 'precio_asc' | 'precio_desc' | 'tamano_asc' | 'tamano_desc'; max_resultados entre 1 y 200 (default 5; pasa 100 o 200 para obtener el listado COMPLETO del inventario).",
+        "description": "Consulta el inventario EN VIVO (Google Sheet de Terra Segura) y el valor UF del dia. Invocala en CADA turno donde el lead pregunte por precios, disponibilidad, lotes, financiamiento, cuotas, recomendaciones o alternativas. Dos modos de uso: (1) si el lead menciona un lote concreto, pasa numero='1'..'74' o 'B1'..'B20' y recibis la info completa de ese lote; (2) si el lead NO menciona un lote, pasa numero='' (string vacio) y recibis TODAS las parcelas disponibles con su info completa para poder recomendar. Cada parcela retornada incluye: estado, tamano_m2, precio_contado, descuento_pct, precio_credito, pie_minimo_50pct, cuota_mensual_uf (36 cuotas en UF) y cuota_mensual_clp (equivalente al UF de hoy). SIEMPRE llamala antes de afirmar cualquier precio, cuota o disponibilidad.",
         "workflowId": {
           "__rl": true,
           "value": "Xa432ZfJ7y0M8iw2",
@@ -173,16 +173,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "numero": "={{ $fromAI('numero', \"SIEMPRE inclui este campo. Numero de parcela especifica: '1'..'74' o 'B1'..'B20' si buscas una parcela puntual; si no, pasa string vacio ''.\", 'string') }}",
-            "estado": "={{ $fromAI('estado', \"Estado buscado: 'disponible' (default), 'reservado', 'vendido' o 'todos'.\", 'string') }}",
-            "tamano_min": "={{ $fromAI('tamano_min', 'Tamano minimo en m2. 0 = sin limite.', 'number') }}",
-            "tamano_max": "={{ $fromAI('tamano_max', 'Tamano maximo en m2. 0 = sin limite.', 'number') }}",
-            "presupuesto_contado_max": "={{ $fromAI('presupuesto_contado_max', 'Presupuesto maximo contado en CLP. 0 = sin limite.', 'number') }}",
-            "presupuesto_credito_max": "={{ $fromAI('presupuesto_credito_max', 'Presupuesto maximo credito (valor total) en CLP. 0 = sin limite.', 'number') }}",
-            "sector": "={{ $fromAI('sector', \"Sector: 'numeradas' (1-74), 'lote_b' (B1-B20) o 'todas' (default).\", 'string') }}",
-            "solo_destacadas": "={{ $fromAI('solo_destacadas', 'true para mostrar solo parcelas destacadas (estrella).', 'boolean') }}",
-            "orden": "={{ $fromAI('orden', \"Orden del resultado: 'destacadas_primero' (default), 'precio_asc' (mas baratas primero), 'precio_desc' (mas caras primero), 'tamano_asc' o 'tamano_desc'.\", 'string') }}",
-            "max_resultados": "={{ $fromAI('max_resultados', 'Cantidad maxima de parcelas a devolver (1-200, default 5; pasa 100 o 200 para recibir el listado COMPLETO del inventario y poder razonar sobre todo).', 'number') }}"
+            "numero": "={{ $fromAI('numero', \"Numero del lote si el lead pregunta por uno especifico: '1'..'74' (parcelas numeradas) o 'B1'..'B20' (lotes de ampliacion). Si el lead NO menciona un lote concreto, pasa string vacio '' para recibir TODAS las parcelas disponibles y poder recomendar.\", 'string') }}"
           },
           "schema": [
             {
@@ -190,87 +181,6 @@
               "type": "string",
               "required": true,
               "displayName": "numero",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "estado",
-              "type": "string",
-              "required": true,
-              "displayName": "estado",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "tamano_min",
-              "type": "number",
-              "required": true,
-              "displayName": "tamano_min",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "tamano_max",
-              "type": "number",
-              "required": true,
-              "displayName": "tamano_max",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "presupuesto_contado_max",
-              "type": "number",
-              "required": true,
-              "displayName": "presupuesto_contado_max",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "presupuesto_credito_max",
-              "type": "number",
-              "required": true,
-              "displayName": "presupuesto_credito_max",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "sector",
-              "type": "string",
-              "required": true,
-              "displayName": "sector",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "solo_destacadas",
-              "type": "boolean",
-              "required": true,
-              "displayName": "solo_destacadas",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "orden",
-              "type": "string",
-              "required": true,
-              "displayName": "orden",
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "max_resultados",
-              "type": "number",
-              "required": true,
-              "displayName": "max_resultados",
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true

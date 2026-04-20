@@ -4,82 +4,64 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"numero\": \"\",\n  \"estado\": \"disponible\",\n  \"tamano_min\": 0,\n  \"tamano_max\": 0,\n  \"presupuesto_contado_max\": 0,\n  \"presupuesto_credito_max\": 0,\n  \"sector\": \"todas\",\n  \"solo_destacadas\": false,\n  \"orden\": \"destacadas_primero\",\n  \"max_resultados\": 5\n}"
+        "jsonExample": "{\n  \"numero\": \"\"\n}"
       },
       "id": "trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [
-        240,
-        300
-      ]
+      "position": [240, 300]
     },
     {
       "parameters": {
         "url": "https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/export?format=csv&gid=1975618999",
         "options": {
-          "redirect": {
-            "redirect": {
-              "followRedirects": true
-            }
-          },
+          "redirect": { "redirect": { "followRedirects": true } },
           "timeout": 10000,
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
+          "response": { "response": { "responseFormat": "text" } }
         }
       },
       "id": "fetch-sheet",
       "name": "Fetch Google Sheet CSV",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        460,
-        300
-      ]
+      "position": [460, 300]
     },
     {
       "parameters": {
-        "jsCode": "// Lee el CSV de Google Sheets (fuente de verdad del inventario), filtra, ordena, resume y devuelve.\n// Inputs (todos opcionales excepto si se busca por numero):\n//   numero (string): '1'..'74' o 'B1'..'B20' \u2014 busqueda puntual\n//   estado (string): 'disponible' (default) | 'reservado' | 'vendido' | 'todos'\n//   tamano_min / tamano_max (number, m2): 0 = sin limite\n//   presupuesto_contado_max / presupuesto_credito_max (number, CLP): 0 = sin limite\n//   sector (string): 'numeradas' | 'lote_b' | 'todas' (default)\n//   solo_destacadas (boolean): true = solo parcelas con estrella\n//   orden (string): 'destacadas_primero' (default) | 'precio_asc' | 'precio_desc' | 'tamano_asc' | 'tamano_desc'\n//   max_resultados (number): default 5, clamp a [1, 200] (sin limite practico: 94 parcelas total)\n\nconst csvText = (($input.first().json.data ?? $input.first().json.body) || '').toString();\nif (!csvText || csvText.length < 100) {\n  return [{ json: {\n    error: 'csv_fetch_failed',\n    tool_output_text: 'No pude consultar el inventario en este momento. Deja que Diego te confirme por WhatsApp.',\n  }}];\n}\n\nconst q = $('Execute Workflow Trigger').first().json || {};\nconst numero = (q.numero ?? '').toString().trim().toUpperCase();\nconst estado = ((q.estado ?? 'disponible').toString().trim().toLowerCase()) || 'disponible';\nconst tamano_min = Number(q.tamano_min) || 0;\nconst tamano_max = Number(q.tamano_max) || 0;\nconst presupuesto_contado_max = Number(q.presupuesto_contado_max) || 0;\nconst presupuesto_credito_max = Number(q.presupuesto_credito_max) || 0;\nconst sector = ((q.sector ?? 'todas').toString().trim().toLowerCase()) || 'todas';\nconst solo_destacadas = !!q.solo_destacadas;\nconst orden = ((q.orden ?? 'destacadas_primero').toString().trim().toLowerCase()) || 'destacadas_primero';\nconst max_resultados = Math.max(1, Math.min(200, Number(q.max_resultados) || 5));\n\n// ---- CSV parser (maneja comillas y comas dentro de campos) ----\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [];\n  let field = '';\n  let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i+1] === '\"') { field += '\"'; i++; }\n      else { inQuotes = !inQuotes; }\n    } else if (c === ',' && !inQuotes) {\n      row.push(field); field = '';\n    } else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i+1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else {\n      field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nconst rows = parseCsv(csvText);\n\nconst parseMoney = (s) => {\n  if (!s) return null;\n  const t = s.toString();\n  if (t.includes('#DIV') || t.includes('#REF') || t.includes('#VALUE')) return null;\n  const cleaned = t.replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseSize = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseCuotaMensual = (s) => parseMoney(s);\nconst normalizeEstado = (raw) => {\n  const e = (raw || '').toString().trim().toLowerCase();\n  if (e.startsWith('disponi')) return 'disponible';\n  if (e.startsWith('reserv')) return 'reservado';\n  if (e.startsWith('vendi')) return 'vendido';\n  return e || 'desconocido';\n};\n\nconst parcelas = [];\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  const destacada = ((r[0] || '').toString().trim() === '\u2b50');\n  parcelas.push({\n    numero: lote.toUpperCase(),\n    destacada,\n    estado: normalizeEstado(r[2]),\n    tamano_m2: parseSize(r[3]),\n    precio_contado: parseMoney(r[6]),\n    descuento_pct: (r[7] || '').toString().replace(/[^0-9]/g, '') ? parseInt(r[7].replace(/[^0-9]/g, ''), 10) : null,\n    precio_credito: parseMoney(r[9]),\n    pie_minimo: parseMoney(r[10]),\n    cuota_mensual: parseCuotaMensual(r[11]),\n    es_lote_b: lote.toUpperCase().startsWith('B'),\n  });\n}\n\n// ---- Resumen global (antes de cualquier filtro, sobre todo el sheet) ----\nfunction buildResumenGlobal(all) {\n  const disp = all.filter(p => p.estado === 'disponible');\n  const tramos = {};\n  const tamanos = {};\n  const numeradas = disp.filter(p => !p.es_lote_b).length;\n  const loteB = disp.filter(p => p.es_lote_b).length;\n  let precMin = null, precMax = null, cuotaMin = null, cuotaMax = null;\n  for (const p of disp) {\n    if (p.precio_contado !== null) {\n      const key = p.precio_contado.toString();\n      tramos[key] = (tramos[key] || 0) + 1;\n      if (precMin === null || p.precio_contado < precMin) precMin = p.precio_contado;\n      if (precMax === null || p.precio_contado > precMax) precMax = p.precio_contado;\n    }\n    if (p.tamano_m2 !== null) {\n      const key = p.tamano_m2.toString();\n      tamanos[key] = (tamanos[key] || 0) + 1;\n    }\n    if (p.cuota_mensual !== null) {\n      if (cuotaMin === null || p.cuota_mensual < cuotaMin) cuotaMin = p.cuota_mensual;\n      if (cuotaMax === null || p.cuota_mensual > cuotaMax) cuotaMax = p.cuota_mensual;\n    }\n  }\n  return {\n    total_inventario: all.length,\n    total_disponibles: disp.length,\n    total_reservadas: all.filter(p => p.estado === 'reservado').length,\n    total_vendidas: all.filter(p => p.estado === 'vendido').length,\n    destacadas_disponibles: disp.filter(p => p.destacada).length,\n    destacadas_ids: disp.filter(p => p.destacada).map(p => p.numero),\n    disponibles_por_tramo_contado: tramos,\n    disponibles_por_tamano_m2: tamanos,\n    disponibles_por_sector: { numeradas, lote_b: loteB },\n    rango_precio_contado: { min: precMin, max: precMax },\n    rango_cuota_mensual: { min: cuotaMin, max: cuotaMax },\n  };\n}\nconst resumen_global = buildResumenGlobal(parcelas);\n\n// --- Modo 1: busqueda puntual por numero ---\nif (numero) {\n  const match = parcelas.find(p => p.numero === numero);\n  if (!match) {\n    return [{ json: {\n      query: { numero },\n      resumen_global,\n      total_matches: 0,\n      tool_output_text: `No encuentro la parcela ${numero} en el inventario. Las numeradas van del 1 al 74 y hay lotes de ampliacion B1 al B20.`,\n    }}];\n  }\n  const disp = match.estado === 'disponible';\n  const resv = match.estado === 'reservado';\n  const vend = match.estado === 'vendido';\n  let text;\n  if (disp) {\n    const contado = match.precio_contado ? `$${match.precio_contado.toLocaleString('es-CL')}` : 'precio a confirmar';\n    const credito = match.precio_credito ? `$${match.precio_credito.toLocaleString('es-CL')}` : 'precio a confirmar';\n    const pie = match.pie_minimo ? `$${match.pie_minimo.toLocaleString('es-CL')}` : 'pie a confirmar';\n    const cuota = match.cuota_mensual ? `$${match.cuota_mensual.toLocaleString('es-CL')} mensuales (indexadas en UF)` : 'cuota a confirmar';\n    const dest = match.destacada ? ' \u2b50 (destacada)' : '';\n    text = `La parcela ${match.numero}${dest} esta disponible. Tamano ${match.tamano_m2} m\u00b2. Contado ${contado} (dcto ${match.descuento_pct}%). Credito ${credito} con 50% pie (${pie}) + 36 cuotas de ${cuota}.`;\n  } else if (resv) {\n    text = `La parcela ${match.numero} esta reservada actualmente. Si te interesa, te aviso cuando quede libre o te muestro alternativas parecidas.`;\n  } else if (vend) {\n    text = `La parcela ${match.numero} ya esta vendida. Te puedo mostrar alternativas parecidas en tamano y precio.`;\n  } else {\n    text = `La parcela ${match.numero} no tiene estado claro en el inventario. Deja que Diego te lo confirme.`;\n  }\n  return [{ json: {\n    query: { numero },\n    resumen_global,\n    total_matches: 1,\n    parcela: match,\n    tool_output_text: text,\n  }}];\n}\n\n// --- Modo 2: filtrado ---\nlet filtered = parcelas;\nif (estado !== 'todos') {\n  filtered = filtered.filter(p => p.estado === estado);\n}\nif (sector === 'numeradas') filtered = filtered.filter(p => !p.es_lote_b);\nelse if (sector === 'lote_b') filtered = filtered.filter(p => p.es_lote_b);\nif (tamano_min > 0) filtered = filtered.filter(p => (p.tamano_m2 ?? 0) >= tamano_min);\nif (tamano_max > 0) filtered = filtered.filter(p => (p.tamano_m2 ?? Infinity) <= tamano_max);\nif (presupuesto_contado_max > 0) filtered = filtered.filter(p => p.precio_contado !== null && p.precio_contado <= presupuesto_contado_max);\nif (presupuesto_credito_max > 0) filtered = filtered.filter(p => p.precio_credito !== null && p.precio_credito <= presupuesto_credito_max);\nif (solo_destacadas) filtered = filtered.filter(p => p.destacada);\n\n// Orden configurable\nconst byNumero = (a, b) => a.numero.localeCompare(b.numero, 'es', { numeric: true });\nconst sorters = {\n  'destacadas_primero': (a, b) => {\n    if (a.destacada !== b.destacada) return a.destacada ? -1 : 1;\n    const pa = a.precio_contado ?? Infinity;\n    const pb = b.precio_contado ?? Infinity;\n    if (pa !== pb) return pa - pb;\n    return byNumero(a, b);\n  },\n  'precio_asc': (a, b) => {\n    const pa = a.precio_contado ?? Infinity;\n    const pb = b.precio_contado ?? Infinity;\n    if (pa !== pb) return pa - pb;\n    return byNumero(a, b);\n  },\n  'precio_desc': (a, b) => {\n    const pa = a.precio_contado ?? -Infinity;\n    const pb = b.precio_contado ?? -Infinity;\n    if (pa !== pb) return pb - pa;\n    return byNumero(a, b);\n  },\n  'tamano_asc': (a, b) => {\n    const ta = a.tamano_m2 ?? Infinity;\n    const tb = b.tamano_m2 ?? Infinity;\n    if (ta !== tb) return ta - tb;\n    return byNumero(a, b);\n  },\n  'tamano_desc': (a, b) => {\n    const ta = a.tamano_m2 ?? -Infinity;\n    const tb = b.tamano_m2 ?? -Infinity;\n    if (ta !== tb) return tb - ta;\n    return byNumero(a, b);\n  },\n};\nconst sorter = sorters[orden] || sorters['destacadas_primero'];\nfiltered.sort(sorter);\n\nconst shown = filtered.slice(0, max_resultados);\nconst total_matches = filtered.length;\n\n// Resumen filtrado (para reasoning del agente)\nfunction buildResumenFiltrado(set) {\n  if (set.length === 0) return { vacio: true };\n  const tramos = {};\n  let precMin = null, precMax = null;\n  let destacadas = 0, numeradas = 0, loteB = 0;\n  const tamanos = {};\n  for (const p of set) {\n    if (p.destacada) destacadas++;\n    if (p.es_lote_b) loteB++; else numeradas++;\n    if (p.precio_contado !== null) {\n      const key = p.precio_contado.toString();\n      tramos[key] = (tramos[key] || 0) + 1;\n      if (precMin === null || p.precio_contado < precMin) precMin = p.precio_contado;\n      if (precMax === null || p.precio_contado > precMax) precMax = p.precio_contado;\n    }\n    if (p.tamano_m2 !== null) {\n      const key = p.tamano_m2.toString();\n      tamanos[key] = (tamanos[key] || 0) + 1;\n    }\n  }\n  return {\n    destacadas,\n    por_sector: { numeradas, lote_b: loteB },\n    por_tramo_contado: tramos,\n    por_tamano_m2: tamanos,\n    rango_precio_contado: { min: precMin, max: precMax },\n    numeros: set.map(p => p.numero),\n  };\n}\nconst resumen_filtrado = buildResumenFiltrado(filtered);\n\n// tool_output_text narrativo\nlet text;\nif (total_matches === 0) {\n  text = `No tengo parcelas que cumplan esos criterios ahora mismo. \u00bfRelajamos algun filtro (presupuesto o tamano) o te aviso cuando entre una?`;\n} else {\n  const fmtM = (n) => n ? `$${n.toLocaleString('es-CL')}` : '\u2014';\n  const lines = shown.map(p => {\n    const star = p.destacada ? '\u2b50 ' : '';\n    const pCont = fmtM(p.precio_contado);\n    const pCred = fmtM(p.precio_credito);\n    return `${star}Parcela ${p.numero} (${p.tamano_m2} m\u00b2) \u2014 contado ${pCont} / credito ${pCred}`;\n  });\n  const extra = total_matches > max_resultados ? ` (muestro ${max_resultados} de ${total_matches})` : '';\n  text = `Tengo ${total_matches} parcela${total_matches > 1 ? 's' : ''} que calza${total_matches > 1 ? 'n' : ''}${extra}:\\n${lines.join('\\n')}`;\n}\n\nreturn [{ json: {\n  query: {\n    estado, tamano_min, tamano_max, presupuesto_contado_max, presupuesto_credito_max,\n    sector, solo_destacadas, orden, max_resultados,\n  },\n  resumen_global,\n  resumen_filtrado,\n  total_matches,\n  shown_count: shown.length,\n  parcelas: shown,\n  tool_output_text: text,\n}}];"
+        "url": "https://mindicador.cl/api/uf",
+        "options": {
+          "timeout": 5000,
+          "response": { "response": { "neverError": true } }
+        }
       },
-      "id": "parse-and-filter",
-      "name": "Parse CSV and Filter",
+      "id": "fetch-uf",
+      "name": "Fetch UF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Google Sheet CSV + UF actual. Devuelve info completa del lote solicitado\n// o lista completa de disponibles si no viene numero.\n// Campos por lote: numero, estado, tamano_m2, precio_contado, descuento_pct,\n//                  precio_credito, pie_minimo, cuota_mensual_clp, cuota_mensual_uf.\n\nconst uf = $json;\nconst ufValor = uf && uf.serie && uf.serie[0] && typeof uf.serie[0].valor === 'number'\n  ? uf.serie[0].valor\n  : null;\nconst ufFecha = uf && uf.serie && uf.serie[0] ? uf.serie[0].fecha : null;\n\nconst sheetItem = $('Fetch Google Sheet CSV').first().json;\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\nif (!csvText || csvText.length < 100) {\n  return [{ json: {\n    ok: false,\n    error: 'csv_fetch_failed',\n    tool_output_text: 'No pude consultar el inventario en este momento. Deja que Diego te confirme por WhatsApp.',\n  } }];\n}\n\nconst input = $('Execute Workflow Trigger').first().json || {};\nconst numero = (input.numero ?? '').toString().trim().toUpperCase();\n\n// CSV parser (maneja comillas y comas dentro de campos)\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [];\n  let field = '';\n  let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else { inQuotes = !inQuotes; }\n    } else if (c === ',' && !inQuotes) {\n      row.push(field); field = '';\n    } else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else {\n      field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nconst parseMoney = (s) => {\n  if (!s) return null;\n  const t = s.toString();\n  if (t.includes('#DIV') || t.includes('#REF') || t.includes('#VALUE')) return null;\n  const cleaned = t.replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseSize = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseIntSafe = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst normalizeEstado = (raw) => {\n  const e = (raw || '').toString().trim().toLowerCase();\n  if (e.startsWith('disponi')) return 'disponible';\n  if (e.startsWith('reserv')) return 'reservado';\n  if (e.startsWith('vendi')) return 'vendido';\n  return e || 'desconocido';\n};\n\nconst clpToUf = (clp) => {\n  if (clp === null || !ufValor) return null;\n  return Math.round((clp / ufValor) * 100) / 100;\n};\n\nconst rows = parseCsv(csvText);\nconst parcelas = [];\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  const cuotaClp = parseMoney(r[11]);\n  parcelas.push({\n    numero: lote.toUpperCase(),\n    destacada: ((r[0] || '').toString().trim() === '⭐'),\n    estado: normalizeEstado(r[2]),\n    tamano_m2: parseSize(r[3]),\n    precio_contado: parseMoney(r[6]),\n    descuento_pct: parseIntSafe(r[7]),\n    precio_credito: parseMoney(r[9]),\n    pie_minimo_50pct: parseMoney(r[10]),\n    cuota_mensual_clp: cuotaClp,\n    cuota_mensual_uf: clpToUf(cuotaClp),\n  });\n}\n\nconst fmtClp = (n) => (n === null || n === undefined) ? '—' : `$${n.toLocaleString('es-CL')}`;\nconst fmtUf = (n) => (n === null || n === undefined) ? '—' : `${n.toFixed(2)} UF`;\n\nfunction lotText(p) {\n  if (p.estado === 'disponible') {\n    const dest = p.destacada ? ' ⭐' : '';\n    return `Parcela ${p.numero}${dest} · ${p.tamano_m2} m² · disponible · contado ${fmtClp(p.precio_contado)} (dcto ${p.descuento_pct || 0}%) · crédito ${fmtClp(p.precio_credito)} con 50% pie ${fmtClp(p.pie_minimo_50pct)} + 36 cuotas de ${fmtUf(p.cuota_mensual_uf)} (~${fmtClp(p.cuota_mensual_clp)} al valor UF de hoy).`;\n  }\n  if (p.estado === 'reservado') return `Parcela ${p.numero} · ${p.tamano_m2} m² · reservada.`;\n  if (p.estado === 'vendido') return `Parcela ${p.numero} · ${p.tamano_m2} m² · vendida.`;\n  return `Parcela ${p.numero} · estado no definido.`;\n}\n\n// Modo 1: consulta puntual por numero\nif (numero) {\n  const match = parcelas.find(p => p.numero === numero);\n  if (!match) {\n    return [{ json: {\n      ok: false,\n      query: { numero },\n      uf_valor_clp: ufValor,\n      uf_fecha: ufFecha,\n      tool_output_text: `No encuentro la parcela ${numero} en el inventario. Las numeradas van del 1 al 74 y hay lotes B1 al B20 de ampliación.`,\n    } }];\n  }\n  return [{ json: {\n    ok: true,\n    query: { numero },\n    uf_valor_clp: ufValor,\n    uf_fecha: ufFecha,\n    parcela: match,\n    tool_output_text: lotText(match),\n  } }];\n}\n\n// Modo 2: sin numero → lista todos los disponibles\nconst disponibles = parcelas.filter(p => p.estado === 'disponible');\n// Orden: destacadas primero, luego por precio contado asc (null al final)\ndisponibles.sort((a, b) => {\n  if (a.destacada !== b.destacada) return a.destacada ? -1 : 1;\n  const pa = a.precio_contado ?? Infinity;\n  const pb = b.precio_contado ?? Infinity;\n  if (pa !== pb) return pa - pb;\n  return a.numero.localeCompare(b.numero, 'es', { numeric: true });\n});\n\nif (disponibles.length === 0) {\n  return [{ json: {\n    ok: true,\n    query: {},\n    uf_valor_clp: ufValor,\n    uf_fecha: ufFecha,\n    total_disponibles: 0,\n    parcelas: [],\n    tool_output_text: 'En este momento no tengo parcelas disponibles. ¿Te aviso cuando entre alguna?',\n  } }];\n}\n\nconst lines = disponibles.map(lotText).join('\\n');\nconst text = `Tengo ${disponibles.length} parcelas disponibles ahora:\\n${lines}`;\n\nreturn [{ json: {\n  ok: true,\n  query: {},\n  uf_valor_clp: ufValor,\n  uf_fecha: ufFecha,\n  total_disponibles: disponibles.length,\n  parcelas: disponibles,\n  tool_output_text: text,\n} }];"
+      },
+      "id": "parse",
+      "name": "Parse and Respond",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        680,
-        300
-      ]
+      "position": [900, 300]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [
-        [
-          {
-            "node": "Fetch Google Sheet CSV",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Fetch Google Sheet CSV", "type": "main", "index": 0 }]]
     },
     "Fetch Google Sheet CSV": {
-      "main": [
-        [
-          {
-            "node": "Parse CSV and Filter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Fetch UF", "type": "main", "index": 0 }]]
+    },
+    "Fetch UF": {
+      "main": [[{ "node": "Parse and Respond", "type": "main", "index": 0 }]]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": { "executionOrder": "v1" }
 }
