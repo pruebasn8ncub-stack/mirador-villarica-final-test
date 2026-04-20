@@ -298,9 +298,9 @@ export function ChatWindow({
         </div>
 
         <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
-          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-bosque-800">
-            <Lock aria-hidden className="h-3 w-3" strokeWidth={2.5} />
-            Conversación privada
+          <p className="flex h-4 items-center gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-bosque-800">
+            <Lock aria-hidden className="h-3 w-3 shrink-0" strokeWidth={2.5} />
+            <span>Conversación privada</span>
           </p>
           {showCounter ? (
             <p
@@ -312,7 +312,7 @@ export function ChatWindow({
               {input.length}/{MAX_MESSAGE_LENGTH}
             </p>
           ) : (
-            <p className="flex items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-bosque-800">
+            <p className="flex h-4 items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-bosque-800">
               <span>Powered by</span>
               <img
                 src="/assets/terra-segura-logo.webp"
