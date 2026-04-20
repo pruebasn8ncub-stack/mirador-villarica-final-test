@@ -1,0 +1,30 @@
+{
+  "name": "[Tool] Mirador - mostrar_tour360",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const BASE = 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/assets';\nconst TOUR_URL = 'https://lanube360.com/mirador-de-villarrica/';\n\nreturn [{ json: {\n  type: 'tour360_floating',\n  url: TOUR_URL,\n  title: 'Tour 360° · Mirador de Villarrica',\n  caption: 'Recorre el proyecto desde tu dispositivo',\n  poster: `${BASE}/banner-volcan.jpg`,\n  description_detailed: 'Tour virtual 360° interactivo del proyecto Mirador de Villarrica en Colico, La Araucanía. Permite al lead recorrer el proyecto desde su dispositivo: arrastrando con el dedo en móvil (o moviendo el teléfono usando el giroscopio) y arrastrando el mouse en PC. Muestra vistas inmersivas del terreno, bosque nativo, caminos internos, entorno de las 80 hectáreas y perspectivas hacia el Volcán Villarrica y el Lago Colico. Útil para leads que quieren una sensación más real del proyecto antes de una visita presencial.',\n  tool_output_text: 'Acá puedes ver el tour 360° con las distintas vistas del proyecto y una descripción de lo que verás. En el recorrido verás las parcelas marcadas: rojo son las vendidas, azul las reservadas y blanco las disponibles. ¿Hay alguna parcela en específico que te interese? Así te consulto la disponibilidad en tiempo real y el precio.',\n} }];"
+      },
+      "id": "build-tour360",
+      "name": "Build Tour 360",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Build Tour 360", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

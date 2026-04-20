@@ -108,7 +108,7 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="chat-dotgrid flex flex-1 min-h-0 flex-col overflow-hidden px-5 pb-4 pt-4"
+      className="chat-dotgrid flex flex-1 min-h-0 flex-col overflow-y-auto px-5 pb-4 pt-4"
       noValidate
     >
       <motion.div

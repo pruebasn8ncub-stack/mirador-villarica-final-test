@@ -7,6 +7,8 @@ import { AttachmentImage } from './AttachmentImage';
 import { AttachmentFloatingImage } from './AttachmentFloatingImage';
 import { AttachmentGallery } from './AttachmentGallery';
 import { AttachmentFloatingGallery } from './AttachmentFloatingGallery';
+import { AttachmentFloatingTour360 } from './AttachmentFloatingTour360';
+import { AttachmentFloatingMasterplan } from './AttachmentFloatingMasterplan';
 import { AttachmentWhatsAppLink } from './AttachmentWhatsAppLink';
 import { AttachmentPropertyCard } from './AttachmentPropertyCard';
 import { AttachmentPropertyCarousel } from './AttachmentPropertyCarousel';
@@ -104,6 +106,25 @@ export function MessageBubble({
                   key={key}
                   images={att.images}
                   caption={att.caption}
+                />
+              );
+            case 'tour360_floating':
+              return (
+                <AttachmentFloatingTour360
+                  key={key}
+                  url={att.url}
+                  caption={att.caption}
+                  poster={att.poster}
+                  title={att.title}
+                />
+              );
+            case 'masterplan_floating':
+              return (
+                <AttachmentFloatingMasterplan
+                  key={key}
+                  url={att.url}
+                  caption={att.caption}
+                  title={att.title}
                 />
               );
             case 'whatsapp_link':

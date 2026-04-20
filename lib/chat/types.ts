@@ -30,6 +30,8 @@ export type Attachment =
   | { type: 'image_floating'; url: string; caption?: string; title?: string }
   | { type: 'gallery'; images: { url: string; alt: string }[] }
   | { type: 'gallery_floating'; images: { url: string; alt?: string }[]; caption?: string }
+  | { type: 'tour360_floating'; url: string; caption?: string; poster?: string; title?: string }
+  | { type: 'masterplan_floating'; url: string; caption?: string; title?: string }
   | { type: 'whatsapp_link'; url: string; label: string }
   | {
       type: 'property_card';

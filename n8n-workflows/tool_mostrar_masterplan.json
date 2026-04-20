@@ -1,0 +1,30 @@
+{
+  "name": "[Tool] Mirador - mostrar_masterplan",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MASTERPLAN_URL = 'https://miradordevillarrica.cl/imagenes/Plano%20Comercial_Mirador%20de%20Villarica.jpg';\n\nreturn [{ json: {\n  type: 'masterplan_floating',\n  url: MASTERPLAN_URL,\n  title: 'Masterplan · Mirador de Villarrica',\n  caption: 'Plano comercial · 94 parcelas · 80 hectáreas',\n  description_detailed: 'Plano comercial oficial del proyecto Mirador de Villarrica. Muestra la subdivisión de 94 parcelas distribuidas en 80 hectáreas en Colico, La Araucanía. Cada parcela está numerada e identificada con un color según su estado comercial: ROJO = parcelas vendidas, AZUL = parcelas reservadas, BLANCO = parcelas disponibles. El plano incluye caminos internos, áreas comunes y referencias del entorno. El visor flotante permite zoom hasta 4x y paneo para inspeccionar parcelas específicas.',\n  tool_output_text: 'Acá puedes ver el masterplan del proyecto con las distintas vistas. En el plano: rojo son las parcelas vendidas, azul las reservadas y blanco las disponibles. ¿Hay alguna parcela en específico que te interese? Así te consulto la disponibilidad en tiempo real y el precio.',\n} }];"
+      },
+      "id": "build-masterplan",
+      "name": "Build Masterplan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Build Masterplan", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -16,6 +16,7 @@ import {
 import { sendChatMessage, ChatApiError } from '@/lib/chat/api';
 import { ensureSession, submitLeadGate, LeadGateError } from '@/lib/chat/lead';
 import type { Attachment, LeadGateData, Message } from '@/lib/chat/types';
+import { GALERIA, PROYECTO } from '@/data/content';
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_CHAT_MOCKS === '1';
 
@@ -73,6 +74,64 @@ async function mockReply(
   const lower = userText.toLowerCase();
   const name = lead ? firstName(lead.nombre) : '';
   const greet = name ? `${name}, ` : '';
+
+  // 0a. Tour 360° flotante — keywords: "360", "tour virtual", "recorrer", "recorrido"
+  //     Debe ir ANTES de "tour" (property_carousel) y "video" (video_card que también captura "360").
+  if (
+    lower.includes('360') ||
+    lower.includes('recorr') ||
+    lower.includes('tour virtual') ||
+    lower.includes('tour 360')
+  ) {
+    return {
+      reply:
+        `${greet}acá puedes ver el tour 360° con las distintas vistas del proyecto y una descripción de lo que verás. ` +
+        `En el recorrido verás las parcelas marcadas: rojo son las vendidas, azul las reservadas y blanco las disponibles. ` +
+        `¿Hay alguna parcela en específico que te interese? Así te consulto la disponibilidad en tiempo real y el precio.`,
+      attachments: [
+        {
+          type: 'tour360_floating',
+          url: PROYECTO.tour360Url,
+          title: 'Tour 360° · Mirador de Villarrica',
+          caption: 'Recorre el proyecto desde tu dispositivo',
+          poster: '/assets/banner-volcan.jpg',
+        },
+      ],
+    };
+  }
+
+  // 0b. Masterplan flotante — keywords: "masterplan", "master plan", "plano"
+  if (
+    lower.includes('masterplan') ||
+    lower.includes('master plan') ||
+    lower.includes('plano')
+  ) {
+    return {
+      reply: `${greet}acá tienes el masterplan del proyecto — el plano comercial con las 94 parcelas distribuidas en 80 hectáreas. ¿Quieres que lo revisemos juntos por alguna zona en particular?`,
+      attachments: [
+        {
+          type: 'masterplan_floating',
+          url: PROYECTO.masterPlanOficialUrl,
+          title: 'Masterplan · Mirador de Villarrica',
+          caption: 'Plano comercial · 94 parcelas · 80 hectáreas',
+        },
+      ],
+    };
+  }
+
+  // 0. Galería flotante — keyword: "galería", "galeria", "fotos"
+  if (lower.includes('galer') || lower.includes('fotos')) {
+    return {
+      reply: `${greet}acá tienes la galería del proyecto — son ${GALERIA.length} fotos del entorno: bosque nativo, vista al volcán y lago Colico.`,
+      attachments: [
+        {
+          type: 'gallery_floating',
+          images: GALERIA.map((g) => ({ url: g.src, alt: g.alt })),
+          caption: `${GALERIA.length} fotos · Mirador de Villarrica`,
+        },
+      ],
+    };
+  }
 
   // 1. PropertyCard (hero) — keyword: "parcela", "tarjeta", "detalle"
   if (lower.includes('tarjeta') || lower.includes('detalle') || lower.match(/\bparcela\b/)) {
@@ -192,8 +251,8 @@ async function mockReply(
     };
   }
 
-  // 7. Video — keyword: "video", "drone", "360"
-  if (lower.includes('video') || lower.includes('drone') || lower.includes('360')) {
+  // 7. Video — keyword: "video", "drone"
+  if (lower.includes('video') || lower.includes('drone')) {
     return {
       reply: 'Te muestro el video aéreo del proyecto:',
       attachments: [
