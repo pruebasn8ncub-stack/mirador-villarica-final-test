@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { motion } from 'framer-motion';
-import { Send, X, RefreshCw, Minus } from 'lucide-react';
+import { Send, X, RefreshCw, Minus, Lock } from 'lucide-react';
 import type { LeadGateData, Message } from '@/lib/chat/types';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -299,7 +299,7 @@ export function ChatWindow({
 
         <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
           <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-bosque-800">
-            <span aria-hidden>🔒</span>
+            <Lock aria-hidden className="h-3 w-3" strokeWidth={2.5} />
             Conversación privada
           </p>
           {showCounter ? (
