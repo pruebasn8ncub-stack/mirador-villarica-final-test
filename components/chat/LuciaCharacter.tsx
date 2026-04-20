@@ -25,7 +25,7 @@ export function LuciaCharacter({
       aria-hidden="true"
     >
       <Image
-        src="/avatars/lucia-v2-flat.png"
+        src="/avatars/lucia-v4-editorial-pro.png"
         alt=""
         fill
         sizes={`${size}px`}

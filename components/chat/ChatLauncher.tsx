@@ -27,7 +27,7 @@ export function ChatLauncher({
   onClick,
   hasUnread,
   showBubble = true,
-  bubbleDelayMs = 1800,
+  bubbleDelayMs = 1000,
   bubbleMessage = DEFAULT_BUBBLE,
 }: ChatLauncherProps) {
   const [bubbleVisible, setBubbleVisible] = useState(false);
@@ -111,12 +111,15 @@ export function ChatLauncher({
 
       {/* Launcher — wrapper que aplica la animación de atención */}
       <motion.div
-        initial={{ scale: 0, rotate: -40 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: 240, damping: 18, delay: 0.25 }}
+        initial={{ scale: 0, rotate: -60, y: 40 }}
+        animate={{ scale: 1, rotate: 0, y: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.2 }}
         className="relative"
       >
-        {/* Halo concéntrico doble (solo cuando está cerrado) */}
+        {/* Halos concéntricos triples (solo cuando está cerrado).
+            Capa 1: pulse-glow (mostaza lento 2.8s)
+            Capa 2: pulse-ring (bosque medio 2.4s, desfasado)
+            Capa 3: halo-quick (mostaza rápido 1.6s) — capta el ojo periférico */}
         {!isOpen && (
           <>
             <span
@@ -128,25 +131,30 @@ export function ChatLauncher({
               className="pointer-events-none absolute inset-0 rounded-full bg-bosque-600/35 animate-pulse-ring"
               style={{ animationDelay: '0.9s' }}
             />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-full bg-mostaza/55 animate-halo-quick"
+              style={{ animationDelay: '0.3s' }}
+            />
           </>
         )}
 
-        {/* Botón principal con animación de atención.
+        {/* Botón principal con animación de atención agresiva (saluda cada 5s).
             Estado cerrado: fondo crema para que la caricatura de Lucía (que tiene fondo cream) fluya sin bordes visibles.
             Estado abierto: gradiente bosque para el icono X. */}
         <motion.button
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={onClick}
           aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat con Lucía, asesora virtual de Mirador de Villarrica'}
           aria-expanded={isOpen}
           className={cn(
-            'group relative flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-full',
-            'shadow-chat-launcher ring-2 transition-all duration-300 hover:shadow-xl md:h-20 md:w-20',
+            'group relative flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-full',
+            'shadow-chat-launcher ring-[3px] transition-all duration-300 hover:shadow-xl md:h-24 md:w-24',
             isOpen
               ? 'bg-gradient-launcher text-crema ring-mostaza/40'
-              : 'bg-crema text-bosque-800 ring-bosque-800/15',
-            !isOpen && 'animate-launcher-attention'
+              : 'bg-crema text-bosque-800 ring-mostaza/30',
+            !isOpen && 'animate-attention-fast'
           )}
           style={{ transformOrigin: 'center center' }}
         >
@@ -170,32 +178,25 @@ export function ChatLauncher({
                 animate={{ rotate: 0, opacity: 1, scale: 1 }}
                 exit={{ rotate: -90, opacity: 0, scale: 0.7 }}
                 transition={{ duration: 0.22 }}
-                className="relative flex h-full w-full items-center justify-center"
+                className="relative flex h-full w-full items-center justify-center animate-lucia-nod"
+                style={{ transformOrigin: '50% 65%' }}
               >
-                <LuciaCharacter size={80} className="h-full w-full" />
+                <LuciaCharacter size={96} className="h-full w-full" />
               </motion.span>
             )}
           </AnimatePresence>
         </motion.button>
 
-        {/* Dot online + badge flotantes FUERA del botón (evita clip) */}
+        {/* Badge "1 mensaje nuevo" flotante FUERA del botón (evita clip).
+            Siempre visible cuando el chat está cerrado — refuerza
+            visualmente "tienes un mensaje pendiente". */}
         {!isOpen && (
-          <>
-            <span
-              className="pointer-events-none absolute bottom-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-crema bg-emerald-400 shadow"
-              aria-label="En línea"
-            >
-              <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-white/80" />
-            </span>
-            {hasUnread && (
-              <span
-                className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-mostaza text-[10px] font-bold text-bosque-900 ring-2 ring-crema shadow"
-                aria-label="Mensaje nuevo"
-              >
-                1
-              </span>
-            )}
-          </>
+          <span
+            className="pointer-events-none absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white ring-[3px] ring-crema shadow-md animate-badge-pop"
+            aria-label="Mensaje nuevo"
+          >
+            1
+          </span>
         )}
       </motion.div>
     </div>

@@ -34,12 +34,6 @@ interface ChatWindowProps {
 
 const MAX_MESSAGE_LENGTH = 1000;
 
-const QUICK_REPLIES = [
-  { label: 'Ya tengo información', value: 'Ya tengo información del proyecto' },
-  { label: 'Quiero un tour guiado', value: 'Quiero un tour guiado del proyecto' },
-  { label: 'Quiero comprar', value: 'Quiero comprar una parcela' },
-];
-
 /**
  * Agrupa mensajes consecutivos del mismo remitente para decidir
  * cuándo mostrar el avatar (solo en el último mensaje del grupo).
@@ -72,9 +66,6 @@ export function ChatWindow({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const showAvatarMap = useMemo(() => computeShowAvatar(messages), [messages]);
-  // Quick replies visibles mientras el usuario aún no haya respondido.
-  const isFirstExchange =
-    messages.length > 0 && messages.every((m) => m.role === 'assistant');
   const showCounter = input.length > 800;
 
   // Auto-scroll al recibir mensaje o typing
@@ -84,10 +75,13 @@ export function ChatWindow({
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, isSending]);
 
-  // Focus input al montar
+  // Focus input al montar (solo cuando el chat es interactivo, no durante el gate).
+  // El rAF evita que el cursor se renderice visible sobre el header durante el primer frame.
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (gateRequired) return;
+    const raf = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(raf);
+  }, [gateRequired]);
 
   // ESC cierra
   useEffect(() => {
@@ -169,18 +163,23 @@ export function ChatWindow({
         <span className="h-1 w-10 rounded-full bg-bosque-200" aria-hidden="true" />
       </div>
 
-      {/* Header premium con gradient */}
+      {/* Header premium con gradient + foto de Lucía como identidad visual */}
       <header className="chat-header-glass flex items-center justify-between gap-3 px-4 pb-3 pt-3 text-crema md:pt-4">
         <div className="flex min-w-0 items-center gap-3">
-          <AssistantAvatar size="md" showStatus className="ring-2 ring-crema/10" />
+          <AssistantAvatar size="lg" photo className="ring-2 ring-crema/20" />
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold leading-tight">
+            <h2 className="truncate text-[15px] font-semibold leading-tight">
               Lucía
-              <span className="ml-1.5 text-xs font-normal text-crema/70">· Mirador</span>
             </h2>
-            <p className="flex items-center gap-1.5 text-[11px] leading-tight text-crema/70">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Responde en segundos
+            <p className="truncate text-[11px] leading-tight text-crema/75">
+              Asistente virtual · Proyecto Mirador de Villarrica
+            </p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide leading-tight text-emerald-300">
+              <span className="relative inline-flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
+              En línea
             </p>
           </div>
         </div>
@@ -241,33 +240,6 @@ export function ChatWindow({
             />
           ))}
 
-          {/* Quick replies después del primer mensaje de bienvenida */}
-          {isFirstExchange && !isSending && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.25 }}
-              className="flex flex-wrap gap-2 pl-8 pt-1"
-              role="group"
-              aria-label="Preguntas sugeridas"
-            >
-              {QUICK_REPLIES.map((q) => (
-                <button
-                  key={q.label}
-                  type="button"
-                  onClick={() => submitText(q.value)}
-                  disabled={isSending}
-                  className={cn(
-                    'rounded-full border border-bosque-200 bg-white px-3 py-1.5 text-xs font-medium text-bosque-700',
-                    'shadow-sm transition-all hover:-translate-y-0.5 hover:border-bosque-300 hover:bg-bosque-50 hover:shadow-md',
-                    'disabled:opacity-50'
-                  )}
-                >
-                  {q.label}
-                </button>
-              ))}
-            </motion.div>
-          )}
 
           {isSending && <TypingIndicator />}
 
@@ -340,8 +312,13 @@ export function ChatWindow({
               {input.length}/{MAX_MESSAGE_LENGTH}
             </p>
           ) : (
-            <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-bosque-400">
-              Powered by Terra Segura Inmobiliaria
+            <p className="flex items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-bosque-400">
+              <span>Powered by</span>
+              <img
+                src="/assets/terra-segura-logo.webp"
+                alt="Terra Segura"
+                className="h-4 w-auto object-contain"
+              />
             </p>
           )}
         </div>

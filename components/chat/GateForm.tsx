@@ -6,7 +6,6 @@ import { ArrowRight, Loader2, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LeadGateData } from '@/lib/chat/types';
 import { FormField } from './FormField';
-import { LuciaCharacter } from './LuciaCharacter';
 
 interface GateFormProps {
   onSubmit: (data: LeadGateData) => Promise<void> | void;
@@ -79,17 +78,14 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
-          'relative mb-4 overflow-hidden rounded-2xl border border-mostaza-100 px-5 pb-5 pt-6 text-center',
-          'bg-gradient-to-b from-mostaza-50 via-white to-white shadow-sm'
+          'relative mb-3 overflow-hidden rounded-2xl border border-mostaza-100 px-5 pb-4 pt-5 text-center',
+          'bg-gradient-to-b from-mostaza-50 to-white shadow-sm'
         )}
       >
-        <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-[3px] border-mostaza-300 bg-crema-100 shadow-md">
-          <LuciaCharacter size={80} className="h-full w-full" />
-        </div>
-        <h3 className="text-[19px] font-semibold leading-tight tracking-tight text-bosque-900">
+        <h3 className="text-[16px] font-semibold leading-snug tracking-tight text-bosque-900">
           ¡Hola! Soy Lucía <span aria-hidden>👋</span>
         </h3>
-        <p className="mx-auto mt-1.5 max-w-[280px] text-[13px] leading-relaxed text-bosque-600">
+        <p className="mx-auto mt-1 max-w-[280px] text-[13px] leading-relaxed text-bosque-600">
           Para darte una{' '}
           <strong className="font-semibold text-bosque-900">atención personalizada</strong>{' '}
           y enviarte información exclusiva del proyecto, necesito algunos datos:
@@ -161,7 +157,7 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
           )}
         </button>
 
-        <p className="mt-1 flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-bosque-400">
+        <p className="mt-1 flex items-center justify-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bosque-400">
           <Lock className="h-3 w-3" aria-hidden="true" />
           Tus datos son privados · No spam
         </p>

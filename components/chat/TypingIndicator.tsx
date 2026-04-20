@@ -7,8 +7,8 @@ export function TypingIndicator() {
       role="status"
       aria-label="Lucía está escribiendo"
     >
-      <AssistantAvatar size="xs" />
-      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-bosque-100 bg-white px-3.5 py-2.5 shadow-chat-bubble-bot">
+      <AssistantAvatar size="xs" robot />
+      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-bosque-100 bg-white px-3 py-2 shadow-chat-bubble-bot">
         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-bosque-400" />
         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-bosque-400" />
         <span className="typing-dot h-1.5 w-1.5 rounded-full bg-bosque-400" />

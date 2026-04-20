@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Message } from '@/lib/chat/types';
 import { AssistantAvatar } from './AssistantAvatar';
@@ -24,8 +22,6 @@ interface MessageBubbleProps {
   message: Message;
   /** Si true, muestra el avatar junto a la burbuja del asistente. */
   showAvatar?: boolean;
-  /** Si true, muestra timestamp visible (sin hover). */
-  alwaysShowTimestamp?: boolean;
   /**
    * Callback que la tarjeta dispara al hacer click en un CTA
    * (ej. "Ver detalles", "Simular crédito"). Se convierte en mensaje del usuario.
@@ -33,35 +29,12 @@ interface MessageBubbleProps {
   onAction?: (action: string) => void;
 }
 
-function formatTime(ts: number): string {
-  try {
-    return new Date(ts).toLocaleTimeString('es-CL', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
-}
-
 export function MessageBubble({
   message,
   showAvatar = true,
-  alwaysShowTimestamp = false,
   onAction,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // silencioso
-    }
-  };
 
   /** Detecta si todas las attachments del mensaje son rich-cards full-width
    *  (se renderizan sin burbuja de fondo para dejar el layout del diseño). */
@@ -90,16 +63,16 @@ export function MessageBubble({
       )}
     >
       {!isUser && (
-        <div className={cn('mb-1', showAvatar ? 'opacity-100' : 'opacity-0')}>
-          <AssistantAvatar size="xs" />
+        <div className={cn('mb-0.5', showAvatar ? 'opacity-100' : 'opacity-0')}>
+          <AssistantAvatar size="xs" robot />
         </div>
       )}
 
-      <div className={cn('flex max-w-[88%] flex-col gap-2', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex max-w-[85%] flex-col gap-1.5', isUser ? 'items-end' : 'items-start')}>
         {!hideBubble && (
           <div
             className={cn(
-              'relative rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+              'relative rounded-2xl px-3.5 py-2 text-[13.5px] leading-snug',
               isUser
                 ? 'bg-bosque-800 text-crema rounded-br-sm shadow-chat-bubble-user'
                 : 'bg-white text-bosque-900 rounded-bl-sm border border-bosque-100 shadow-chat-bubble-bot'
@@ -238,40 +211,6 @@ export function MessageBubble({
           }
         })}
 
-        {/* Meta row: timestamp + copiar */}
-        {message.content && (
-          <div
-            className={cn(
-              'flex items-center gap-2 px-1 text-[10px] text-bosque-400',
-              isUser ? 'flex-row-reverse' : 'flex-row',
-              alwaysShowTimestamp
-                ? 'opacity-100'
-                : 'opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100'
-            )}
-          >
-            <span className="tabular-nums">{formatTime(message.timestamp)}</span>
-            {!isUser && message.content && (
-              <button
-                type="button"
-                onClick={copy}
-                className="flex items-center gap-1 rounded px-1 py-0.5 text-bosque-400 hover:bg-bosque-50 hover:text-bosque-700"
-                aria-label={copied ? 'Copiado' : 'Copiar mensaje'}
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-3 w-3" />
-                    <span>Copiado</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3 w-3" />
-                    <span>Copiar</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

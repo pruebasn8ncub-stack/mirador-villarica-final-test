@@ -34,8 +34,8 @@ function buildOpeningMessages(lead: LeadGateData | null): Message[] {
   const name = lead ? firstName(lead.nombre) : '';
   const baseTs = Date.now();
   const greeting = name
-    ? `${name}, gracias por compartir tus datos. 🙌`
-    : 'Gracias por compartir tus datos. 🙌';
+    ? `Hola ${name}, gracias por compartir tus datos. Los usaremos para enviarte información exclusiva del proyecto. 🙌`
+    : 'Gracias por compartir tus datos. Los usaremos para enviarte información exclusiva del proyecto. 🙌';
   return [
     {
       id: 'opening-1',
@@ -47,30 +47,57 @@ function buildOpeningMessages(lead: LeadGateData | null): Message[] {
       id: 'opening-2',
       role: 'assistant',
       content:
-        'Soy Lucía, la asistente virtual del proyecto Mirador de Villarrica — 94 parcelas con SAG aprobado, roles listos y caminos estabilizados, en Colico.',
+        'Soy Lucía, la asistente virtual del proyecto Mirador de Villarrica y estoy para ayudarte a elegir tu próxima parcela. 🌲',
       timestamp: baseTs + 1,
     },
     {
       id: 'opening-3',
       role: 'assistant',
       content:
-        'Estoy acá para ayudarte a elegir tu próxima parcela 🌲. Para continuar, ¿qué te acomoda?',
+        'Para continuar me gustaría saber — ¿ya cuentas con información del proyecto o te gustaría un tour virtual guiado?',
       timestamp: baseTs + 2,
     },
   ];
 }
 
+/**
+ * Mocks para iteración visual de rich cards. Activar con NEXT_PUBLIC_CHAT_MOCKS=1.
+ * Cada keyword dispara una card específica para poder refinarla en aislamiento.
+ */
 async function mockReply(
   userText: string,
   lead: LeadGateData | null
 ): Promise<{ reply: string; attachments?: Attachment[] }> {
-  await new Promise((r) => setTimeout(r, 700));
+  await new Promise((r) => setTimeout(r, 400));
   const lower = userText.toLowerCase();
   const name = lead ? firstName(lead.nombre) : '';
+  const greet = name ? `${name}, ` : '';
 
-  if (lower.includes('tour')) {
+  // 1. PropertyCard (hero) — keyword: "parcela", "tarjeta", "detalle"
+  if (lower.includes('tarjeta') || lower.includes('detalle') || lower.match(/\bparcela\b/)) {
     return {
-      reply: `${name ? name + ', ' : ''}perfecto. Te muestro las parcelas más solicitadas:`,
+      reply: `${greet}esta es una de nuestras parcelas destacadas:`,
+      attachments: [
+        {
+          type: 'property_card',
+          parcela: 'P-24',
+          sqm: '5.120 m²',
+          price: 'UF 520',
+          status: 'Disponible',
+          features: ['Vista al volcán', 'Acceso pavimentado', 'Bosque nativo'],
+          ctas: [
+            { label: 'Ver más fotos', action: 'Ver fotos de P-24' },
+            { label: 'Me interesa', action: 'Quiero comprar P-24' },
+          ],
+        },
+      ],
+    };
+  }
+
+  // 2. PropertyCarousel — keyword: "tour", "opciones", "disponibles"
+  if (lower.includes('tour') || lower.includes('opciones') || lower.includes('disponibles')) {
+    return {
+      reply: `${greet}perfecto. Te muestro las parcelas más solicitadas:`,
       attachments: [
         {
           type: 'property_carousel',
@@ -78,37 +105,39 @@ async function mockReply(
             { parcela: 'P-24', sqm: '5.120', price: 'UF 520', tone: 'forest' },
             { parcela: 'P-31', sqm: '5.800', price: 'UF 580', tone: 'meadow' },
             { parcela: 'P-07', sqm: '6.450', price: 'UF 640', tone: 'lake' },
+            { parcela: 'P-12', sqm: '5.950', price: 'UF 595', tone: 'volcano' },
           ],
         },
       ],
     };
   }
-  if (lower.includes('comprar') || lower.includes('precio') || lower.includes('financ')) {
+
+  // 3. CompareTable — keyword: "comparar", "comparativa"
+  if (lower.includes('comparar') || lower.includes('comparativa')) {
     return {
-      reply:
-        'Manejamos dos modalidades: **contado** desde $14.490.000 o **crédito directo** desde $17.490.000 (50% pie + 36 cuotas UF). Podés simular tu cuota acá:',
-      attachments: [{ type: 'mortgage_simulator', priceUf: 520, defaultDownPct: 50, defaultMonths: 36 }],
-    };
-  }
-  if (lower.includes('asesor') || lower.includes('diego')) {
-    return {
-      reply: 'Te conecto con Diego:',
+      reply: 'Esta es la comparativa de las 3 parcelas más consultadas:',
       attachments: [
         {
-          type: 'handoff',
-          advisorName: 'Diego Cavagnaro',
-          advisorRole: 'Asesor inmobiliario · Terra Segura',
-          whatsapp: '+56940329987',
+          type: 'compare_table',
+          rows: [
+            { rol: 'P-07', sqm: '6.450', view: 'Lago', price: 'UF 640' },
+            { rol: 'P-24', sqm: '5.120', view: 'Volcán', price: 'UF 520', highlight: true },
+            { rol: 'P-31', sqm: '5.800', view: 'Bosque', price: 'UF 580' },
+          ],
         },
       ],
     };
   }
-  if (lower.includes('mapa')) {
+
+  // 4. MapCard — keyword: "mapa", "ubicacion", "dónde"
+  if (lower.includes('mapa') || lower.includes('ubicaci') || lower.includes('dónde') || lower.includes('donde')) {
     return {
-      reply: 'Estamos sobre la ruta a Las Hortensias:',
+      reply: 'Estamos sobre la ruta a Las Hortensias, en Colico:',
       attachments: [
         {
           type: 'map_card',
+          title: 'Mirador de Villarrica',
+          subtitle: 'Colico, Cunco · La Araucanía',
           address: 'Colico, Cunco, La Araucanía, Chile',
           nearbyMinutes: [
             { place: 'Lago Colico', minutes: 15 },
@@ -120,8 +149,101 @@ async function mockReply(
       ],
     };
   }
+
+  // 5. MortgageSimulator — keyword: "comprar", "precio", "financ", "crédito", "simular"
+  if (
+    lower.includes('comprar') ||
+    lower.includes('precio') ||
+    lower.includes('financ') ||
+    lower.includes('crédito') ||
+    lower.includes('credito') ||
+    lower.includes('simular') ||
+    lower.includes('cuota')
+  ) {
+    return {
+      reply:
+        'Manejamos dos modalidades: **contado** desde $14.490.000 o **crédito directo** desde $17.490.000 (50% pie + 36 cuotas UF). Simula tu cuota:',
+      attachments: [
+        { type: 'mortgage_simulator', priceUf: 520, defaultDownPct: 50, defaultMonths: 36 },
+      ],
+    };
+  }
+
+  // 6. Brochure — keyword: "brochure", "pdf", "folleto", "información"
+  if (
+    lower.includes('brochure') ||
+    lower.includes('folleto') ||
+    lower.includes('pdf') ||
+    lower.includes('información') ||
+    lower.includes('informacion')
+  ) {
+    return {
+      reply: 'Acá tienes el brochure completo del proyecto:',
+      attachments: [
+        {
+          type: 'brochure_card',
+          url: '/brochure-mirador-villarrica.pdf',
+          title: 'Brochure · Mirador de Villarrica',
+          pages: 24,
+          sizeKb: 3400,
+        },
+      ],
+    };
+  }
+
+  // 7. Video — keyword: "video", "drone", "360"
+  if (lower.includes('video') || lower.includes('drone') || lower.includes('360')) {
+    return {
+      reply: 'Te muestro el video aéreo del proyecto:',
+      attachments: [
+        {
+          type: 'video_card',
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          title: 'Tour aéreo · Mirador de Villarrica',
+          duration: '2:14',
+        },
+      ],
+    };
+  }
+
+  // 8. LeadForm — keyword: "contacto", "llamar", "formulario"
+  if (lower.includes('contacto') || lower.includes('llamar') || lower.includes('formulario')) {
+    return {
+      reply: 'Déjame tus datos y Diego se contacta contigo:',
+      attachments: [
+        {
+          type: 'lead_form',
+          prompt: '¿Cuándo te acomoda una llamada?',
+          fields: ['nombre', 'whatsapp', 'cuando'],
+        },
+      ],
+    };
+  }
+
+  // 9. Handoff — keyword: "asesor", "diego", "humano", "whatsapp"
+  if (
+    lower.includes('asesor') ||
+    lower.includes('diego') ||
+    lower.includes('humano') ||
+    lower.includes('whatsapp')
+  ) {
+    return {
+      reply: 'Te conecto con Diego, tu asesor directo:',
+      attachments: [
+        {
+          type: 'handoff',
+          advisorName: 'Diego Cavagnaro',
+          advisorRole: 'Asesor inmobiliario · Terra Segura',
+          whatsapp: '+56940329987',
+          message:
+            'Hola Diego, me interesa una parcela en Mirador de Villarrica. Vengo desde el chat de Lucía.',
+        },
+      ],
+    };
+  }
+
   return {
-    reply: `[mock] Recibí: "${userText}". En producción Lucía responde con datos reales del brochure.`,
+    reply: `[mock] Recibí: "${userText}". Probá: tarjeta · tour · comparar · mapa · simular · brochure · video · contacto · asesor.`,
   };
 }
 
@@ -136,6 +258,58 @@ export function ChatWidget() {
   const [gateError, setGateError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const firstMessageSent = useRef(false);
+  const streamTimers = useRef<number[]>([]);
+
+  /**
+   * Introduce los mensajes de bienvenida uno por uno con un typing indicator
+   * entre medio, simulando que Lucía está escribiendo. Evita que los 3 mensajes
+   * aparezcan de golpe y se sienta como un spam de texto.
+   *
+   * Timeline pausado para que el usuario alcance a leer cada mensaje:
+   *   t=0     typing on
+   *   t=1200  msg1 + typing off  (→ pausa de lectura 2200ms)
+   *   t=3400  typing on
+   *   t=4600  msg2 + typing off  (→ pausa de lectura 2200ms)
+   *   t=6800  typing on
+   *   t=8000  msg3 + typing off → quick replies
+   */
+  const streamOpeningMessages = useCallback((lead: LeadGateData | null) => {
+    // Limpiar cualquier stream anterior en curso
+    streamTimers.current.forEach((t) => window.clearTimeout(t));
+    streamTimers.current = [];
+
+    const msgs = buildOpeningMessages(lead);
+    setMessages([]);
+    setIsSending(true);
+
+    const TYPING_MS = 1200;
+    const GAP_MS = 2200;
+
+    msgs.forEach((msg, i) => {
+      const cycleStart = i * (TYPING_MS + GAP_MS);
+      // Show typing before each message (ya está en true para el primero)
+      if (i > 0) {
+        streamTimers.current.push(
+          window.setTimeout(() => setIsSending(true), cycleStart)
+        );
+      }
+      // Add message and hide typing
+      streamTimers.current.push(
+        window.setTimeout(() => {
+          setMessages((prev) => [...prev, msg]);
+          setIsSending(false);
+        }, cycleStart + TYPING_MS)
+      );
+    });
+  }, []);
+
+  // Cleanup timers si el componente se desmonta en medio del stream
+  useEffect(
+    () => () => {
+      streamTimers.current.forEach((t) => window.clearTimeout(t));
+    },
+    []
+  );
 
   // Bootstrap: sesión + lead + mensajes persistidos
   useEffect(() => {
@@ -156,10 +330,10 @@ export function ChatWidget() {
           firstMessageSent.current = true;
         }
       } else {
-        setMessages(buildOpeningMessages(savedLead));
+        streamOpeningMessages(savedLead);
       }
     }
-  }, []);
+  }, [streamOpeningMessages]);
 
   // Persistir mensajes tras cada cambio
   useEffect(() => {
@@ -185,9 +359,9 @@ export function ChatWidget() {
       saveLead(sessionId, data);
       setLeadData(data);
       setGatePassed(true);
-      setMessages(buildOpeningMessages(data));
+      streamOpeningMessages(data);
     },
-    [sessionId]
+    [sessionId, streamOpeningMessages]
   );
 
   const handleSend = useCallback(
@@ -260,12 +434,16 @@ export function ChatWidget() {
   );
 
   const handleReset = useCallback(() => {
+    // Cancelar cualquier stream de bienvenida en curso
+    streamTimers.current.forEach((t) => window.clearTimeout(t));
+    streamTimers.current = [];
     const newId = resetSession();
     setSessionId(newId);
     void ensureSession(newId);
     setLeadData(null);
     setGatePassed(false);
     setMessages([]);
+    setIsSending(false);
     setError(null);
     setGateError(null);
     firstMessageSent.current = false;
@@ -275,7 +453,14 @@ export function ChatWidget() {
 
   return (
     <>
-      <ChatLauncher isOpen={isOpen} onClick={() => setIsOpen((v) => !v)} />
+      {/* El launcher solo existe cuando el chat está cerrado — al abrir se
+          desmonta con fade/scale via AnimatePresence y la ventana del chat
+          ocupa su rol. Evita el "botón X flotante" duplicado que confunde. */}
+      <AnimatePresence>
+        {!isOpen && (
+          <ChatLauncher key="launcher" isOpen={false} onClick={() => setIsOpen(true)} />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {isOpen && (
           <ChatWindow

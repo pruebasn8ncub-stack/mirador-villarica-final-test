@@ -48,6 +48,10 @@ const config: Config = {
         'chat-bubble-user': '0 1px 2px rgba(26, 61, 46, 0.15)',
         'chat-bubble-bot': '0 1px 3px rgba(26, 61, 46, 0.08), 0 1px 2px rgba(26, 61, 46, 0.04)',
         'preview': '0 8px 24px -6px rgba(26, 61, 46, 0.3), 0 2px 6px -1px rgba(26, 61, 46, 0.15)',
+        // Cards boutique: 3 niveles (reposo, hover, focus)
+        'card': '0 1px 2px rgba(26, 61, 46, 0.04), 0 4px 12px -4px rgba(26, 61, 46, 0.08)',
+        'card-hover': '0 2px 4px rgba(26, 61, 46, 0.06), 0 12px 28px -8px rgba(26, 61, 46, 0.14)',
+        'card-focus': '0 0 0 3px rgba(244, 168, 75, 0.25)',
       },
       backgroundImage: {
         'gradient-header': 'linear-gradient(135deg, #1a3d2e 0%, #264d3a 60%, #33664d 100%)',
@@ -67,6 +71,14 @@ const config: Config = {
         'bubble-float': 'bubbleFloat 3.5s ease-in-out infinite',
         // Halo concéntrico doble (bosque + mostaza)
         'pulse-glow': 'pulseGlow 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        // Halo rápido atractor — frecuencia alta capta el ojo periférico
+        'halo-quick': 'haloQuick 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+        // Launcher attention agresivo — ciclo 5s con saludo pronunciado cada pasada
+        'attention-fast': 'attentionFast 5s ease-in-out infinite',
+        // Head tilt sutil del avatar Lucía (simula que asiente/saluda)
+        'lucia-nod': 'luciaNod 3.5s ease-in-out infinite',
+        // Badge "1 mensaje nuevo" con pop inicial + pulse discreto
+        'badge-pop': 'badgePop 2.4s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -126,6 +138,35 @@ const config: Config = {
             opacity: '0',
             boxShadow: '0 0 0 14px rgba(244, 168, 75, 0)',
           },
+        },
+        // Halo rápido atractor (1.6s) — mostaza brillante pulsa más seguido
+        haloQuick: {
+          '0%': { transform: 'scale(1)', opacity: '0.55' },
+          '70%': { transform: 'scale(1.55)', opacity: '0' },
+          '100%': { transform: 'scale(1.55)', opacity: '0' },
+        },
+        // Attention agresivo 5s: breathe continuo + wiggle saludando cada ciclo
+        attentionFast: {
+          '0%, 100%': { transform: 'scale(1) rotate(0deg)' },
+          '18%': { transform: 'scale(1.06) rotate(0deg)' },
+          '32%': { transform: 'scale(1.05) rotate(-9deg)' },
+          '38%': { transform: 'scale(1.06) rotate(9deg)' },
+          '44%': { transform: 'scale(1.05) rotate(-6deg)' },
+          '50%': { transform: 'scale(1.06) rotate(6deg)' },
+          '56%': { transform: 'scale(1.05) rotate(0deg)' },
+          '72%': { transform: 'scale(1) rotate(0deg)' },
+        },
+        // Head-tilt sutil de Lucía (simula que está "viva")
+        luciaNod: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '40%': { transform: 'rotate(-3deg)' },
+          '60%': { transform: 'rotate(3deg)' },
+          '80%': { transform: 'rotate(-1.5deg)' },
+        },
+        // Badge unread pulsante suave
+        badgePop: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.15)' },
         },
       },
     },
