@@ -118,16 +118,58 @@
         "subject": "Mirador de Villarrica — Recomendación personalizada",
         "emailType": "html",
         "message": "={{ $json.emailHtml }}",
-        "options": {}
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              { "binaryPropertyName": "data" }
+            ]
+          }
+        }
       },
       "id": "gmail-send",
       "name": "Gmail Send Resumen",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [2000, 120],
+      "position": [2120, 120],
       "credentials": {
         "gmailOAuth2": { "id": "12sHtnYC9mtyjrpQ", "name": "Gmail account" }
       }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/brochure/mirador-villarrica-brochure.pdf",
+        "options": {
+          "response": { "response": { "responseFormat": "file" } }
+        }
+      },
+      "id": "download-pdf",
+      "name": "Download Brochure PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1900, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.17.0.1:8080/message/sendMedia/Hugo Vargas Cubelli",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "apikey", "value": "429683C4C977415CAAFCCE10F7D57E11" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Build Messages').first().json.phone_clean, mediatype: 'document', media: 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/brochure/mirador-villarrica-brochure.pdf', fileName: 'Mirador-de-Villarrica-Brochure.pdf', caption: 'Brochure oficial - Mirador de Villarrica' }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "wa-send-pdf",
+      "name": "Evolution Send PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 400]
     },
     {
       "parameters": {
@@ -203,17 +245,19 @@
     },
     "Send Email?": {
       "main": [
-        [{ "node": "Gmail Send Resumen", "type": "main", "index": 0 }],
+        [{ "node": "Download Brochure PDF", "type": "main", "index": 0 }],
         [{ "node": "Send WA?", "type": "main", "index": 0 }]
       ]
     },
+    "Download Brochure PDF": { "main": [[{ "node": "Gmail Send Resumen", "type": "main", "index": 0 }]] },
     "Gmail Send Resumen": { "main": [[{ "node": "Send WA?", "type": "main", "index": 0 }]] },
     "Send WA?": {
       "main": [
-        [{ "node": "Evolution Send WA", "type": "main", "index": 0 }],
+        [{ "node": "Evolution Send PDF", "type": "main", "index": 0 }],
         [{ "node": "Final Output + PATCH", "type": "main", "index": 0 }]
       ]
     },
+    "Evolution Send PDF": { "main": [[{ "node": "Evolution Send WA", "type": "main", "index": 0 }]] },
     "Evolution Send WA": { "main": [[{ "node": "Final Output + PATCH", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" }
