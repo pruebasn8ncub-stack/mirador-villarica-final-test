@@ -162,7 +162,7 @@ export function AttachmentFloatingMasterplan({
               </header>
 
               <div
-                className="relative flex-1 overflow-hidden bg-bosque-900/90 select-none"
+                className="relative flex-1 overflow-hidden bg-neutral-950 select-none"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
