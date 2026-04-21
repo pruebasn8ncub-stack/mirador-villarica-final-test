@@ -137,7 +137,7 @@ export function AttachmentFloatingMasterplan({
               aria-label="Masterplan del proyecto"
               aria-modal="false"
               className="fixed z-[60] flex flex-col overflow-hidden bg-white shadow-2xl ring-1 ring-bosque-900/10
-                         inset-0 md:inset-auto md:bottom-6 md:right-[440px] md:h-[calc(100vh-3rem)] md:max-h-[780px] md:w-[500px] md:rounded-2xl"
+                         inset-0 md:inset-auto md:left-6 md:right-[440px] md:top-6 md:bottom-6 md:rounded-2xl"
             >
               <header className="flex items-center justify-between bg-bosque-800 px-4 py-3 text-crema">
                 <div className="flex min-w-0 items-center gap-2.5">
