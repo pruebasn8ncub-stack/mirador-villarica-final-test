@@ -163,6 +163,25 @@
     },
     {
       "parameters": {
+        "name": "mostrar_tour360",
+        "description": "Muestra el tour virtual 360\u00b0 del proyecto Mirador de Villarrica como una tarjeta flotante en el chat. Usala cuando el lead pida ver el tour, recorrido virtual, paseo 360, o quiera explorar el proyecto desde su dispositivo. No requiere parametros. La tarjeta aparece en el chat con un boton 'Abrir tour 360\u00b0' que el lead debe presionar para iniciar el recorrido.",
+        "workflowId": {
+          "__rl": true,
+          "value": "wpung11jB88uBaGV",
+          "mode": "id"
+        }
+      },
+      "id": "tool-tour360",
+      "name": "Tool mostrar_tour360",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        520
+      ]
+    },
+    {
+      "parameters": {
         "name": "consultar_disponibilidad",
         "description": "Consulta el inventario EN VIVO (Google Sheet de Terra Segura) y el valor UF del dia. Invocala en CADA turno donde el lead pregunte por precios, disponibilidad, lotes, financiamiento, cuotas, recomendaciones o alternativas. Dos modos de uso: (1) si el lead menciona un lote concreto, pasa numero='1'..'74' o 'B1'..'B20' y recibis la info completa de ese lote; (2) si el lead NO menciona un lote, pasa numero='' (string vacio) y recibis TODAS las parcelas disponibles con su info completa para poder recomendar. Cada parcela retornada incluye: estado, tamano_m2, precio_contado, descuento_pct, precio_credito, pie_minimo_50pct, cuota_mensual_uf (36 cuotas en UF) y cuota_mensual_clp (equivalente al UF de hoy). SIEMPRE llamala antes de afirmar cualquier precio, cuota o disponibilidad.",
         "workflowId": {
@@ -491,6 +510,17 @@
           {
             "node": "AI Agent",
             "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool mostrar_tour360": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
             "index": 0
           }
         ]
