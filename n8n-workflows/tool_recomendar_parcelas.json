@@ -1,0 +1,61 @@
+{
+  "name": "[Tool] Mirador - recomendar_parcelas",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"forma_pago\": \"credito\",\n  \"presupuesto_clp\": 0,\n  \"pie_clp\": 15000000,\n  \"tamano_preferido\": \"\",\n  \"uso\": \"segunda\"\n}"
+      },
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/export?format=csv&gid=1975618999",
+        "options": {
+          "redirect": { "redirect": { "followRedirects": true } },
+          "timeout": 10000,
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "id": "fetch-sheet",
+      "name": "Fetch Google Sheet CSV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://mindicador.cl/api/uf",
+        "options": {
+          "timeout": 5000,
+          "response": { "response": { "neverError": true } }
+        }
+      },
+      "id": "fetch-uf",
+      "name": "Fetch UF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recomienda TOP 3 parcelas disponibles segun forma_pago + presupuesto_clp|pie_clp.\n// Reutiliza el mismo parser CSV que consultar_disponibilidad.\n// Devuelve tool_output_text con el pitch + metadata cruda para el LLM.\n\nconst uf = $json;\nconst ufValor = uf && uf.serie && uf.serie[0] && typeof uf.serie[0].valor === 'number'\n  ? uf.serie[0].valor\n  : null;\n\nconst sheetItem = $('Fetch Google Sheet CSV').first().json;\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\nif (!csvText || csvText.length < 100) {\n  return [{ json: {\n    ok: false,\n    error: 'csv_fetch_failed',\n    tool_output_text: 'No pude consultar el inventario en este momento. Dejame intentar en un minuto o paso tu caso al asesor.',\n  } }];\n}\n\nconst input = $('Execute Workflow Trigger').first().json || {};\nconst formaPago = (input.forma_pago || '').toString().toLowerCase().trim();\nconst presupuestoClp = Number(input.presupuesto_clp) || 0;\nconst pieClp = Number(input.pie_clp) || 0;\nconst tamanoPref = (input.tamano_preferido || '').toString().toLowerCase().trim();\nconst uso = (input.uso || '').toString().toLowerCase().trim();\n\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [];\n  let field = '';\n  let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else { inQuotes = !inQuotes; }\n    } else if (c === ',' && !inQuotes) {\n      row.push(field); field = '';\n    } else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else {\n      field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nconst parseMoney = (s) => {\n  if (!s) return null;\n  const t = s.toString();\n  if (t.includes('#DIV') || t.includes('#REF') || t.includes('#VALUE')) return null;\n  const cleaned = t.replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseSize = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseIntSafe = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst normalizeEstado = (raw) => {\n  const e = (raw || '').toString().trim().toLowerCase();\n  if (e.startsWith('disponi')) return 'disponible';\n  if (e.startsWith('reserv')) return 'reservado';\n  if (e.startsWith('vendi')) return 'vendido';\n  return e || 'desconocido';\n};\n\nconst clpToUf = (clp) => (clp === null || !ufValor) ? null : Math.round((clp / ufValor) * 100) / 100;\n\nconst rows = parseCsv(csvText);\nconst parcelas = [];\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  const cuotaClp = parseMoney(r[11]);\n  const p = {\n    numero: lote.toUpperCase(),\n    destacada: ((r[0] || '').toString().trim() === '⭐'),\n    estado: normalizeEstado(r[2]),\n    tamano_m2: parseSize(r[3]),\n    precio_contado: parseMoney(r[6]),\n    descuento_pct: parseIntSafe(r[7]),\n    precio_credito: parseMoney(r[9]),\n    pie_minimo_50pct: parseMoney(r[10]),\n    cuota_mensual_clp: cuotaClp,\n    cuota_mensual_uf: clpToUf(cuotaClp),\n  };\n  if (p.estado === 'disponible') parcelas.push(p);\n}\n\nif (parcelas.length === 0) {\n  return [{ json: {\n    ok: true,\n    total_candidatas: 0,\n    recomendadas: [],\n    tool_output_text: 'En este momento no tengo parcelas disponibles. Puedo pasar su caso al equipo para aviso cuando entre alguna. Le parece?',\n  } }];\n}\n\n// Filtro por forma de pago\nlet candidatas = parcelas.slice();\nif (formaPago === 'contado' && presupuestoClp > 0) {\n  candidatas = candidatas.filter(p => p.precio_contado !== null && p.precio_contado <= presupuestoClp);\n} else if (formaPago === 'credito' && pieClp > 0) {\n  candidatas = candidatas.filter(p => p.pie_minimo_50pct !== null && p.pie_minimo_50pct <= pieClp);\n}\n\n// Si el filtro deja 0, relaja y toma las mas economicas igual (mejor ofrecer alternativas que decir 'nada')\nlet sinMatch = false;\nif (candidatas.length === 0) {\n  sinMatch = true;\n  candidatas = parcelas.slice();\n}\n\n// Filtro por tamano preferido (soft)\nif (tamanoPref.includes('1000') || tamanoPref.includes('hecta') || tamanoPref === 'grande') {\n  const big = candidatas.filter(p => (p.tamano_m2 || 0) >= 7500);\n  if (big.length >= 1) candidatas = big;\n} else if (tamanoPref.includes('5000') || tamanoPref === 'chica' || tamanoPref === 'pequena') {\n  const small = candidatas.filter(p => (p.tamano_m2 || 0) <= 6000);\n  if (small.length >= 1) candidatas = small;\n}\n\n// Scoring: destacada, cercania al presupuesto/pie, tamano\ncandidatas.forEach(p => {\n  let fit = 0;\n  if (p.destacada) fit += 10;\n  if (formaPago === 'contado' && presupuestoClp > 0 && p.precio_contado) {\n    const dif = presupuestoClp - p.precio_contado;\n    if (dif >= 0) fit += 20 - Math.min(20, Math.floor((dif / presupuestoClp) * 20));\n  } else if (formaPago === 'credito' && pieClp > 0 && p.pie_minimo_50pct) {\n    const dif = pieClp - p.pie_minimo_50pct;\n    if (dif >= 0) fit += 20 - Math.min(20, Math.floor((dif / pieClp) * 20));\n  } else {\n    // Sin presupuesto: prioriza mas economicas\n    fit += Math.max(0, 15 - Math.floor((p.precio_contado || 0) / 2000000));\n  }\n  if (uso === 'inversion' && p.tamano_m2 && p.tamano_m2 <= 6000) fit += 3;\n  if ((uso === 'vivienda' || uso === 'segunda') && p.tamano_m2 && p.tamano_m2 >= 7500) fit += 3;\n  p._fit = fit;\n});\n\ncandidatas.sort((a, b) => b._fit - a._fit);\nconst top = candidatas.slice(0, 3);\n\nconst fmtClp = (n) => (n === null || n === undefined) ? '—' : `$${n.toLocaleString('es-CL')}`;\nconst fmtUf = (n) => (n === null || n === undefined) ? '—' : `${n.toFixed(2)} UF`;\n\nfunction pitchLine(p) {\n  const dest = p.destacada ? ' ⭐' : '';\n  if (formaPago === 'credito') {\n    return `Parcela ${p.numero}${dest} · ${p.tamano_m2} m² · pie 50% ${fmtClp(p.pie_minimo_50pct)} + 36 cuotas de ${fmtUf(p.cuota_mensual_uf)} (~${fmtClp(p.cuota_mensual_clp)}/mes al UF de hoy). Total crédito ${fmtClp(p.precio_credito)}.`;\n  }\n  return `Parcela ${p.numero}${dest} · ${p.tamano_m2} m² · contado ${fmtClp(p.precio_contado)} (dcto ${p.descuento_pct || 0}%).`;\n}\n\nconst intro = sinMatch\n  ? 'No tengo parcelas que calcen exacto con lo declarado, pero estas son las mejores alternativas cercanas:'\n  : 'Basado en lo que me compartió, le recomiendo estas opciones:';\n\nconst text = `${intro}\\n\\n${top.map((p, i) => `${i + 1}. ${pitchLine(p)}`).join('\\n')}\\n\\n¿Alguna le llama la atención para seguir afinando?`;\n\nreturn [{ json: {\n  ok: true,\n  query: { forma_pago: formaPago, presupuesto_clp: presupuestoClp, pie_clp: pieClp, uso, tamano_preferido: tamanoPref },\n  sin_match_estricto: sinMatch,\n  uf_valor_clp: ufValor,\n  total_candidatas: candidatas.length,\n  recomendadas: top.map(p => ({\n    numero: p.numero,\n    destacada: p.destacada,\n    tamano_m2: p.tamano_m2,\n    precio_contado: p.precio_contado,\n    precio_credito: p.precio_credito,\n    pie_minimo_50pct: p.pie_minimo_50pct,\n    cuota_mensual_uf: p.cuota_mensual_uf,\n    cuota_mensual_clp: p.cuota_mensual_clp,\n  })),\n  tool_output_text: text,\n} }];"
+      },
+      "id": "recomendar",
+      "name": "Recomendar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Fetch Google Sheet CSV", "type": "main", "index": 0 }]] },
+    "Fetch Google Sheet CSV": { "main": [[{ "node": "Fetch UF", "type": "main", "index": 0 }]] },
+    "Fetch UF": { "main": [[{ "node": "Recomendar", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
