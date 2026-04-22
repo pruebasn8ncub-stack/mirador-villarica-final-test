@@ -13,33 +13,14 @@ const leadGateSchema = z.object({
   nombre: z.string().trim().min(2).max(120),
   whatsapp: z.string().trim().min(7).max(30),
   email: z.string().trim().email().max(150),
-  plazo: z.enum(['inmediato', '1-3m', '3-6m', '6-12m', '12m+']),
 });
 
 type LeadGatePayload = z.infer<typeof leadGateSchema>;
 
-// Normaliza el valor del formulario al valor canónico BANT+ usado en DB.
-const PLAZO_GATE_TO_CANONICAL: Record<LeadGatePayload['plazo'], string> = {
-  inmediato: 'ahora',
-  '1-3m': '1_a_3_meses',
-  '3-6m': '3_a_6_meses',
-  '6-12m': '6_a_12_meses',
-  '12m+': 'mas_de_1_ano',
-};
-
-// Puntos de la columna "plazo" del framework BANT+ (ver n8n-workflows/scoring-spec.md).
-const PLAZO_POINTS: Record<LeadGatePayload['plazo'], number> = {
-  inmediato: 22,
-  '1-3m': 22,
-  '3-6m': 15,
-  '6-12m': 8,
-  '12m+': 3,
-};
-
-// Score inicial: plazo + contacto (whatsapp && email = 10). Nombre alcanzaría para 3.
-// Con los 3 contactos que pide el gate, contacto vale 10.
-function computeInitialScoreNumeric(plazo: LeadGatePayload['plazo']): number {
-  return PLAZO_POINTS[plazo] + 10;
+// Score inicial sólo por contacto completo (whatsapp + email = 10). Plazo se
+// captura después dentro de la conversación vía calificar_lead / actualizar_datos_lead.
+function computeInitialScoreNumeric(): number {
+  return 10;
 }
 
 async function notifyN8n(payload: LeadGatePayload, scoreNumeric: number) {
@@ -85,8 +66,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const scoreNumeric = computeInitialScoreNumeric(parsed.data.plazo);
-  const plazoCanonical = PLAZO_GATE_TO_CANONICAL[parsed.data.plazo];
+  const scoreNumeric = computeInitialScoreNumeric();
 
   const config = getSupabaseConfig();
   if (!config) {
@@ -102,7 +82,6 @@ export async function POST(req: Request) {
         nombre: parsed.data.nombre,
         whatsapp: parsed.data.whatsapp,
         email: parsed.data.email,
-        plazo: plazoCanonical,
         score: 'FRIO',
         score_numeric: scoreNumeric,
         score_history: [
@@ -110,8 +89,6 @@ export async function POST(req: Request) {
             at: new Date().toISOString(),
             action: 'gate_submit',
             source: 'form',
-            plazo_raw: parsed.data.plazo,
-            plazo_canonical: plazoCanonical,
             score_numeric: scoreNumeric,
           },
         ],

@@ -100,7 +100,7 @@ export interface LeadGateData {
   nombre: string;
   whatsapp: string;
   email: string;
-  plazo: LeadGatePlazo;
+  plazo?: LeadGatePlazo;
 }
 
 export interface ChatRequest {

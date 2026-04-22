@@ -2,18 +2,15 @@
 
 import { useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle2, Loader2, Lock, MessageCircle } from 'lucide-react';
+import { ArrowRight, Loader2, Lock, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LeadGateData, LeadGatePlazo } from '@/lib/chat/types';
-import { LEAD_GATE_PLAZO_LABELS } from '@/lib/chat/types';
+import type { LeadGateData } from '@/lib/chat/types';
 import { FormField } from './FormField';
 
 type Channel = 'web' | 'whatsapp';
 
 /** Hugo Vargas Cubelli — receptor directo de leads via WhatsApp. */
 const WHATSAPP_TO = '56992533044';
-
-const PLAZO_ORDER: LeadGatePlazo[] = ['inmediato', '1-3m', '3-6m', '6-12m', '12m+'];
 
 interface GateFormProps {
   onSubmit: (data: LeadGateData) => Promise<void> | void;
@@ -37,9 +34,6 @@ function validate(values: LeadGateData): Errors {
   if (!EMAIL_RE.test(values.email.trim())) {
     errors.email = 'Revisa que el correo esté completo.';
   }
-  if (!PLAZO_ORDER.includes(values.plazo)) {
-    errors.plazo = 'Elige cuándo te gustaría comprar.';
-  }
   return errors;
 }
 
@@ -48,7 +42,6 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
     nombre: defaultValues?.nombre ?? '',
     whatsapp: defaultValues?.whatsapp ?? '',
     email: defaultValues?.email ?? '',
-    plazo: defaultValues?.plazo ?? ('' as LeadGatePlazo),
   });
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<Channel | null>(null);
@@ -65,7 +58,6 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
     const text =
       `Hola, soy ${data.nombre}.\n` +
       `Vi el proyecto Mirador de Villarrica y me gustaría recibir más información.\n\n` +
-      `Cuándo me gustaría comprar: ${LEAD_GATE_PLAZO_LABELS[data.plazo]}\n` +
       `Mi correo: ${data.email}`;
     return `https://wa.me/${WHATSAPP_TO}?text=${encodeURIComponent(text)}`;
   };
@@ -79,7 +71,6 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
       nombre: values.nombre.trim(),
       whatsapp: values.whatsapp.trim(),
       email: values.email.trim(),
-      plazo: values.plazo,
     };
     // Abrir wa.me ANTES del await para no ser bloqueado por el popup blocker
     // (sólo un click directo cuenta como gesto de usuario).
@@ -156,42 +147,6 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
           onChange={(v) => setField('email', v)}
           error={errors.email}
         />
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bosque-700">
-            ¿Cuándo te gustaría comprar?
-          </label>
-          <div
-            role="radiogroup"
-            aria-label="Cuándo te gustaría comprar"
-            className="grid grid-cols-2 gap-1.5"
-          >
-            {PLAZO_ORDER.map((p) => {
-              const selected = values.plazo === p;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setField('plazo', p)}
-                  className={cn(
-                    'rounded-lg border px-2 py-1 text-[11.5px] font-medium transition-all',
-                    selected
-                      ? 'border-bosque-600 bg-bosque-600 text-crema shadow-sm'
-                      : 'border-bosque-200 bg-white text-bosque-700 hover:border-bosque-400 hover:bg-bosque-50',
-                    p === '12m+' && 'col-span-2'
-                  )}
-                >
-                  {LEAD_GATE_PLAZO_LABELS[p]}
-                </button>
-              );
-            })}
-          </div>
-          {errors.plazo && (
-            <p className="mt-0.5 text-[11px] text-red-600">{errors.plazo}</p>
-          )}
-        </div>
 
         {error && (
           <div
