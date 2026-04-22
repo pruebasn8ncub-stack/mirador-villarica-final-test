@@ -325,49 +325,25 @@ function ResumenDocument({ data }: { data: RenderBody }) {
             <Text style={styles.resourcesTitle}>Recursos del proyecto</Text>
             <Text style={styles.resourcesSubtitle}>Explorá el proyecto a tu ritmo</Text>
 
-            <Link src={TOUR_URL} style={styles.resourceItem}>
-              <View style={styles.resourceIconWrap}>
-                <Image src={`${base}/assets/icons/icon-tour.png`} style={styles.resourceIcon} />
+            {[
+              { url: TOUR_URL, icon: `${base}/assets/icons/icon-tour.png`, label: 'Tour 360°', desc: 'Recorrido virtual del proyecto', cta: 'Abrir →' },
+              { url: BROCHURE_URL, icon: `${base}/assets/icons/icon-brochure.png`, label: 'Brochure PDF', desc: 'Información completa del proyecto', cta: 'Descargar →' },
+              { url: SHEET_URL, icon: `${base}/assets/icons/icon-inventario.png`, label: 'Inventario en vivo', desc: 'Precios y disponibilidad en tiempo real', cta: 'Ver planilla →' },
+              { url: LOCATION_URL, icon: `${base}/assets/icons/icon-ubicacion.png`, label: 'Ubicación', desc: 'Colico, Región de La Araucanía', cta: 'Ver mapa →' },
+            ].map((r) => (
+              <View key={r.label} style={styles.resourceItem}>
+                <View style={styles.resourceIconWrap}>
+                  <Image src={r.icon} style={styles.resourceIcon} />
+                </View>
+                <View style={styles.resourceTextBlock}>
+                  <Text style={styles.resourceLabel}>{r.label}</Text>
+                  <Text style={styles.resourceDesc}>{r.desc}</Text>
+                </View>
+                <Link src={r.url} style={styles.resourceLink}>
+                  {r.cta}
+                </Link>
               </View>
-              <View style={styles.resourceTextBlock}>
-                <Text style={styles.resourceLabel}>Tour 360°</Text>
-                <Text style={styles.resourceDesc}>Recorrido virtual del proyecto</Text>
-              </View>
-              <Text style={styles.resourceLink}>Abrir →</Text>
-            </Link>
-
-            <Link src={BROCHURE_URL} style={styles.resourceItem}>
-              <View style={styles.resourceIconWrap}>
-                <Image src={`${base}/assets/icons/icon-brochure.png`} style={styles.resourceIcon} />
-              </View>
-              <View style={styles.resourceTextBlock}>
-                <Text style={styles.resourceLabel}>Brochure PDF</Text>
-                <Text style={styles.resourceDesc}>Información completa del proyecto</Text>
-              </View>
-              <Text style={styles.resourceLink}>Descargar →</Text>
-            </Link>
-
-            <Link src={SHEET_URL} style={styles.resourceItem}>
-              <View style={styles.resourceIconWrap}>
-                <Image src={`${base}/assets/icons/icon-inventario.png`} style={styles.resourceIcon} />
-              </View>
-              <View style={styles.resourceTextBlock}>
-                <Text style={styles.resourceLabel}>Inventario en vivo</Text>
-                <Text style={styles.resourceDesc}>Precios y disponibilidad en tiempo real</Text>
-              </View>
-              <Text style={styles.resourceLink}>Ver planilla →</Text>
-            </Link>
-
-            <Link src={LOCATION_URL} style={styles.resourceItem}>
-              <View style={styles.resourceIconWrap}>
-                <Image src={`${base}/assets/icons/icon-ubicacion.png`} style={styles.resourceIcon} />
-              </View>
-              <View style={styles.resourceTextBlock}>
-                <Text style={styles.resourceLabel}>Ubicación</Text>
-                <Text style={styles.resourceDesc}>Colico, Región de La Araucanía</Text>
-              </View>
-              <Text style={styles.resourceLink}>Ver mapa →</Text>
-            </Link>
+            ))}
           </View>
         </View>
 
