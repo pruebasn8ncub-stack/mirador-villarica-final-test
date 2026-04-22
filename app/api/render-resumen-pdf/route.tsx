@@ -118,16 +118,36 @@ const styles = StyleSheet.create({
   subtle: { fontSize: 9, color: '#888888', fontFamily: 'Helvetica' },
   resourcesBox: {
     backgroundColor: BRAND_CREAM_LIGHT,
-    borderRadius: 6,
+    borderRadius: 8,
     padding: 18,
     marginTop: 6,
     marginBottom: 6,
   },
-  resourcesTitle: { color: BRAND_GREEN, fontSize: 13, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 4 },
-  resourcesSubtitle: { fontSize: 9, color: TEXT_MUTED, textAlign: 'center', marginBottom: 12 },
-  resourceRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  resourceLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: BRAND_GREEN },
-  resourceLink: { fontSize: 9, color: '#1a6bc7', textDecoration: 'underline', maxWidth: '60%', textAlign: 'right' },
+  resourcesTitle: { color: BRAND_GREEN, fontSize: 13, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 3 },
+  resourcesSubtitle: { fontSize: 9, color: TEXT_MUTED, textAlign: 'center', marginBottom: 14 },
+  resourceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+  },
+  resourceIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: BRAND_GREEN,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  resourceIcon: { width: 18, height: 18 },
+  resourceTextBlock: { flex: 1 },
+  resourceLabel: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: BRAND_GREEN, marginBottom: 1 },
+  resourceDesc: { fontSize: 8.5, color: TEXT_MUTED },
+  resourceLink: { fontSize: 9, color: '#1a6bc7', textDecoration: 'underline', fontFamily: 'Helvetica-Bold' },
   footer: {
     backgroundColor: BRAND_GREEN_DARK,
     paddingVertical: 14,
@@ -305,30 +325,49 @@ function ResumenDocument({ data }: { data: RenderBody }) {
             <Text style={styles.resourcesTitle}>Recursos del proyecto</Text>
             <Text style={styles.resourcesSubtitle}>Explorá el proyecto a tu ritmo</Text>
 
-            <View style={styles.resourceRow}>
-              <Text style={styles.resourceLabel}>Tour 360°</Text>
-              <Link src={TOUR_URL} style={styles.resourceLink}>
-                lanube360.com/mirador-de-villarrica
-              </Link>
-            </View>
-            <View style={styles.resourceRow}>
-              <Text style={styles.resourceLabel}>Brochure PDF</Text>
-              <Link src={BROCHURE_URL} style={styles.resourceLink}>
-                Descargar PDF
-              </Link>
-            </View>
-            <View style={styles.resourceRow}>
-              <Text style={styles.resourceLabel}>Inventario en vivo</Text>
-              <Link src={SHEET_URL} style={styles.resourceLink}>
-                Ver planilla
-              </Link>
-            </View>
-            <View style={styles.resourceRow}>
-              <Text style={styles.resourceLabel}>Ubicación</Text>
-              <Link src={LOCATION_URL} style={styles.resourceLink}>
-                Ver en mapa
-              </Link>
-            </View>
+            <Link src={TOUR_URL} style={styles.resourceItem}>
+              <View style={styles.resourceIconWrap}>
+                <Image src={`${base}/assets/icons/icon-tour.png`} style={styles.resourceIcon} />
+              </View>
+              <View style={styles.resourceTextBlock}>
+                <Text style={styles.resourceLabel}>Tour 360°</Text>
+                <Text style={styles.resourceDesc}>Recorrido virtual del proyecto</Text>
+              </View>
+              <Text style={styles.resourceLink}>Abrir →</Text>
+            </Link>
+
+            <Link src={BROCHURE_URL} style={styles.resourceItem}>
+              <View style={styles.resourceIconWrap}>
+                <Image src={`${base}/assets/icons/icon-brochure.png`} style={styles.resourceIcon} />
+              </View>
+              <View style={styles.resourceTextBlock}>
+                <Text style={styles.resourceLabel}>Brochure PDF</Text>
+                <Text style={styles.resourceDesc}>Información completa del proyecto</Text>
+              </View>
+              <Text style={styles.resourceLink}>Descargar →</Text>
+            </Link>
+
+            <Link src={SHEET_URL} style={styles.resourceItem}>
+              <View style={styles.resourceIconWrap}>
+                <Image src={`${base}/assets/icons/icon-inventario.png`} style={styles.resourceIcon} />
+              </View>
+              <View style={styles.resourceTextBlock}>
+                <Text style={styles.resourceLabel}>Inventario en vivo</Text>
+                <Text style={styles.resourceDesc}>Precios y disponibilidad en tiempo real</Text>
+              </View>
+              <Text style={styles.resourceLink}>Ver planilla →</Text>
+            </Link>
+
+            <Link src={LOCATION_URL} style={styles.resourceItem}>
+              <View style={styles.resourceIconWrap}>
+                <Image src={`${base}/assets/icons/icon-ubicacion.png`} style={styles.resourceIcon} />
+              </View>
+              <View style={styles.resourceTextBlock}>
+                <Text style={styles.resourceLabel}>Ubicación</Text>
+                <Text style={styles.resourceDesc}>Colico, Región de La Araucanía</Text>
+              </View>
+              <Text style={styles.resourceLink}>Ver mapa →</Text>
+            </Link>
           </View>
         </View>
 
