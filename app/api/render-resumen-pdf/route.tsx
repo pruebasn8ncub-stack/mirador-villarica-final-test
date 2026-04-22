@@ -46,14 +46,14 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: BRAND_GREEN,
-    paddingVertical: 24,
+    paddingVertical: 14,
     paddingHorizontal: 36,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoMirador: { width: 110, objectFit: 'contain' },
-  logoTerra: { width: 130, objectFit: 'contain' },
+  logoMirador: { width: 88, objectFit: 'contain' },
+  logoTerra: { width: 104, objectFit: 'contain' },
   headerDivider: {
     color: '#ffffff',
     fontSize: 8,
