@@ -155,8 +155,7 @@ export function ChatWindow({
         'inset-x-0 bottom-0 top-auto max-h-[92svh] min-h-[60svh] rounded-t-2xl',
         // Desktop: ventana flotante centrada verticalmente, anclada a la derecha.
         // top:calc(50% - 310px) evita conflicto con el transform Y de framer-motion.
-        'md:inset-auto md:right-6 md:top-[calc(50%-310px)] md:bottom-auto md:h-[620px] md:max-h-[calc(100vh-4rem)] md:w-[400px] md:rounded-2xl',
-        'border border-bosque-100/60'
+        'md:inset-auto md:right-6 md:top-[calc(50%-310px)] md:bottom-auto md:h-[620px] md:max-h-[calc(100vh-4rem)] md:w-[400px] md:rounded-2xl'
       )}
     >
       {/* Drag handle visual (solo mobile) */}
