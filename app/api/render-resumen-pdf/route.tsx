@@ -349,8 +349,8 @@ function ResumenDocument({ data }: { data: RenderBody }) {
 }
 
 export async function POST(req: NextRequest) {
-  const token = process.env.N8N_WEBHOOK_TOKEN;
-  const auth = req.headers.get('x-render-token');
+  const token = (process.env.N8N_WEBHOOK_TOKEN || '').trim();
+  const auth = (req.headers.get('x-render-token') || '').trim();
   if (token && auth !== token) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }

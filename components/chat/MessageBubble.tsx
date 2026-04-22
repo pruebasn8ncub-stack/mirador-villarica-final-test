@@ -20,6 +20,29 @@ import { AttachmentVideo } from './AttachmentVideo';
 import { AttachmentLeadForm } from './AttachmentLeadForm';
 import { AttachmentHandoff } from './AttachmentHandoff';
 
+/**
+ * Renderiza texto del bot con soporte mínimo de markdown:
+ * **negrita**, saltos de línea simples y párrafos (línea en blanco).
+ * Evita dependencias externas para mantener el bundle liviano.
+ */
+function FormattedContent({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*\n]+\*\*)/g);
+  return (
+    <p className="whitespace-pre-line break-words leading-snug">
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return (
+            <strong key={i} className="font-semibold text-bosque-900">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </p>
+  );
+}
+
 interface MessageBubbleProps {
   message: Message;
   /** Si true, muestra el avatar junto a la burbuja del asistente. */
@@ -80,7 +103,7 @@ export function MessageBubble({
                 : 'bg-white text-bosque-900 rounded-bl-sm border border-bosque-100 shadow-chat-bubble-bot'
             )}
           >
-            {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+            {message.content && <FormattedContent text={message.content} />}
           </div>
         )}
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Compass, Maximize2, Loader2 } from 'lucide-react';
+import { X, Compass, Loader2 } from 'lucide-react';
 
 interface AttachmentFloatingTour360Props {
   url: string;
@@ -15,7 +15,6 @@ interface AttachmentFloatingTour360Props {
 export function AttachmentFloatingTour360({
   url,
   caption,
-  poster,
   title,
 }: AttachmentFloatingTour360Props) {
   const [mounted, setMounted] = useState(false);
@@ -42,39 +41,32 @@ export function AttachmentFloatingTour360({
   }, [open]);
 
   const inlinePreview = (
-    <div className="mt-2 flex flex-col gap-2 overflow-hidden rounded-xl border border-bosque-100 bg-white p-2 shadow-sm">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="group relative aspect-[16/10] overflow-hidden rounded-lg bg-black"
-        aria-label="Abrir tour 360°"
-      >
-        {poster && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={poster}
-            alt={title ?? 'Tour 360° del proyecto'}
-            className="h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
-          />
-        )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-b from-bosque-900/30 via-bosque-900/50 to-bosque-900/70 text-crema">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 ring-2 ring-crema/80 backdrop-blur-sm transition-transform group-hover:scale-110">
-            <Compass className="h-7 w-7" strokeWidth={2} />
-          </div>
-          <span className="rounded-full bg-bosque-900/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] backdrop-blur-sm">
-            Tour 360°
-          </span>
-        </div>
-      </button>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-1.5 rounded-lg bg-bosque-800 px-3 py-2 text-[12px] font-semibold text-crema transition-colors hover:bg-bosque-700"
-      >
-        <Maximize2 className="h-3.5 w-3.5" strokeWidth={2.5} />
-        {isMobile ? 'Abrir tour 360° a pantalla completa' : 'Abrir tour 360° al costado'}
-      </button>
-    </div>
+    <motion.button
+      type="button"
+      onClick={() => setOpen(true)}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        boxShadow: [
+          '0 0 0 0 rgba(251, 240, 217, 0.55)',
+          '0 0 0 8px rgba(251, 240, 217, 0)',
+          '0 0 0 0 rgba(251, 240, 217, 0)',
+        ],
+      }}
+      transition={{
+        opacity: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+        y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+        boxShadow: { duration: 1.8, repeat: Infinity, repeatDelay: 0.6, ease: 'easeOut' },
+      }}
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.98 }}
+      className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-bosque-800 px-3.5 py-2.5 text-[12.5px] font-semibold text-crema transition-colors hover:bg-bosque-700"
+      aria-label="Abrir tour 360°"
+    >
+      <Compass className="h-4 w-4" strokeWidth={2.25} />
+      Abrir tour 360°
+    </motion.button>
   );
 
   const floating =

@@ -77,7 +77,7 @@ export async function POST(req: Request) {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 55_000);
+    const timeout = setTimeout(() => controller.abort(), 90_000);
 
     const upstream = await fetch(webhookUrl, {
       method: 'POST',
