@@ -29,35 +29,21 @@ function firstName(fullName: string): string {
 }
 
 /**
- * Saludo local post-gate. 3 burbujas + quick replies llegan gratis (sin tokens).
- * El primer POST al n8n recién ocurre cuando el usuario elige un quick reply.
+ * Saludo local post-gate (1 burbuja + quick replies). El primer POST al n8n
+ * recién ocurre cuando el usuario elige un quick reply o escribe.
  */
 function buildOpeningMessages(lead: LeadGateData | null): Message[] {
   const name = lead ? firstName(lead.nombre) : '';
-  const baseTs = Date.now();
-  const greeting = name
-    ? `Hola ${name}, gracias por compartir tus datos. Los usaremos para enviarte información exclusiva del proyecto. 🙌`
-    : 'Gracias por compartir tus datos. Los usaremos para enviarte información exclusiva del proyecto. 🙌';
+  const saludo = name ? `Hola ${name}` : 'Hola';
   return [
     {
       id: 'opening-1',
       role: 'assistant',
-      content: greeting,
-      timestamp: baseTs,
-    },
-    {
-      id: 'opening-2',
-      role: 'assistant',
       content:
-        'Soy Lucía, la asistente virtual del proyecto Mirador de Villarrica y estoy para ayudarte a elegir tu próxima parcela. 🌲',
-      timestamp: baseTs + 1,
-    },
-    {
-      id: 'opening-3',
-      role: 'assistant',
-      content:
-        'Para continuar me gustaría saber — ¿ya cuentas con información del proyecto o te gustaría un tour virtual guiado?',
-      timestamp: baseTs + 2,
+        `${saludo} 👋 Soy **Lucía**, asistente virtual de Mirador de Villarrica. ` +
+        `Puedo ayudarte a consultar disponibilidad de parcelas, precios y conectarte con un broker cuando lo necesites.\n\n` +
+        `Para partir, ¿ya tienes información del proyecto o prefieres que te guíe con un tour virtual?`,
+      timestamp: Date.now(),
     },
   ];
 }
