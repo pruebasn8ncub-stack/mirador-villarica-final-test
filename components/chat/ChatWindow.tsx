@@ -150,7 +150,7 @@ export function ChatWindow({
       aria-label="Chat asistente Mirador de Villarrica"
       aria-modal="false"
       className={cn(
-        'fixed z-50 flex flex-col overflow-hidden bg-crema shadow-chat-window',
+        'fixed z-50 flex flex-col overflow-hidden bg-crema shadow-chat-window ring-1 ring-bosque-900/10',
         // Mobile: sheet desde abajo con altura 92vh y esquinas superiores redondeadas
         'inset-x-0 bottom-0 top-auto max-h-[92svh] min-h-[60svh] rounded-t-2xl',
         // Desktop: ventana flotante centrada verticalmente, anclada a la derecha.
