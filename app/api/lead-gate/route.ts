@@ -17,10 +17,10 @@ const leadGateSchema = z.object({
 
 type LeadGatePayload = z.infer<typeof leadGateSchema>;
 
-// Score inicial sólo por contacto completo (whatsapp + email = 10). Plazo se
-// captura después dentro de la conversación vía calificar_lead / actualizar_datos_lead.
+// Score inicial: 0. Las señales BANT+ (plazo, presupuesto, uso, forma_pago,
+// decisor, pre_aprobacion) se capturan durante la conversación con el bot.
 function computeInitialScoreNumeric(): number {
-  return 10;
+  return 0;
 }
 
 async function notifyN8n(payload: LeadGatePayload, scoreNumeric: number) {
