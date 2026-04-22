@@ -47,6 +47,15 @@ export function saveMessages(sessionId: string, messages: Message[]): void {
   }
 }
 
+export function clearMessages(sessionId: string): void {
+  if (typeof window === 'undefined' || !sessionId) return;
+  try {
+    window.sessionStorage.removeItem(messagesKey(sessionId));
+  } catch {
+    // silenciar
+  }
+}
+
 export function loadLead(sessionId: string): LeadGateData | null {
   if (typeof window === 'undefined' || !sessionId) return null;
   try {

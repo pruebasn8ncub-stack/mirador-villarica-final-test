@@ -6,6 +6,7 @@ import { ChatLauncher } from './ChatLauncher';
 import { ChatWindow } from './ChatWindow';
 import { GateModal } from './GateModal';
 import {
+  clearMessages,
   getOrCreateSessionId,
   loadLead,
   loadMessages,
@@ -467,21 +468,42 @@ export function ChatWidget() {
     [sessionId, leadData]
   );
 
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
     // Cancelar cualquier stream de bienvenida en curso
     streamTimers.current.forEach((t) => window.clearTimeout(t));
     streamTimers.current = [];
-    const newId = resetSession();
-    setSessionId(newId);
-    void ensureSession(newId);
-    setLeadData(null);
-    setGatePassed(false);
-    setMessages([]);
+
     setIsSending(false);
     setError(null);
     setGateError(null);
     firstMessageSent.current = false;
-  }, []);
+
+    // Si no hay lead aún, simplemente creamos una sesión nueva (flujo original).
+    if (!sessionId || !leadData) {
+      const newId = resetSession();
+      setSessionId(newId);
+      void ensureSession(newId);
+      setLeadData(null);
+      setGatePassed(false);
+      setMessages([]);
+      return;
+    }
+
+    // Lead ya identificado: mantenemos sesión + identidad y limpiamos chat_history
+    // + BANT en Supabase para reiniciar la conversación con memoria fresca.
+    clearMessages(sessionId);
+    setMessages([]);
+    try {
+      await fetch('/api/reset-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+    } catch {
+      // best-effort: si el backend falla igual dejamos la UI limpia.
+    }
+    streamOpeningMessages(leadData);
+  }, [sessionId, leadData, streamOpeningMessages]);
 
   if (!mounted) return null;
 
