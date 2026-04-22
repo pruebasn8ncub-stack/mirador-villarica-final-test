@@ -44,7 +44,7 @@ const config: Config = {
       boxShadow: {
         // Shadow layering para look premium
         'chat-launcher': '0 10px 30px -5px rgba(26, 61, 46, 0.4), 0 4px 12px -2px rgba(26, 61, 46, 0.25)',
-        'chat-window': '0 25px 50px -12px rgba(26, 61, 46, 0.35), 0 10px 20px -5px rgba(26, 61, 46, 0.15)',
+        'chat-window': '0 40px 80px -20px rgba(26, 61, 46, 0.45), 0 24px 48px -12px rgba(26, 61, 46, 0.30), 0 8px 16px -4px rgba(26, 61, 46, 0.18), 0 0 0 1px rgba(26, 61, 46, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
         'chat-bubble-user': '0 1px 2px rgba(26, 61, 46, 0.15)',
         'chat-bubble-bot': '0 1px 3px rgba(26, 61, 46, 0.08), 0 1px 2px rgba(26, 61, 46, 0.04)',
         'preview': '0 8px 24px -6px rgba(26, 61, 46, 0.3), 0 2px 6px -1px rgba(26, 61, 46, 0.15)',
