@@ -74,6 +74,15 @@ export function AttachmentFloatingTour360({
       ? createPortal(
           <AnimatePresence>
             <motion.div
+              key="tour360-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.24 }}
+              aria-hidden="true"
+              className="fixed inset-0 z-[45] bg-bosque-900/40 backdrop-blur-md"
+            />
+            <motion.div
               key="tour360-floating"
               initial={{ opacity: 0, x: isMobile ? 0 : 24, y: isMobile ? 24 : 0, scale: 0.97 }}
               animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}

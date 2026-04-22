@@ -153,8 +153,9 @@ export function ChatWindow({
         'fixed z-50 flex flex-col overflow-hidden bg-crema shadow-chat-window',
         // Mobile: sheet desde abajo con altura 92vh y esquinas superiores redondeadas
         'inset-x-0 bottom-0 top-auto max-h-[92svh] min-h-[60svh] rounded-t-2xl',
-        // Desktop: ventana flotante bottom-right
-        'md:inset-auto md:bottom-24 md:right-6 md:h-[620px] md:max-h-[calc(100vh-8rem)] md:w-[400px] md:rounded-2xl',
+        // Desktop: ventana flotante centrada verticalmente, anclada a la derecha.
+        // top:calc(50% - 310px) evita conflicto con el transform Y de framer-motion.
+        'md:inset-auto md:right-6 md:top-[calc(50%-310px)] md:bottom-auto md:h-[620px] md:max-h-[calc(100vh-4rem)] md:w-[400px] md:rounded-2xl',
         'border border-bosque-100/60'
       )}
     >
