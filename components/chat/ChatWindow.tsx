@@ -151,8 +151,10 @@ export function ChatWindow({
       aria-modal="false"
       className={cn(
         'fixed z-50 flex flex-col overflow-hidden bg-crema shadow-chat-window ring-1 ring-bosque-900/10',
-        // Mobile: fullscreen con altura dinámica (dvh) que se ajusta al abrir el teclado en Android/iOS.
-        'inset-0 h-[100dvh] max-h-[100dvh] rounded-none',
+        // Mobile: fullscreen anclado al top con altura dinámica (dvh).
+        // IMPORTANTE: sin bottom:0 para que el teclado Android NO empuje el layout hacia arriba
+        // (eso ocultaba el header). dvh se re-calcula cuando el teclado abre/cierra.
+        'left-0 right-0 top-0 h-[100dvh] max-h-[100dvh] rounded-none',
         // Desktop: ventana flotante centrada verticalmente, anclada a la derecha.
         // top:calc(50% - 310px) evita conflicto con el transform Y de framer-motion.
         'md:inset-auto md:right-6 md:top-[calc(50%-310px)] md:bottom-auto md:h-[620px] md:max-h-[calc(100vh-4rem)] md:w-[400px] md:rounded-2xl'
