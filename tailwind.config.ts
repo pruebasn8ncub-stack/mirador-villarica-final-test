@@ -61,7 +61,7 @@ const config: Config = {
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
-        'message-in': 'messageIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+        'message-in': 'messageIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
         'pulse-ring': 'pulseRing 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-dot': 'pulseDot 2s ease-in-out infinite',
         'preview-in': 'previewIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -90,8 +90,9 @@ const config: Config = {
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
         messageIn: {
-          '0%': { transform: 'translateY(8px) scale(0.98)', opacity: '0' },
-          '100%': { transform: 'translateY(0) scale(1)', opacity: '1' },
+          '0%':   { transform: 'translateY(14px) scale(0.94)', opacity: '0', filter: 'blur(4px)' },
+          '40%':  { opacity: '1', filter: 'blur(0)' },
+          '100%': { transform: 'translateY(0) scale(1)',       opacity: '1', filter: 'blur(0)' },
         },
         pulseRing: {
           '0%': { transform: 'scale(1)', opacity: '0.5' },
