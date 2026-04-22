@@ -307,20 +307,10 @@ export function ChatWidget() {
   const streamTimers = useRef<number[]>([]);
 
   /**
-   * Introduce los mensajes de bienvenida uno por uno con un typing indicator
-   * entre medio, simulando que Lucía está escribiendo. Evita que los 3 mensajes
-   * aparezcan de golpe y se sienta como un spam de texto.
-   *
-   * Timeline pausado para que el usuario alcance a leer cada mensaje:
-   *   t=0     typing on
-   *   t=1200  msg1 + typing off  (→ pausa de lectura 2200ms)
-   *   t=3400  typing on
-   *   t=4600  msg2 + typing off  (→ pausa de lectura 2200ms)
-   *   t=6800  typing on
-   *   t=8000  msg3 + typing off → quick replies
+   * Al abrir el chat, mostrar typing indicator por 2s antes de renderizar la
+   * burbuja de bienvenida para simular que Lucía está escribiendo.
    */
   const streamOpeningMessages = useCallback((lead: LeadGateData | null) => {
-    // Limpiar cualquier stream anterior en curso
     streamTimers.current.forEach((t) => window.clearTimeout(t));
     streamTimers.current = [];
 
@@ -328,18 +318,16 @@ export function ChatWidget() {
     setMessages([]);
     setIsSending(true);
 
-    const TYPING_MS = 1200;
-    const GAP_MS = 2200;
+    const TYPING_MS = 2000;
+    const GAP_MS = 1500;
 
     msgs.forEach((msg, i) => {
       const cycleStart = i * (TYPING_MS + GAP_MS);
-      // Show typing before each message (ya está en true para el primero)
       if (i > 0) {
         streamTimers.current.push(
           window.setTimeout(() => setIsSending(true), cycleStart)
         );
       }
-      // Add message and hide typing
       streamTimers.current.push(
         window.setTimeout(() => {
           setMessages((prev) => [...prev, msg]);
