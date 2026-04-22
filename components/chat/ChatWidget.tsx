@@ -43,7 +43,7 @@ function buildOpeningMessages(lead: LeadGateData | null): Message[] {
       content:
         `${saludo} 👋 Soy **Lucía**, asistente virtual de Mirador de Villarrica. ` +
         `Puedo ayudarte a consultar disponibilidad de parcelas, precios y conectarte con un broker cuando lo necesites.\n\n` +
-        `Para partir, ¿ya tienes información del proyecto o prefieres que te guíe con un tour virtual?`,
+        `Para partir, ¿ya tienes información del proyecto o prefieres que lo revisemos juntos?`,
       timestamp: Date.now(),
     },
   ];
