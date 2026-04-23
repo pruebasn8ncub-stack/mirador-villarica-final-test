@@ -20,9 +20,6 @@ interface Parcela {
 
 interface RenderBody {
   primerNombre: string;
-  uso?: string;
-  forma_pago?: string;
-  plazo_compra?: string;
   resumen_conversacion?: string;
   parcelas: Parcela[];
   base_url?: string;
@@ -168,13 +165,6 @@ function estadoLabel(estado: string): string {
   return 'Vendida';
 }
 
-function usoLabel(uso?: string): string {
-  if (uso === 'inversion') return 'inversión';
-  if (uso === 'segunda') return 'segunda vivienda';
-  if (uso === 'vivienda') return 'vivienda permanente';
-  return '';
-}
-
 function ParcelaCard({ p }: { p: Parcela }) {
   const hasContado = p.precio_contado !== null && p.precio_contado !== undefined;
   const hasCredito =
@@ -266,14 +256,6 @@ function ResumenDocument({ data }: { data: RenderBody }) {
   const LOCATION_URL = 'https://www.google.com/maps/place/39%C2%B000%2752.4%22S+72%C2%B007%2740.8%22W/';
   const BROCHURE_URL = `${base}/brochure/mirador-villarrica-brochure.pdf`;
 
-  const uso = usoLabel(data.uso);
-  const pagoIntro =
-    data.forma_pago === 'credito'
-      ? ' con financiamiento vía crédito directo'
-      : data.forma_pago === 'contado'
-      ? ' con pago contado'
-      : '';
-
   return (
     <Document
       title={`Resumen Mirador de Villarrica · ${data.primerNombre}`}
@@ -295,13 +277,8 @@ function ResumenDocument({ data }: { data: RenderBody }) {
             Hola <Text style={{ fontFamily: 'Helvetica-Bold' }}>{data.primerNombre}</Text>,
           </Text>
           <Text style={styles.intro}>
-            Gracias por conversar con nosotros. En base a tu interés
-            {uso ? (
-              <>
-                {' '}para <Text style={{ fontFamily: 'Helvetica-Bold' }}>{uso}</Text>
-              </>
-            ) : null}
-            {pagoIntro}, preparamos este resumen con las parcelas que mejor se ajustan a tu perfil.
+            Gracias por conversar con nosotros. Preparamos este resumen con las parcelas que conversamos y el detalle
+            actualizado de precios y condiciones para que lo revises con calma.
           </Text>
 
           {data.resumen_conversacion && data.resumen_conversacion.trim() && (

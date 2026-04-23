@@ -30,8 +30,7 @@ const TOUR_360_URL = 'https://lanube360.com/mirador-de-villarrica/';
  * de línea simples y párrafos. Evita dependencias externas.
  */
 function FormattedContent({ text }: { text: string }) {
-  const normalized = text.replace(/\n{2,}/g, '\n');
-  const parts = normalized.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
   return (
     <p className="whitespace-pre-line break-words leading-snug">
       {parts.map((part, i) => {
