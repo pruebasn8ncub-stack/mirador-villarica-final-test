@@ -9,7 +9,7 @@ import { AttachmentGallery } from './AttachmentGallery';
 import { AttachmentFloatingGallery } from './AttachmentFloatingGallery';
 import { AttachmentFloatingTour360 } from './AttachmentFloatingTour360';
 import { AttachmentFloatingMasterplan } from './AttachmentFloatingMasterplan';
-import { AttachmentFloatingInventory } from './AttachmentFloatingInventory';
+import { AttachmentFloatingExplorer } from './AttachmentFloatingExplorer';
 import { AttachmentWhatsAppLink } from './AttachmentWhatsAppLink';
 import { AttachmentPropertyCard } from './AttachmentPropertyCard';
 import { AttachmentPropertyCarousel } from './AttachmentPropertyCarousel';
@@ -275,18 +275,10 @@ export function MessageBubble({
           }
         })}
 
-        {hasTourToken && (
-          <AttachmentFloatingTour360
-            url={TOUR_360_URL}
-            title="Tour 360° · Mirador de Villarrica"
-            caption="Recorre el proyecto desde tu dispositivo"
-          />
-        )}
-
-        {hasInventoryToken && (
-          <AttachmentFloatingInventory
-            title="Inventario · Parcelas disponibles"
-            caption="Precios, tamaños y cuotas actualizados en tiempo real"
+        {(hasTourToken || hasInventoryToken) && (
+          <AttachmentFloatingExplorer
+            initialTab={hasInventoryToken && !hasTourToken ? 'inventory' : 'tour'}
+            tourUrl={TOUR_360_URL}
           />
         )}
       </div>
