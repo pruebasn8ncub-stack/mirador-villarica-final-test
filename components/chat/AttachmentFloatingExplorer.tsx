@@ -10,6 +10,8 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 
 type Tab = 'tour' | 'inventory';
@@ -85,6 +87,48 @@ function cleanMoney(raw: string): string {
   return v;
 }
 
+function moneyToNumber(raw: string): number | null {
+  if (!raw || raw === '—') return null;
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  return parseInt(digits, 10);
+}
+
+function tamanoToNumber(raw: string): number | null {
+  const digits = (raw || '').replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  return parseInt(digits, 10);
+}
+
+type PriceRange = 'all' | 'lt15' | '15-18' | '18-22' | 'gt22';
+type TamanoFilter = 'all' | '5000' | '10000';
+
+const PRICE_RANGES: { id: PriceRange; label: string; min: number; max: number | null }[] = [
+  { id: 'all', label: 'Todos', min: 0, max: null },
+  { id: 'lt15', label: 'Hasta $15M', min: 0, max: 15_000_000 },
+  { id: '15-18', label: '$15M – $18M', min: 15_000_000, max: 18_000_000 },
+  { id: '18-22', label: '$18M – $22M', min: 18_000_000, max: 22_000_000 },
+  { id: 'gt22', label: 'Más de $22M', min: 22_000_000, max: null },
+];
+
+const PIE_RANGES: { id: PriceRange; label: string; min: number; max: number | null }[] = [
+  { id: 'all', label: 'Todos', min: 0, max: null },
+  { id: 'lt15', label: 'Hasta $9M', min: 0, max: 9_000_000 },
+  { id: '15-18', label: '$9M – $11M', min: 9_000_000, max: 11_000_000 },
+  { id: '18-22', label: '$11M – $13M', min: 11_000_000, max: 13_000_000 },
+  { id: 'gt22', label: 'Más de $13M', min: 13_000_000, max: null },
+];
+
+function inRange(
+  value: number | null,
+  range: { min: number; max: number | null }
+): boolean {
+  if (value === null) return false;
+  if (value < range.min) return false;
+  if (range.max !== null && value > range.max) return false;
+  return true;
+}
+
 export function AttachmentFloatingExplorer({
   tourUrl,
   title,
@@ -108,6 +152,11 @@ export function AttachmentFloatingExplorer({
   const [invError, setInvError] = useState<string | null>(null);
   const [invRows, setInvRows] = useState<Parcela[]>([]);
   const [query, setQuery] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [contadoFilter, setContadoFilter] = useState<PriceRange>('all');
+  const [creditoFilter, setCreditoFilter] = useState<PriceRange>('all');
+  const [pieFilter, setPieFilter] = useState<PriceRange>('all');
+  const [tamanoFilter, setTamanoFilter] = useState<TamanoFilter>('all');
 
   useEffect(() => {
     setMounted(true);
@@ -169,11 +218,48 @@ export function AttachmentFloatingExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tab]);
 
+  const activeFilterCount =
+    (contadoFilter !== 'all' ? 1 : 0) +
+    (creditoFilter !== 'all' ? 1 : 0) +
+    (pieFilter !== 'all' ? 1 : 0) +
+    (tamanoFilter !== 'all' ? 1 : 0);
+
+  const resetFilters = () => {
+    setContadoFilter('all');
+    setCreditoFilter('all');
+    setPieFilter('all');
+    setTamanoFilter('all');
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return invRows;
-    return invRows.filter((r) => r.lote.toLowerCase().includes(q));
-  }, [invRows, query]);
+    const contadoRange = PRICE_RANGES.find((r) => r.id === contadoFilter)!;
+    const creditoRange = PRICE_RANGES.find((r) => r.id === creditoFilter)!;
+    const pieRange = PIE_RANGES.find((r) => r.id === pieFilter)!;
+
+    return invRows.filter((r) => {
+      if (q && !r.lote.toLowerCase().includes(q)) return false;
+
+      if (tamanoFilter !== 'all') {
+        const t = tamanoToNumber(r.tamano);
+        if (t === null) return false;
+        if (tamanoFilter === '5000' && t !== 5000) return false;
+        if (tamanoFilter === '10000' && t !== 10000) return false;
+      }
+
+      if (contadoFilter !== 'all') {
+        if (!inRange(moneyToNumber(r.contado), contadoRange)) return false;
+      }
+      if (creditoFilter !== 'all') {
+        if (!inRange(moneyToNumber(r.credito), creditoRange)) return false;
+      }
+      if (pieFilter !== 'all') {
+        if (!inRange(moneyToNumber(r.pie), pieRange)) return false;
+      }
+
+      return true;
+    });
+  }, [invRows, query, contadoFilter, creditoFilter, pieFilter, tamanoFilter]);
 
   const inlinePreview = (
     <motion.div
@@ -363,20 +449,139 @@ export function AttachmentFloatingExplorer({
                   role="tabpanel"
                   className="flex flex-1 flex-col overflow-hidden bg-white"
                 >
-                  <div className="flex items-center gap-2 border-b border-bosque-100 bg-crema/50 px-4 py-2.5">
-                    <div className="relative flex-1">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-bosque-500" />
-                      <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Buscar por número de lote (ej. 12, B3)"
-                        className="w-full rounded-lg border border-bosque-200 bg-white py-1.5 pl-8 pr-3 text-[12.5px] text-bosque-900 placeholder:text-bosque-400 focus:border-bosque-500 focus:outline-none focus:ring-2 focus:ring-bosque-500/20"
-                      />
+                  <div className="border-b border-bosque-100 bg-crema/50">
+                    <div className="flex items-center gap-2 px-4 py-2.5">
+                      <div className="relative flex-1">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-bosque-500" />
+                        <input
+                          type="text"
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          placeholder="Buscar por número de lote (ej. 12, B3)"
+                          className="w-full rounded-lg border border-bosque-200 bg-white py-1.5 pl-8 pr-3 text-[12.5px] text-bosque-900 placeholder:text-bosque-400 focus:border-bosque-500 focus:outline-none focus:ring-2 focus:ring-bosque-500/20"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFiltersOpen((v) => !v)}
+                        aria-expanded={filtersOpen}
+                        aria-controls="filters-panel"
+                        className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                          activeFilterCount > 0
+                            ? 'border-bosque-800 bg-bosque-800 text-crema hover:bg-bosque-700'
+                            : 'border-bosque-200 bg-white text-bosque-800 hover:bg-bosque-50'
+                        }`}
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.25} />
+                        Filtros
+                        {activeFilterCount > 0 && (
+                          <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-crema px-1 text-[10px] font-bold text-bosque-800">
+                            {activeFilterCount}
+                          </span>
+                        )}
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                          strokeWidth={2.25}
+                        />
+                      </button>
+                      <span className="shrink-0 rounded-full bg-bosque-800/10 px-2.5 py-1 text-[11px] font-semibold text-bosque-800">
+                        {filtered.length} {filtered.length === 1 ? 'lote' : 'lotes'}
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-bosque-800/10 px-2.5 py-1 text-[11px] font-semibold text-bosque-800">
-                      {filtered.length} {filtered.length === 1 ? 'lote' : 'lotes'}
-                    </span>
+
+                    <AnimatePresence initial={false}>
+                      {filtersOpen && (
+                        <motion.div
+                          id="filters-panel"
+                          key="filters-panel"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="grid grid-cols-1 gap-3 border-t border-bosque-100 bg-white px-4 py-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wide text-bosque-600">
+                                Tamaño
+                              </label>
+                              <select
+                                value={tamanoFilter}
+                                onChange={(e) => setTamanoFilter(e.target.value as TamanoFilter)}
+                                className="w-full cursor-pointer rounded-lg border border-bosque-200 bg-white px-2.5 py-1.5 text-[12.5px] text-bosque-900 focus:border-bosque-500 focus:outline-none focus:ring-2 focus:ring-bosque-500/20"
+                              >
+                                <option value="all">Todos</option>
+                                <option value="5000">5.000 m²</option>
+                                <option value="10000">1 hectárea</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wide text-bosque-600">
+                                Precio contado
+                              </label>
+                              <select
+                                value={contadoFilter}
+                                onChange={(e) => setContadoFilter(e.target.value as PriceRange)}
+                                className="w-full cursor-pointer rounded-lg border border-bosque-200 bg-white px-2.5 py-1.5 text-[12.5px] text-bosque-900 focus:border-bosque-500 focus:outline-none focus:ring-2 focus:ring-bosque-500/20"
+                              >
+                                {PRICE_RANGES.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wide text-bosque-600">
+                                Precio crédito
+                              </label>
+                              <select
+                                value={creditoFilter}
+                                onChange={(e) => setCreditoFilter(e.target.value as PriceRange)}
+                                className="w-full cursor-pointer rounded-lg border border-bosque-200 bg-white px-2.5 py-1.5 text-[12.5px] text-bosque-900 focus:border-bosque-500 focus:outline-none focus:ring-2 focus:ring-bosque-500/20"
+                              >
+                                {PRICE_RANGES.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wide text-bosque-600">
+                                Pie 50%
+                              </label>
+                              <select
+                                value={pieFilter}
+                                onChange={(e) => setPieFilter(e.target.value as PriceRange)}
+                                className="w-full cursor-pointer rounded-lg border border-bosque-200 bg-white px-2.5 py-1.5 text-[12.5px] text-bosque-900 focus:border-bosque-500 focus:outline-none focus:ring-2 focus:ring-bosque-500/20"
+                              >
+                                {PIE_RANGES.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {activeFilterCount > 0 && (
+                              <div className="sm:col-span-2">
+                                <button
+                                  type="button"
+                                  onClick={resetFilters}
+                                  className="text-[11.5px] font-semibold text-bosque-700 underline-offset-2 hover:underline"
+                                >
+                                  Limpiar filtros
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div className="relative flex-1 overflow-auto bg-white">
@@ -402,10 +607,21 @@ export function AttachmentFloatingExplorer({
                       </div>
                     )}
                     {!invLoading && !invError && filtered.length === 0 && invRows.length > 0 && (
-                      <div className="flex h-full items-center justify-center">
+                      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                         <p className="text-[12.5px] text-bosque-500">
-                          Sin resultados para &quot;{query}&quot;
+                          Sin resultados
+                          {query ? ` para "${query}"` : ''}
+                          {activeFilterCount > 0 ? ' con los filtros aplicados' : ''}
                         </p>
+                        {activeFilterCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="text-[12px] font-semibold text-bosque-700 underline-offset-2 hover:underline"
+                          >
+                            Limpiar filtros
+                          </button>
+                        )}
                       </div>
                     )}
                     {!invError && filtered.length > 0 && (
