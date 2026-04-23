@@ -15,7 +15,6 @@ interface Parcela {
   precio_credito: number | null;
   pie_minimo_50pct: number | null;
   cuota_mensual_clp: number | null;
-  cuota_mensual_uf: number | null;
 }
 
 interface RenderBody {
@@ -156,8 +155,6 @@ const styles = StyleSheet.create({
 
 const fmtClp = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `$${n.toLocaleString('es-CL')}`;
-const fmtUf = (n: number | null | undefined) =>
-  n === null || n === undefined ? '—' : `${n.toFixed(2)} UF`;
 
 function estadoLabel(estado: string): string {
   if (estado === 'disponible') return 'Disponible';
@@ -227,13 +224,10 @@ function ParcelaCard({ p }: { p: Parcela }) {
                 <Text style={styles.rowValue}>{fmtClp(p.pie_minimo_50pct)}</Text>
               </View>
             )}
-            {p.cuota_mensual_uf !== null && p.cuota_mensual_uf !== undefined && (
+            {p.cuota_mensual_clp !== null && p.cuota_mensual_clp !== undefined && (
               <View style={styles.row}>
                 <Text style={styles.rowLabel}>Cuota mensual</Text>
-                <Text style={styles.rowValue}>
-                  {fmtUf(p.cuota_mensual_uf)}{' '}
-                  <Text style={styles.subtle}>(~{fmtClp(p.cuota_mensual_clp)} hoy)</Text>
-                </Text>
+                <Text style={styles.rowValue}>{fmtClp(p.cuota_mensual_clp)}</Text>
               </View>
             )}
             <View style={styles.row}>
