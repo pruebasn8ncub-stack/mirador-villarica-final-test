@@ -2,10 +2,6 @@
   "name": "[Tool] Mirador - enviar_resumen_personalizado",
   "nodes": [
     {
-      "parameters": {
-        "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"session_id\": \"uuid-del-session\",\n  \"canales\": [\"email\"],\n  \"parcelas_recomendadas\": [\"9\", \"16\", \"47\"],\n  \"forma_pago\": \"credito\",\n  \"presupuesto_o_pie_clp\": 15000000,\n  \"uso\": \"segunda\",\n  \"resumen_conversacion\": \"Lead interesado en parcela para segunda vivienda con vista al volcan. Pie disponible 15M.\"\n}"
-      },
       "id": "trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -13,12 +9,13 @@
       "position": [
         240,
         300
-      ]
+      ],
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"session_id\": \"uuid-del-session\",\n  \"canales\": [\"email\"],\n  \"parcelas_recomendadas\": [\"9\", \"16\", \"47\"],\n  \"forma_pago\": \"credito\",\n  \"presupuesto_o_pie_clp\": 15000000,\n  \"uso\": \"segunda\",\n  \"resumen_conversacion\": \"Lead interesado\"\n}"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// Valida inputs y normaliza canales.\nconst d = $json;\n\nif (!d.session_id || typeof d.session_id !== 'string') {\n  throw new Error('session_id requerido');\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) {\n  throw new Error('session_id debe ser UUID valido');\n}\n\n// Normaliza canales: acepta array o string 'ambos'\nlet canales = [];\nif (Array.isArray(d.canales)) {\n  canales = d.canales.map(c => String(c).toLowerCase().trim());\n} else if (typeof d.canales === 'string') {\n  const raw = d.canales.toLowerCase().trim();\n  if (raw === 'ambos' || raw === 'both') canales = ['email', 'whatsapp'];\n  else canales = [raw];\n}\ncanales = canales.filter(c => ['email', 'whatsapp'].includes(c));\nif (canales.length === 0) canales = ['email']; // fallback\n\nconst parcelas = Array.isArray(d.parcelas_recomendadas)\n  ? d.parcelas_recomendadas.map(p => String(p).toUpperCase().trim()).filter(Boolean)\n  : [];\n\nreturn [{ json: {\n  session_id: d.session_id,\n  canales,\n  parcelas_recomendadas: parcelas,\n  forma_pago: (d.forma_pago || '').toString().toLowerCase().trim(),\n  presupuesto_o_pie_clp: Number(d.presupuesto_o_pie_clp) || 0,\n  uso: (d.uso || '').toString().toLowerCase().trim(),\n  resumen_conversacion: (d.resumen_conversacion || '').toString().slice(0, 1200),\n  send_email: canales.includes('email'),\n  send_whatsapp: canales.includes('whatsapp'),\n} }];"
-      },
       "id": "validate",
       "name": "Validate Input",
       "type": "n8n-nodes-base.code",
@@ -26,9 +23,20 @@
       "position": [
         460,
         300
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const d = $json;\nif (!d.session_id || typeof d.session_id !== 'string') { throw new Error('session_id requerido'); }\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) { throw new Error('session_id debe ser UUID valido'); }\n\n// canales: acepta array, string coma-separado, o 'ambos'/'both'\nlet canales = [];\nif (Array.isArray(d.canales)) { canales = d.canales.map(c => String(c).toLowerCase().trim()); }\nelse if (typeof d.canales === 'string') { const raw = d.canales.toLowerCase().trim(); if (raw === 'ambos' || raw === 'both') canales = ['email', 'whatsapp']; else canales = raw.split(',').map(s => s.trim()).filter(Boolean); }\ncanales = canales.filter(c => ['email', 'whatsapp'].includes(c));\n\n// parcelas_recomendadas: acepta array o string coma-separado\nlet parcelas = [];\nif (Array.isArray(d.parcelas_recomendadas)) { parcelas = d.parcelas_recomendadas; }\nelse if (typeof d.parcelas_recomendadas === 'string' && d.parcelas_recomendadas.trim()) { parcelas = d.parcelas_recomendadas.split(',').map(s => s.trim()).filter(Boolean); }\nparcelas = parcelas.map(p => String(p).toUpperCase().trim()).filter(Boolean);\n\n// Overrides opcionales: el LLM los envía solo si el lead pidió cambiar el contacto.\nconst emailOverride = (d.email_override || '').toString().trim();\nconst waOverrideRaw = (d.whatsapp_override || '').toString().trim();\nconst waOverrideClean = waOverrideRaw.replace(/[^0-9]/g, '');\nconst emailValidRe = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nconst emailOverrideValid = emailOverride && emailValidRe.test(emailOverride) ? emailOverride : '';\nconst waOverrideValid = waOverrideClean.length >= 10 ? waOverrideClean : '';\n\nreturn [{ json: {\n  session_id: d.session_id,\n  canales,\n  parcelas_recomendadas: parcelas,\n  forma_pago: (d.forma_pago || '').toString().toLowerCase().trim(),\n  presupuesto_o_pie_clp: Number(d.presupuesto_o_pie_clp) || 0,\n  uso: (d.uso || '').toString().toLowerCase().trim(),\n  plazo_compra: (d.plazo_compra || '').toString().trim().slice(0, 80),\n  resumen_conversacion: (d.resumen_conversacion || '').toString().slice(0, 1500),\n  email_override: emailOverrideValid,\n  whatsapp_override: waOverrideValid,\n  send_email: canales.includes('email'),\n  send_whatsapp: canales.includes('whatsapp'),\n} }];"
+      }
     },
     {
+      "id": "fetch-lead",
+      "name": "Fetch Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $json.session_id }}&select=id,nombre,whatsapp,email,uso,forma_pago,rango_presupuesto,pie_disponible,parcela_interes,score_history",
@@ -52,17 +60,17 @@
             }
           }
         }
-      },
-      "id": "fetch-lead",
-      "name": "Fetch Lead",
+      }
+    },
+    {
+      "id": "fetch-sheet",
+      "name": "Fetch Sheet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        680,
+        900,
         300
-      ]
-    },
-    {
+      ],
       "parameters": {
         "url": "https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/export?format=csv&gid=1975618999",
         "options": {
@@ -78,17 +86,17 @@
             }
           }
         }
-      },
-      "id": "fetch-sheet",
-      "name": "Fetch Sheet",
+      }
+    },
+    {
+      "id": "fetch-uf",
+      "name": "Fetch UF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        900,
+        1120,
         300
-      ]
-    },
-    {
+      ],
       "parameters": {
         "url": "https://mindicador.cl/api/uf",
         "options": {
@@ -99,20 +107,9 @@
             }
           }
         }
-      },
-      "id": "fetch-uf",
-      "name": "Fetch UF",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1120,
-        300
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// Construye HTML del email + texto de WhatsApp con las parcelas recomendadas.\nconst input = $('Validate Input').first().json;\nconst leadArr = $('Fetch Lead').first().json;\nconst sheetItem = $('Fetch Sheet').first().json;\nconst uf = $json;\n\nconst ufValor = uf && uf.serie && uf.serie[0] && typeof uf.serie[0].valor === 'number' ? uf.serie[0].valor : null;\n\nif (!Array.isArray(leadArr) || leadArr.length === 0) {\n  return [{ json: {\n    ok: false,\n    skip: true,\n    tool_output_text: 'No encontre tu registro de sesion para enviar el resumen. Confirma tu nombre, email y WhatsApp para continuar.',\n  } }];\n}\nconst lead = leadArr[0];\nconst primerNombre = (lead.nombre || '').split(' ')[0] || 'Cliente';\n\n// Parse CSV inventario\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\nfunction parseCsv(text) {\n  const rows = [];\n  let row = []; let field = ''; let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else inQuotes = !inQuotes;\n    } else if (c === ',' && !inQuotes) { row.push(field); field = ''; }\n    else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else field += c;\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\nconst pm = (s) => { if (!s) return null; const t = s.toString(); if (t.includes('#')) return null; const n = t.replace(/[^0-9]/g, ''); return n ? parseInt(n, 10) : null; };\nconst ps = (s) => { if (!s) return null; const n = s.toString().replace(/[^0-9]/g, ''); return n ? parseInt(n, 10) : null; };\nconst normEstado = (r) => { const e = (r || '').toString().trim().toLowerCase(); if (e.startsWith('disponi')) return 'disponible'; if (e.startsWith('reserv')) return 'reservado'; if (e.startsWith('vendi')) return 'vendido'; return e; };\n\nconst rows = parseCsv(csvText);\nconst byNumero = new Map();\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  const cuotaClp = pm(r[11]);\n  byNumero.set(lote.toUpperCase(), {\n    numero: lote.toUpperCase(),\n    destacada: ((r[0] || '').toString().trim() === '⭐'),\n    estado: normEstado(r[2]),\n    tamano_m2: ps(r[3]),\n    precio_contado: pm(r[6]),\n    descuento_pct: ps(r[7]),\n    precio_credito: pm(r[9]),\n    pie_minimo_50pct: pm(r[10]),\n    cuota_mensual_clp: cuotaClp,\n    cuota_mensual_uf: cuotaClp && ufValor ? Math.round((cuotaClp / ufValor) * 100) / 100 : null,\n  });\n}\n\nconst parcelas = input.parcelas_recomendadas\n  .map(n => byNumero.get(n.toUpperCase()))\n  .filter(Boolean);\n\nconst fmtClp = (n) => n === null || n === undefined ? '—' : `$${n.toLocaleString('es-CL')}`;\nconst fmtUf = (n) => n === null || n === undefined ? '—' : `${n.toFixed(2)} UF`;\n\nconst BASE_URL = 'https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app';\nconst LOGO_MIRADOR = `${BASE_URL}/assets/mirador-logo.png`;\nconst LOGO_TERRA = `${BASE_URL}/assets/terra-segura-logo.png`;\n\nconst SHEET_URL = 'https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/edit?gid=1975618999';\nconst TOUR_URL = 'https://lanube360.com/mirador-de-villarrica/';\nconst LOCATION_URL = 'https://www.google.com/maps/place/39%C2%B000%2752.4%22S+72%C2%B007%2740.8%22W/';\nconst WA_COMERCIAL = '+56 9 4032 9987';\nconst WA_LINK = 'https://wa.me/56940329987';\n\n// ---------- HTML email ----------\nconst parcelasHtml = parcelas.length === 0\n  ? '<p style=\"margin:0;color:#666;font-size:14px;\">El equipo le enviará recomendaciones en detalle pronto.</p>'\n  : parcelas.map(p => {\n      const disp = p.estado === 'disponible' ? '✅ Disponible' : p.estado === 'reservado' ? '⏳ Reservada' : '❌ Vendida';\n      const pagoLabel = input.forma_pago === 'credito' ? 'Crédito directo' : 'Contado';\n      const pagoValue = input.forma_pago === 'credito'\n        ? `Pie 50% ${fmtClp(p.pie_minimo_50pct)} + 36 cuotas de ${fmtUf(p.cuota_mensual_uf)} (~${fmtClp(p.cuota_mensual_clp)} al UF hoy)`\n        : `${fmtClp(p.precio_contado)} (dcto ${p.descuento_pct || 0}%)`;\n      return `<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border:1px solid #d7dcd5;border-radius:8px;margin:14px 0;overflow:hidden;\">`\n        + `<tr><td style=\"background:#1a3d2e;padding:12px 18px;\">`\n        + `<span style=\"color:#fff;font-size:16px;font-weight:bold;\">Parcela ${p.numero}${p.destacada ? ' ⭐' : ''}</span>`\n        + `</td></tr>`\n        + `<tr><td style=\"padding:14px 18px;background:#fff;\">`\n        + `<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"font-size:14px;color:#333;\">`\n        + `<tr><td style=\"padding:6px 0;width:40%;color:#666;\">Tamaño</td><td style=\"padding:6px 0;font-weight:bold;\">${p.tamano_m2 || '—'} m²</td></tr>`\n        + `<tr><td style=\"padding:6px 0;color:#666;\">Estado</td><td style=\"padding:6px 0;font-weight:bold;\">${disp}</td></tr>`\n        + `<tr><td style=\"padding:6px 0;color:#666;\">${pagoLabel}</td><td style=\"padding:6px 0;font-weight:bold;\">${pagoValue}</td></tr>`\n        + `</table>`\n        + `</td></tr></table>`;\n    }).join('');\n\nconst usoLabel = input.uso === 'inversion' ? 'inversión' : input.uso === 'segunda' ? 'segunda vivienda' : input.uso === 'vivienda' ? 'vivienda permanente' : '';\nconst pagoIntro = input.forma_pago === 'credito' ? ' con financiamiento vía crédito directo' : input.forma_pago === 'contado' ? ' con pago contado' : '';\nconst safeResumen = (input.resumen_conversacion || '').replace(/</g, '&lt;');\n\nconst emailHtml = ''\n  + '<div style=\"margin:0;padding:0;background:#f1ede4;\">'\n  + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f1ede4;padding:20px 0;\">'\n  + '<tr><td align=\"center\">'\n  + '<table role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:640px;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#333;\">'\n  // HEADER VERDE con logo Mirador + Terra Segura\n  + '<tr><td style=\"background:#1a3d2e;padding:30px 20px;text-align:center;\">'\n  + '<table role=\"presentation\" align=\"center\" cellpadding=\"0\" cellspacing=\"0\"><tr>'\n  + `<td style=\"vertical-align:middle;padding:0 18px 0 0;\"><img src=\"${LOGO_MIRADOR}\" width=\"130\" alt=\"Mirador de Villarrica\" style=\"display:block;max-width:130px;height:auto;border:0;\"/></td>`\n  + '<td style=\"vertical-align:middle;padding:0 14px;color:#ffffff;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;white-space:nowrap;border-left:1px solid #ffffff33;border-right:1px solid #ffffff33;\">Un proyecto de</td>'\n  + `<td style=\"vertical-align:middle;padding:0 0 0 18px;\"><img src=\"${LOGO_TERRA}\" width=\"150\" alt=\"Terra Segura\" style=\"display:block;max-width:150px;height:auto;border:0;\"/></td>`\n  + '</tr></table>'\n  + '</td></tr>'\n  // SALUDO\n  + '<tr><td style=\"padding:32px 32px 8px;\">'\n  + `<h1 style=\"color:#1a3d2e;margin:0 0 16px;font-size:22px;font-weight:bold;\">Su recomendación personalizada</h1>`\n  + `<p style=\"margin:0 0 14px;font-size:15px;line-height:1.6;color:#333;\">Estimado/a <strong>${primerNombre}</strong>,</p>`\n  + `<p style=\"margin:0 0 16px;font-size:15px;line-height:1.6;color:#333;\">Gracias por conversar con nosotros. En base a su interés${usoLabel ? ' para <strong>' + usoLabel + '</strong>' : ''}${pagoIntro}, preparamos este resumen con las parcelas que mejor se ajustan a su perfil.</p>`\n  + '</td></tr>'\n  // RESUMEN DEL CASO\n  + (safeResumen ? `<tr><td style=\"padding:0 32px;\"><div style=\"background:#f9f6f0;border-left:4px solid #f4a84b;padding:16px 20px;border-radius:4px;\"><p style=\"margin:0 0 6px;font-size:11px;color:#8a6a2e;text-transform:uppercase;letter-spacing:1.5px;font-weight:bold;\">Resumen de su caso</p><p style=\"margin:0;font-size:14px;line-height:1.6;color:#444;\">${safeResumen}</p></div></td></tr>` : '')\n  // PARCELAS\n  + '<tr><td style=\"padding:24px 32px 8px;\">'\n  + '<h2 style=\"color:#1a3d2e;font-size:18px;margin:0 0 4px;font-weight:bold;\">Parcelas recomendadas</h2>'\n  + parcelasHtml\n  + '</td></tr>'\n  // RECURSOS — botones\n  + '<tr><td style=\"padding:12px 32px 24px;\">'\n  + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f9f6f0;border-radius:8px;padding:0;\">'\n  + '<tr><td style=\"padding:24px 20px 8px;text-align:center;\">'\n  + '<p style=\"margin:0 0 4px;color:#1a3d2e;font-size:17px;font-weight:bold;\">Recursos del proyecto</p>'\n  + '<p style=\"margin:0 0 20px;color:#666;font-size:13px;\">Explore el proyecto a su ritmo</p>'\n  + '</td></tr>'\n  + '<tr><td align=\"center\" style=\"padding:0 20px 20px;\">'\n  + '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">'\n  + `<tr><td style=\"padding:5px;\"><a href=\"${TOUR_URL}\" style=\"display:inline-block;background:#1a3d2e;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;min-width:220px;text-align:center;\">🎥 Recorrer tour 360°</a></td></tr>`\n  + `<tr><td style=\"padding:5px;\"><a href=\"${SHEET_URL}\" style=\"display:inline-block;background:#f4a84b;color:#1a3d2e;padding:14px 28px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;min-width:220px;text-align:center;\">📋 Ver inventario en vivo</a></td></tr>`\n  + `<tr><td style=\"padding:5px;\"><a href=\"${LOCATION_URL}\" style=\"display:inline-block;background:#ffffff;color:#1a3d2e;border:2px solid #1a3d2e;padding:12px 28px;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;min-width:218px;text-align:center;\">📍 Ver ubicación en mapa</a></td></tr>`\n  + '</table>'\n  + '</td></tr>'\n  + '</table>'\n  + '</td></tr>'\n  // CTA CONTACTO\n  + '<tr><td style=\"background:#1a3d2e;padding:26px 20px;text-align:center;\">'\n  + '<p style=\"color:#ffffff;margin:0 0 14px;font-size:15px;font-weight:bold;\">¿Listo para avanzar?</p>'\n  + `<a href=\"${WA_LINK}\" style=\"display:inline-block;background:#25D366;color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;\"><img src=\"${BASE_URL}/assets/whatsapp-icon.png\" width=\"18\" height=\"18\" alt=\"\" style=\"vertical-align:middle;margin-right:8px;border:0;\"/>Escribir por WhatsApp</a>`\n  + `<p style=\"color:#c5d5cc;margin:14px 0 0;font-size:12px;\">O responda este correo · ${WA_COMERCIAL}</p>`\n  + '</td></tr>'\n  // FOOTER\n  + '<tr><td style=\"background:#122a20;padding:18px 20px;text-align:center;\">'\n  + '<p style=\"color:#8ea89b;margin:0;font-size:11px;line-height:1.6;\">Equipo de Ventas — Terra Segura Inmobiliaria<br/>Mirador de Villarrica · IX Región</p>'\n  + '</td></tr>'\n  + '</table>'\n  + '</td></tr>'\n  + '</table>'\n  + '</div>';\n\n// ---------- WhatsApp text ----------\nconst waLines = [\n  `*Mirador de Villarrica — Recomendación personalizada*`,\n  ``,\n  `Hola ${primerNombre}, dejamos por escrito las parcelas que revisamos:`,\n];\nif (parcelas.length === 0) {\n  waLines.push('', '_El equipo le enviará recomendaciones en detalle pronto._');\n} else {\n  parcelas.forEach(p => {\n    const dest = p.destacada ? ' ⭐' : '';\n    waLines.push('');\n    waLines.push(`• *Parcela ${p.numero}*${dest} · ${p.tamano_m2} m² · _${p.estado}_`);\n    if (input.forma_pago === 'credito') {\n      waLines.push(`  Pie 50%: ${fmtClp(p.pie_minimo_50pct)}`);\n      waLines.push(`  36 cuotas: ${fmtUf(p.cuota_mensual_uf)} (~${fmtClp(p.cuota_mensual_clp)} al UF hoy)`);\n    } else {\n      waLines.push(`  Contado: ${fmtClp(p.precio_contado)} (dcto ${p.descuento_pct || 0}%)`);\n    }\n  });\n}\nwaLines.push('');\nwaLines.push(`📋 Inventario completo: ${SHEET_URL}`);\nwaLines.push(`🎥 Tour 360°: ${TOUR_URL}`);\nwaLines.push(`📍 Ubicación: ${LOCATION_URL}`);\nwaLines.push('');\nwaLines.push(`Si quiere avanzar, escríbanos al ${WA_COMERCIAL} o responda aquí mismo.`);\n\nconst whatsappText = waLines.join('\\n');\n\n// Normaliza numero de WhatsApp del lead\nlet phoneClean = '';\nif (lead.whatsapp) {\n  phoneClean = lead.whatsapp.replace(/[^0-9]/g, '');\n  if (phoneClean.startsWith('9') && phoneClean.length === 9) phoneClean = '56' + phoneClean;\n}\n\nconst canValidEmail = input.send_email && lead.email && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lead.email);\nconst canValidWa = input.send_whatsapp && phoneClean.length >= 10;\n\nreturn [{ json: {\n  ok: true,\n  skip: false,\n  session_id: input.session_id,\n  lead_id: lead.id,\n  nombre: lead.nombre,\n  primerNombre,\n  email: lead.email,\n  phone_clean: phoneClean,\n  can_email: canValidEmail,\n  can_whatsapp: canValidWa,\n  emailHtml,\n  whatsappText,\n  parcelas_ok: parcelas.length,\n  canales_input: input.canales,\n  score_history: Array.isArray(lead.score_history) ? lead.score_history : [],\n} }];\n"
-      },
       "id": "build",
       "name": "Build Messages",
       "type": "n8n-nodes-base.code",
@@ -120,19 +117,32 @@
       "position": [
         1340,
         300
-      ]
+      ],
+      "parameters": {
+        "jsCode": "// Arma los campos para render PDF + HTML de email + caption de WhatsApp.\nconst input = $('Validate Input').first().json;\nconst leadArr = $('Fetch Lead').first().json;\nconst sheetItem = $('Fetch Sheet').first().json;\nconst uf = $json;\n\nconst ufValor = uf && uf.serie && uf.serie[0] && typeof uf.serie[0].valor === 'number' ? uf.serie[0].valor : null;\n\nconst lead = Array.isArray(leadArr) ? leadArr[0] : leadArr;\nif (!lead || !lead.nombre || !lead.id) {\n  return [{ json: {\n    ok: false,\n    skip: true,\n    tool_output_text: 'No encontre tu registro de sesion para enviar el resumen. Confirma tu nombre, email y WhatsApp para continuar.',\n  } }];\n}\nconst primerNombre = (lead.nombre || '').split(' ')[0] || 'Cliente';\n\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\nfunction parseCsv(text) {\n  const rows = [];\n  let row = []; let field = ''; let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else inQuotes = !inQuotes;\n    } else if (c === ',' && !inQuotes) { row.push(field); field = ''; }\n    else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else field += c;\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\nconst pm = (s) => { if (!s) return null; const t = s.toString(); if (t.includes('#')) return null; const n = t.replace(/[^0-9]/g, ''); return n ? parseInt(n, 10) : null; };\nconst ps = (s) => { if (!s) return null; const n = s.toString().replace(/[^0-9]/g, ''); return n ? parseInt(n, 10) : null; };\nconst normEstado = (r) => { const e = (r || '').toString().trim().toLowerCase(); if (e.startsWith('disponi')) return 'disponible'; if (e.startsWith('reserv')) return 'reservado'; if (e.startsWith('vendi')) return 'vendido'; return e; };\n\nconst rows = parseCsv(csvText);\nconst byNumero = new Map();\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  const cuotaClp = pm(r[11]);\n  byNumero.set(lote.toUpperCase(), {\n    numero: lote.toUpperCase(),\n    destacada: ((r[0] || '').toString().trim() === '⭐'),\n    estado: normEstado(r[2]),\n    tamano_m2: ps(r[3]),\n    precio_contado: pm(r[6]),\n    descuento_pct: ps(r[7]),\n    precio_credito: pm(r[9]),\n    pie_minimo_50pct: pm(r[10]),\n    cuota_mensual_clp: cuotaClp,\n    cuota_mensual_uf: cuotaClp && ufValor ? Math.round((cuotaClp / ufValor) * 100) / 100 : null,\n  });\n}\n\nconst parcelas = input.parcelas_recomendadas\n  .map(n => byNumero.get(n.toUpperCase()))\n  .filter(Boolean);\n\nconst BASE_URL = 'https://mirador-villarrica-chatbot.vercel.app';\n\nconst pdfData = {\n  primerNombre,\n  uso: input.uso || '',\n  forma_pago: input.forma_pago || '',\n  plazo_compra: input.plazo_compra || '',\n  resumen_conversacion: (input.resumen_conversacion || '').trim(),\n  parcelas: parcelas.map(p => ({\n    numero: p.numero,\n    destacada: !!p.destacada,\n    estado: p.estado,\n    tamano_m2: p.tamano_m2,\n    precio_contado: p.precio_contado,\n    descuento_pct: p.descuento_pct,\n    precio_credito: p.precio_credito,\n    pie_minimo_50pct: p.pie_minimo_50pct,\n    cuota_mensual_clp: p.cuota_mensual_clp,\n    cuota_mensual_uf: p.cuota_mensual_uf,\n  })),\n  base_url: BASE_URL,\n};\n\nconst emailSubject = 'Tu resumen personalizado · Mirador de Villarrica';\n\nconst emailBody = ''\n  + '<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.65;color:#333;max-width:560px;padding:16px;\">'\n  +   `<p style=\"margin:0 0 14px;\">Hola <strong>${primerNombre}</strong>,</p>`\n  +   '<p style=\"margin:0 0 14px;\">Te adjunto el PDF con el resumen personalizado de lo que conversamos: las parcelas recomendadas con precios al contado y a crédito directo, el detalle según tu caso y los enlaces útiles del proyecto.</p>'\n  +   '<p style=\"margin:0 0 14px;\">Si tienes más dudas no dudes en preguntarme por acá y con gusto te ayudo. Si ya estás decidido y quieres pasar al proceso de reserva y/o compra, dímelo y te comunico con nuestro equipo de ventas para coordinar una llamada.</p>'\n  +   '<p style=\"margin:18px 0 10px;color:#1a3d2e;font-weight:bold;\">¡Un saludo!</p>'\n  +   '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"margin-top:18px;border-collapse:collapse;border-radius:8px;overflow:hidden;\">'\n  +     '<tr>'\n  +       `<td align=\"center\" bgcolor=\"#1a3d2e\" style=\"background-color:#1a3d2e;padding:16px 20px 12px;\">`\n  +         '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">'\n  +           '<tr>'\n  +             `<td style=\"vertical-align:middle;padding:0 18px 0 0;\"><img src=\"${BASE_URL}/assets/mirador-logo.png\" width=\"88\" alt=\"Mirador de Villarrica\" style=\"display:block;max-width:88px;height:auto;border:0;\"/></td>`\n  +             '<td style=\"vertical-align:middle;padding:0 14px;color:#ffffff;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;white-space:nowrap;\">Un proyecto de</td>'\n  +             `<td style=\"vertical-align:middle;padding:0 0 0 18px;\"><img src=\"${BASE_URL}/assets/terra-segura-logo.png\" width=\"104\" alt=\"Terra Segura\" style=\"display:block;max-width:104px;height:auto;border:0;\"/></td>`\n  +           '</tr>'\n  +         '</table>'\n  +       '</td>'\n  +     '</tr>'\n  +     '<tr>'\n  +       '<td align=\"center\" bgcolor=\"#1a3d2e\" style=\"background-color:#1a3d2e;padding:0 20px 16px;\">'\n  +         '<div style=\"height:1px;background:#ffffff22;margin-bottom:12px;line-height:1px;font-size:0;\">&nbsp;</div>'\n  +         '<p style=\"margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;font-weight:bold;color:#ffffff;\">Equipo de Ventas — Terra Segura Inmobiliaria</p>'\n  +         '<p style=\"margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11.5px;color:#c5d5cc;\">Mirador de Villarrica · Región de La Araucanía</p>'\n  +         '<p style=\"margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11.5px;color:#ffffff;\">'\n  +           '<a href=\"https://wa.me/56940329987\" style=\"color:#ffffff;text-decoration:none;\"><span style=\"color:#25D366;\">●</span> WhatsApp +56 9 4032 9987</a>'\n  +           '&nbsp;·&nbsp;'\n  +           '<a href=\"mailto:diego@terrasegura.cl\" style=\"color:#ffffff;text-decoration:none;\">diego@terrasegura.cl</a>'\n  +         '</p>'\n  +       '</td>'\n  +     '</tr>'\n  +   '</table>'\n  + '</div>';\n\nconst whatsappCaption = ''\n  + `Hola ${primerNombre},\\n\\n`\n  + `Te adjunto el PDF con el resumen personalizado de lo que conversamos: las parcelas recomendadas con precios al contado y a crédito directo, el detalle según tu caso y los enlaces útiles del proyecto.\\n\\n`\n  + `Si tienes más dudas no dudes en preguntarme por acá y con gusto te ayudo. Si ya estás decidido y quieres pasar al proceso de reserva y/o compra, dímelo y te comunico con nuestro equipo de ventas para coordinar una llamada.\\n\\n`\n  + `*Equipo Terra Segura*\\n`\n  + `_Mirador de Villarrica · Región de La Araucanía_`;\n\nconst emailDestino = input.email_override || lead.email || '';\nconst waRaw = input.whatsapp_override || lead.whatsapp || '';\nlet phoneClean = waRaw.toString().replace(/[^0-9]/g, '');\nif (phoneClean.startsWith('9') && phoneClean.length === 9) phoneClean = '56' + phoneClean;\n\nconst canValidEmail = input.send_email && emailDestino && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(emailDestino);\nconst canValidWa = input.send_whatsapp && phoneClean.length >= 10;\n\nreturn [{ json: {\n  ok: true,\n  skip: false,\n  session_id: input.session_id,\n  lead_id: lead.id,\n  nombre: lead.nombre,\n  primerNombre,\n  email: emailDestino,\n  email_source: input.email_override ? 'override' : 'form',\n  phone_clean: phoneClean,\n  whatsapp_source: input.whatsapp_override ? 'override' : 'form',\n  can_email: canValidEmail,\n  can_whatsapp: canValidWa,\n  emailSubject,\n  emailBody,\n  whatsappCaption,\n  pdfData,\n  parcelas_ok: parcelas.length,\n  canales_input: input.canales,\n  score_history: Array.isArray(lead.score_history) ? lead.score_history : [],\n} }];"
+      }
     },
     {
+      "id": "route-skip",
+      "name": "Can send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
             "version": 2,
             "caseSensitive": true,
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "leftValue": ""
           },
           "combinator": "and",
           "conditions": [
             {
+              "id": "c1",
               "leftValue": "={{ $json.skip }}",
               "rightValue": false,
               "operator": {
@@ -142,37 +152,9 @@
             }
           ]
         }
-      },
-      "id": "route-skip",
-      "name": "Can send?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1560,
-        300
-      ]
+      }
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "version": 2,
-            "caseSensitive": true,
-            "typeValidation": "strict"
-          },
-          "combinator": "and",
-          "conditions": [
-            {
-              "leftValue": "={{ $json.can_email }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ]
-        }
-      },
       "id": "route-email",
       "name": "Send Email?",
       "type": "n8n-nodes-base.if",
@@ -180,16 +162,31 @@
       "position": [
         1780,
         200
-      ]
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $('Build Messages').first().json.can_email }}",
+              "operator": {
+                "operation": "equals",
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ]
+        }
+      }
     },
     {
-      "parameters": {
-        "sendTo": "={{ $json.email }}",
-        "subject": "Mirador de Villarrica — Recomendación personalizada",
-        "emailType": "html",
-        "message": "={{ $json.emailHtml }}",
-        "options": {}
-      },
       "id": "gmail-send",
       "name": "Gmail Send Resumen",
       "type": "n8n-nodes-base.gmail",
@@ -198,24 +195,51 @@
         1900,
         200
       ],
+      "parameters": {
+        "sendTo": "={{ $('Build Messages').first().json.email }}",
+        "subject": "={{ $('Build Messages').first().json.emailSubject }}",
+        "emailType": "html",
+        "message": "={{ $('Build Messages').first().json.emailBody }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
       "credentials": {
         "gmailOAuth2": {
           "id": "12sHtnYC9mtyjrpQ",
           "name": "Gmail account"
         }
-      }
+      },
+      "webhookId": "56eb2ba9-3c29-4a86-9b6a-7becc348a7ca",
+      "onError": "continueRegularOutput"
     },
     {
+      "id": "route-wa",
+      "name": "Send WA?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        320
+      ],
       "parameters": {
         "conditions": {
           "options": {
             "version": 2,
             "caseSensitive": true,
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "leftValue": ""
           },
           "combinator": "and",
           "conditions": [
             {
+              "id": "c3",
               "leftValue": "={{ $('Build Messages').first().json.can_whatsapp }}",
               "rightValue": true,
               "operator": {
@@ -225,20 +249,20 @@
             }
           ]
         }
-      },
-      "id": "route-wa",
-      "name": "Send WA?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        2000,
-        320
-      ]
+      }
     },
     {
+      "id": "wa-send",
+      "name": "Evolution Send WA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        240
+      ],
       "parameters": {
         "method": "POST",
-        "url": "=http://172.17.0.1:8080/message/sendText/Hugo Vargas Cubelli",
+        "url": "=http://172.17.0.1:8080/message/sendMedia/Hugo Vargas Cubelli",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -254,7 +278,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $('Build Messages').first().json.phone_clean, text: $('Build Messages').first().json.whatsappText }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: $('Build Messages').first().json.phone_clean, mediatype: 'document', mimetype: 'application/pdf', media: $('PDF to Base64').first().json.pdfBase64, fileName: 'resumen-mirador-villarrica.pdf', caption: $('Build Messages').first().json.whatsappCaption }) }}",
         "options": {
           "response": {
             "response": {
@@ -262,33 +286,67 @@
             }
           }
         }
-      },
-      "id": "wa-send",
-      "name": "Evolution Send WA",
+      }
+    },
+    {
+      "id": "patch-lead",
+      "name": "PATCH Lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2220,
+        2440,
         240
-      ]
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $('Build Messages').first().json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (function(){ const b = $('Build Messages').first().json; const status = { email: null, whatsapp: null }; if (b.can_email) { try { const gmail = $('Gmail Send Resumen').first(); status.email = gmail && !gmail.error ? 'ok' : 'failed'; } catch (_) { status.email = 'failed'; } } if (b.can_whatsapp) { try { const wa = $('Evolution Send WA').first().json; const isOk = wa && (wa.key || wa.messageStatus === 'sent' || (wa.status && wa.status >= 200 && wa.status < 300)); status.whatsapp = isOk ? 'ok' : 'failed'; } catch (_) { status.whatsapp = 'failed'; } } const hist = Array.isArray(b.score_history) ? b.score_history.slice() : []; hist.push({ at: new Date().toISOString(), action: 'resumen_enviado', canales: status, email_destino: status.email ? b.email : null, whatsapp_destino: status.whatsapp ? b.phone_clean : null, email_source: b.email_source, whatsapp_source: b.whatsapp_source }); return JSON.stringify({ canales_envio: status, resumen_enviado_at: new Date().toISOString(), score_history: hist }); })() }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// Merge resultados de ambos canales (si corresponde), PATCH Supabase, arma tool_output_text.\nconst built = $('Build Messages').first().json;\n\nconst SUPABASE_URL = 'https://segllewycyscyenvqtes.supabase.co';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI';\n\nconst sent = [];\nif (built.can_email) sent.push('email');\nif (built.can_whatsapp) sent.push('whatsapp');\n\nconst history = built.score_history.slice();\nhistory.push({\n  at: new Date().toISOString(),\n  action: 'resumen_enviado',\n  canales: sent,\n});\n\nconst patchBody = {\n  canales_envio: sent,\n  resumen_enviado_at: new Date().toISOString(),\n  score_history: history,\n};\n\nconst res = await this.helpers.httpRequest({\n  method: 'PATCH',\n  url: `${SUPABASE_URL}/rest/v1/leads?session_id=eq.${built.session_id}`,\n  headers: {\n    'Content-Type': 'application/json',\n    'Prefer': 'return=minimal',\n    'apikey': SUPABASE_KEY,\n    'Authorization': `Bearer ${SUPABASE_KEY}`,\n  },\n  body: patchBody,\n  json: true,\n  returnFullResponse: false,\n});\n\nconst canalesTexto = sent.length === 2 ? 'por correo y WhatsApp' : sent[0] === 'email' ? 'por correo' : sent[0] === 'whatsapp' ? 'por WhatsApp' : 'por el canal disponible';\n\nreturn [{ json: {\n  ok: true,\n  lead_id: built.lead_id,\n  canales_enviados: sent,\n  tool_output_text: sent.length > 0\n    ? `Listo ${built.primerNombre}, le enviamos el resumen con las parcelas que conversamos ${canalesTexto}. Revíselo con calma y cualquier duda me la cuenta por acá.`\n    : `No pude enviar el resumen porque no tengo ${built.can_email ? '' : 'correo válido'}${!built.can_email && !built.can_whatsapp ? ' ni ' : ''}${built.can_whatsapp ? '' : 'WhatsApp válido'}. ¿Me los confirma para intentar de nuevo?`,\n} }];"
-      },
       "id": "final",
-      "name": "Final Output + PATCH",
+      "name": "Final Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2440,
-        320
-      ]
+        2660,
+        240
+      ],
+      "parameters": {
+        "jsCode": "const built = $('Build Messages').first().json;\nconst primerNombre = built.primerNombre || 'hola';\n\nconst sent = [];\nconst failed = [];\nlet waError = null;\nlet waNumber = built.phone_clean || '';\n\nif (built.can_email) {\n  sent.push('email');\n}\n\nif (built.can_whatsapp) {\n  let waResp = null;\n  try { waResp = $('Evolution Send WA').first().json; } catch (e) { waResp = null; }\n  const statusCode = waResp && typeof waResp.status === 'number' ? waResp.status : null;\n  const respBody = waResp ? (waResp.response || waResp) : null;\n  const message = respBody && respBody.message;\n  const notRegistered = Array.isArray(message) && message.some(m => m && m.exists === false);\n  if (notRegistered) { failed.push('whatsapp'); waError = 'number_not_registered'; }\n  else if (statusCode && statusCode >= 400) { failed.push('whatsapp'); waError = 'api_error'; }\n  else if (waResp && (waResp.key || waResp.message || waResp.status === 'PENDING' || statusCode === null)) { sent.push('whatsapp'); }\n  else { failed.push('whatsapp'); waError = 'unknown'; }\n}\n\nconst prettyNumber = waNumber ? `+${waNumber}` : 'tu WhatsApp';\nlet tool_output_text;\n\nif (sent.length > 0 && failed.length === 0) {\n  const canal = sent.length === 2 ? 'correo y WhatsApp' : sent[0] === 'email' ? 'correo' : 'WhatsApp';\n  tool_output_text = `Listo ${primerNombre}, ya tienes el resumen en tu ${canal} 📨 Revisalo con calma y cualquier duda me la cuentas por aca. ¿Hay algo mas que quieras consultarme o prefieres que te conecte con nuestro equipo de ventas para coordinar una llamada y avanzar con la compra?`;\n} else if (sent.length > 0 && waError === 'number_not_registered') {\n  tool_output_text = `El resumen ya te llego al correo ${primerNombre}. Pero el numero ${prettyNumber} no parece estar registrado en WhatsApp. ¿Me confirmas el numero correcto y lo reintento? O si prefieres, te conecto con nuestro equipo de ventas directamente.`;\n} else if (sent.length > 0 && failed.includes('whatsapp')) {\n  tool_output_text = `Te llego por correo ${primerNombre}, pero el envio por WhatsApp fallo por un tema tecnico. ¿Quieres que lo reintente o prefieres que derive tu caso al equipo para que te contacten directo?`;\n} else if (failed.length > 0 && waError === 'number_not_registered') {\n  tool_output_text = `El numero ${prettyNumber} no esta registrado en WhatsApp ${primerNombre}. ¿Me confirmas el numero correcto? Lo reintento en cuanto me digas, o si prefieres te conecto con el equipo de ventas directamente.`;\n} else if (failed.length > 0) {\n  tool_output_text = `No logre enviar el resumen ${primerNombre}, quedo un tema tecnico pendiente. Dejame pasar tu caso al equipo de ventas para que te contacten de inmediato.`;\n} else {\n  tool_output_text = `No pude preparar el envio ${primerNombre}. Confirmame tu correo y WhatsApp y lo intento de nuevo.`;\n}\n\nreturn [{ json: {\n  ok: sent.length > 0,\n  lead_id: built.lead_id,\n  canales_enviados: sent,\n  canales_fallidos: failed,\n  wa_error: waError,\n  tool_output_text,\n} }];"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "return [{ json: { ok: false, tool_output_text: $json.tool_output_text } }];"
-      },
       "id": "skip-output",
       "name": "Skip Output",
       "type": "n8n-nodes-base.code",
@@ -296,7 +354,107 @@
       "position": [
         1780,
         440
-      ]
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, tool_output_text: $json.tool_output_text } }];"
+      }
+    },
+    {
+      "id": "patch-lead-error",
+      "name": "PATCH Lead Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        560
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $('Validate Input').first().json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (function(){ const validated = $('Validate Input').first().json; const leadArr = $('Fetch Lead').first().json; const lead = Array.isArray(leadArr) ? leadArr[0] : leadArr; const hist = Array.isArray(lead && lead.score_history) ? lead.score_history.slice() : []; hist.push({ at: new Date().toISOString(), action: 'resumen_fallido', reason: ($json && $json.tool_output_text) || 'unknown', canales_solicitados: validated.canales || [] }); return JSON.stringify({ score_history: hist }); })() }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "render-pdf",
+      "name": "Render PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mirador-villarrica-chatbot-pruebasn8ncub-6852s-projects.vercel.app/api/render-resumen-pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-render-token",
+              "value": "lvkeAaoCqWCXYdhKImrOCfX3yVlO1n1uULUrIUia"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.pdfData) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "072f6235-3cab-4c2c-a322-567e5228bf79",
+      "name": "PDF to Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n$input.item.json.pdfBase64 = buf.toString('base64');\nreturn $input.item;"
+      }
     }
   ],
   "connections": {
@@ -370,7 +528,7 @@
       "main": [
         [
           {
-            "node": "Send Email?",
+            "node": "Render PDF",
             "type": "main",
             "index": 0
           }
@@ -424,7 +582,7 @@
         ],
         [
           {
-            "node": "Final Output + PATCH",
+            "node": "PATCH Lead",
             "type": "main",
             "index": 0
           }
@@ -435,7 +593,51 @@
       "main": [
         [
           {
-            "node": "Final Output + PATCH",
+            "node": "PATCH Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PATCH Lead": {
+      "main": [
+        [
+          {
+            "node": "Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Output": {
+      "main": [
+        [
+          {
+            "node": "PATCH Lead Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render PDF": {
+      "main": [
+        [
+          {
+            "node": "PDF to Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF to Base64": {
+      "main": [
+        [
+          {
+            "node": "Send Email?",
             "type": "main",
             "index": 0
           }
@@ -444,6 +646,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   }
 }

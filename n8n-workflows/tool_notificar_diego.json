@@ -4,43 +4,42 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"lead_id\": \"uuid\",\n  \"score\": \"CALIENTE\",\n  \"score_numeric\": 82,\n  \"nombre\": \"Juan Perez\",\n  \"whatsapp\": \"+56912345678\",\n  \"email\": \"juan@ejemplo.cl\",\n  \"intencion\": \"inversion\",\n  \"plazo\": \"1_a_3_meses\",\n  \"presupuesto\": \"contado\",\n  \"uso\": \"inversion\",\n  \"forma_pago\": \"contado\",\n  \"rango_presupuesto\": \"20-40M\",\n  \"decisor\": \"pareja\",\n  \"pre_aprobacion\": false,\n  \"resumen\": \"Interesado en parcelas cerca del volcan, paga contado\",\n  \"session_id\": \"uuid\",\n  \"motivo\": \"lead_solicito\",\n  \"contexto\": \"Pidio explicitamente coordinar visita\",\n  \"broker_request\": true\n}"
+        "jsonExample": "{\n  \"lead_id\": \"uuid\",\n  \"score\": \"CALIENTE\",\n  \"score_numeric\": 82,\n  \"nombre\": \"Juan Perez\",\n  \"whatsapp\": \"+56912345678\",\n  \"email\": \"juan@ejemplo.cl\",\n  \"uso\": \"inversion\",\n  \"forma_pago\": \"contado\",\n  \"rango_presupuesto\": \"20-40M\",\n  \"decisor\": \"pareja\",\n  \"pre_aprobacion\": false,\n  \"resumen\": \"Interesado en parcelas cerca del volcan\",\n  \"session_id\": \"uuid\",\n  \"motivo\": \"lead_solicito\",\n  \"contexto\": \"Pidio coordinar visita\",\n  \"broker_request\": true\n}"
       },
       "id": "trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\n\nconst LABELS_INTENCION = {\n  inversion: 'Inversión',\n  segunda_vivienda: 'Segunda vivienda',\n  vivir_permanente: 'Vivir permanente',\n  evaluando: 'Evaluando',\n  no_definido: 'No definido',\n};\nconst LABELS_USO = {\n  inversion: 'Inversión',\n  segunda: 'Segunda vivienda',\n  vivienda: 'Vivienda principal',\n  no_definido: 'No definido',\n};\nconst LABELS_PLAZO = {\n  ahora: 'Ahora',\n  '1_a_3_meses': '1 a 3 meses',\n  '3_a_6_meses': '3 a 6 meses',\n  '6_a_12_meses': '6 a 12 meses',\n  'mas_de_1_ano': 'Más de 1 año',\n  no_definido: 'No definido',\n};\nconst LABELS_FORMA_PAGO = {\n  contado: 'Contado',\n  credito: 'Crédito',\n  mixto: 'Mixto',\n  subsidio: 'Subsidio',\n  no_definido: 'No definido',\n};\nconst LABELS_DECISOR = {\n  solo: 'Solo',\n  pareja: 'Con pareja',\n  familia: 'Con familia',\n  no_definido: 'No definido',\n};\nconst LABELS_MOTIVO = {\n  lead_solicito: 'Lead pidio hablar con asesor',\n  bot_no_pudo_resolver: 'Bot no pudo resolver duda',\n  score_alto_proactivo: 'Score alto, bot ofrecio contacto',\n};\n\nconst isBrokerRequest = d.broker_request === true || !!d.motivo;\nconst emoji = isBrokerRequest ? '🔔' : (d.score === 'CALIENTE' ? '🟢' : d.score === 'TIBIO' ? '🟡' : '🔵');\nconst titulo = isBrokerRequest\n  ? 'SOLICITUD DE CONTACTO'\n  : (d.score === 'CALIENTE' ? 'NUEVO LEAD CALIENTE' : d.score === 'TIBIO' ? 'NUEVO LEAD TIBIO' : 'NUEVO LEAD FRÍO');\n\nconst usoLabel = LABELS_USO[d.uso] || LABELS_INTENCION[d.intencion] || d.uso || d.intencion || '—';\nconst formaPagoLabel = LABELS_FORMA_PAGO[d.forma_pago] || LABELS_FORMA_PAGO[d.presupuesto] || d.forma_pago || d.presupuesto || '—';\nconst rango = d.rango_presupuesto && d.rango_presupuesto !== 'no_definido' ? ` (${d.rango_presupuesto})` : '';\nconst preApr = typeof d.pre_aprobacion === 'boolean' ? (d.pre_aprobacion ? ' · pre-aprobado' : ' · sin preapr') : '';\nconst scoreLine = d.score_numeric !== undefined && d.score_numeric !== null\n  ? `${d.score} (${d.score_numeric}/100)`\n  : (d.score || '—');\n\nconst texto = [\n  `${emoji} ${titulo} — Mirador Villarrica`,\n  `⭐ Score: ${scoreLine}`,\n  '',\n  `👤 ${d.nombre || 'Sin nombre'}`,\n  d.whatsapp ? `📱 ${d.whatsapp}` : null,\n  d.email ? `📧 ${d.email}` : null,\n  '',\n  `🎯 Uso: ${usoLabel}`,\n  `📅 Plazo: ${LABELS_PLAZO[d.plazo] || d.plazo || '—'}`,\n  `💰 Pago: ${formaPagoLabel}${rango}${preApr}`,\n  d.decisor ? `👥 Decisor: ${LABELS_DECISOR[d.decisor] || d.decisor}` : null,\n  '',\n  isBrokerRequest && d.motivo ? `📌 Motivo: ${LABELS_MOTIVO[d.motivo] || d.motivo}` : null,\n  isBrokerRequest && d.contexto ? `💬 Contexto: ${d.contexto}` : null,\n  d.resumen ? `📝 ${d.resumen}` : null,\n  '',\n  `🔗 Sesión: ${d.session_id || '-'}`,\n].filter(Boolean).join('\\n');\n\n// Número destino: Hugo (desarrollo). Cambiar a 56940329987 (Diego) en go-live.\nreturn [{ json: {\n  text: texto,\n  number: '56992533044',\n  lead_id: d.lead_id,\n  session_id: d.session_id,\n  score: d.score || 'FRIO',\n  score_numeric: typeof d.score_numeric === 'number' ? d.score_numeric : null,\n  // Regla: nunca saltar si es solicitud expresa de broker; si no, mantener skip-FRIO legacy.\n  skip_send: isBrokerRequest ? false : (d.score === 'FRIO'),\n} }];"
+        "jsCode": "const d = $json;\n\nconst LABELS_INTENCION = {\n  inversion: 'Inversión', segunda_vivienda: 'Segunda vivienda',\n  vivir_permanente: 'Vivir permanente', evaluando: 'Evaluando', no_definido: 'No definido',\n};\nconst LABELS_USO = {\n  inversion: 'Inversión', segunda: 'Segunda vivienda',\n  vivienda: 'Vivienda principal', no_definido: 'No definido',\n};\nconst LABELS_PLAZO = {\n  ahora: 'Ahora', '1_a_3_meses': '1 a 3 meses', '3_a_6_meses': '3 a 6 meses',\n  '6_a_12_meses': '6 a 12 meses', 'mas_de_1_ano': 'Más de 1 año', no_definido: 'No definido',\n};\nconst LABELS_FORMA_PAGO = {\n  contado: 'Contado', credito: 'Crédito', mixto: 'Mixto',\n  subsidio: 'Subsidio', no_definido: 'No definido',\n};\nconst LABELS_DECISOR = {\n  solo: 'Solo', pareja: 'Con pareja', familia: 'Con familia', no_definido: 'No definido',\n};\nconst LABELS_MOTIVO = {\n  lead_solicito: 'Lead pidio hablar con asesor',\n  bot_no_pudo_resolver: 'Bot no pudo resolver duda',\n  score_alto_proactivo: 'Score alto, bot ofrecio contacto',\n};\n\nconst isBrokerRequest = d.broker_request === true || !!d.motivo;\nconst emoji = isBrokerRequest ? '🔔' : (d.score === 'CALIENTE' ? '🟢' : d.score === 'TIBIO' ? '🟡' : '🔵');\nconst titulo = isBrokerRequest\n  ? 'SOLICITUD DE CONTACTO'\n  : (d.score === 'CALIENTE' ? 'NUEVO LEAD CALIENTE' : d.score === 'TIBIO' ? 'NUEVO LEAD TIBIO' : 'NUEVO LEAD FRÍO');\n\nconst usoLabel = LABELS_USO[d.uso] || LABELS_INTENCION[d.intencion] || d.uso || d.intencion || '—';\nconst formaPagoLabel = LABELS_FORMA_PAGO[d.forma_pago] || LABELS_FORMA_PAGO[d.presupuesto] || d.forma_pago || d.presupuesto || '—';\nconst rango = d.rango_presupuesto && d.rango_presupuesto !== 'no_definido' ? ` (${d.rango_presupuesto})` : '';\nconst preApr = typeof d.pre_aprobacion === 'boolean' ? (d.pre_aprobacion ? ' · pre-aprobado' : ' · sin preapr') : '';\nconst scoreLine = d.score_numeric !== undefined && d.score_numeric !== null\n  ? `${d.score} (${d.score_numeric}/100)`\n  : (d.score || '—');\n\nconst texto = [\n  `${emoji} ${titulo} — Mirador Villarrica`,\n  `⭐ Score: ${scoreLine}`,\n  '',\n  `👤 ${d.nombre || 'Sin nombre'}`,\n  d.whatsapp ? `📱 ${d.whatsapp}` : null,\n  d.email ? `📧 ${d.email}` : null,\n  '',\n  `🎯 Uso: ${usoLabel}`,\n  `📅 Plazo: ${LABELS_PLAZO[d.plazo] || d.plazo || '—'}`,\n  `💰 Pago: ${formaPagoLabel}${rango}${preApr}`,\n  d.decisor ? `👥 Decisor: ${LABELS_DECISOR[d.decisor] || d.decisor}` : null,\n  '',\n  isBrokerRequest && d.motivo ? `📌 Motivo: ${LABELS_MOTIVO[d.motivo] || d.motivo}` : null,\n  isBrokerRequest && d.contexto ? `💬 Contexto: ${d.contexto}` : null,\n  d.resumen ? `📝 ${d.resumen}` : null,\n  '',\n  `🔗 Sesión: ${d.session_id || '-'}`,\n].filter(Boolean).join('\\n');\n\nconst hasLeadId = !!d.lead_id;\nconst skipByScore = !isBrokerRequest && d.score === 'FRIO';\nconst skipByNoLead = !hasLeadId;\n\nreturn [{ json: {\n  text: texto,\n  number: '56992533044',\n  lead_id: d.lead_id,\n  session_id: d.session_id,\n  score: d.score || 'FRIO',\n  score_numeric: typeof d.score_numeric === 'number' ? d.score_numeric : null,\n  skip_send: d.skip_send === true || skipByScore || skipByNoLead,\n  is_broker_request: isBrokerRequest,\n} }];"
       },
       "id": "build-msg",
       "name": "Build Notification Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "version": 2, "caseSensitive": true, "typeValidation": "strict" },
-          "combinator": "and",
-          "conditions": [
-            {
-              "leftValue": "={{ $json.skip_send }}",
-              "rightValue": false,
-              "operator": { "type": "boolean", "operation": "equals" }
-            }
-          ]
-        }
+        "jsCode": "// Branching determinista sin If node: marca cada item como send o skip.\nconst d = $json;\nif (d.skip_send === true) {\n  return [{ json: { ...d, _action: 'skip' } }];\n}\nreturn [{ json: { ...d, _action: 'send' } }];"
       },
-      "id": "check-skip",
-      "name": "Skip FRIO?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 300]
+      "id": "route",
+      "name": "Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -49,20 +48,35 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "apikey", "value": "429683C4C977415CAAFCCE10F7D57E11" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $json.number, text: $json.text }) }}",
-        "options": { "response": { "response": { "neverError": true } } }
+        "jsonBody": "={{ $json._action === 'send' ? JSON.stringify({ number: $json.number, text: $json.text }) : '{}' }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "evolution-send",
       "name": "Evolution API Send",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 200]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -71,55 +85,118 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Prefer", "value": "return=minimal" },
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ notified_diego: true, notified_at: new Date().toISOString(), last_notified_score: $('Build Notification Text').first().json.score }) }}",
-        "options": { "response": { "response": { "neverError": true } } }
+        "jsonBody": "={{ $('Build Notification Text').first().json.skip_send === true ? '{}' : JSON.stringify({ notified_diego: true, notified_at: new Date().toISOString(), last_notified_score: $('Build Notification Text').first().json.score }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "mark-notified",
       "name": "Mark lead notified",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 200]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "return [{ json: { notified: true, status: 'ok' } }];"
+        "jsCode": "const msg = $('Build Notification Text').first().json;\nif (msg.skip_send === true) {\n  return [{ json: { notified: false, status: 'skipped', reason: msg.skip_send } }];\n}\nreturn [{ json: { notified: true, status: 'ok' } }];"
       },
       "id": "ok-output",
-      "name": "Return OK",
+      "name": "Return Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: { notified: false, status: 'skipped_frio' } }];"
-      },
-      "id": "skipped-output",
-      "name": "Return Skipped",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        1340,
+        300
+      ]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": { "main": [[{ "node": "Build Notification Text", "type": "main", "index": 0 }]] },
-    "Build Notification Text": { "main": [[{ "node": "Skip FRIO?", "type": "main", "index": 0 }]] },
-    "Skip FRIO?": {
+    "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Evolution API Send", "type": "main", "index": 0 }],
-        [{ "node": "Return Skipped", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Build Notification Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Evolution API Send": { "main": [[{ "node": "Mark lead notified", "type": "main", "index": 0 }]] },
-    "Mark lead notified": { "main": [[{ "node": "Return OK", "type": "main", "index": 0 }]] }
+    "Build Notification Text": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Evolution API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution API Send": {
+      "main": [
+        [
+          {
+            "node": "Mark lead notified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark lead notified": {
+      "main": [
+        [
+          {
+            "node": "Return Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
 }

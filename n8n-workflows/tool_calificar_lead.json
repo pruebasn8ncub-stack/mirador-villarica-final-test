@@ -10,37 +10,23 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Valida completitud + normaliza + calcula score BANT+ 0-100.\n// Framework: /n8n-workflows/scoring-spec.md\n//\n// Reglas de completitud:\n//   - nombre no vacio\n//   - whatsapp O email\n//   - al menos 3 de 4 entre: plazo, rango_presupuesto, forma_pago, uso\n// Si falta algo -> retorna { ok: false, reason: 'faltan_datos', faltantes: [...] }\n\nconst d = $json;\n\nif (!d.session_id || typeof d.session_id !== 'string') {\n  throw new Error('session_id requerido');\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) {\n  throw new Error('session_id debe ser UUID valido');\n}\n\n// --- Normalizacion ---\nconst PLAZO_MAP = {\n  'inmediato': 'ahora',\n  'ahora': 'ahora',\n  '1-3m': '1_a_3_meses',\n  '1_a_3_meses': '1_a_3_meses',\n  '3-6m': '3_a_6_meses',\n  '3_a_6_meses': '3_a_6_meses',\n  '6-12m': '6_a_12_meses',\n  '6_a_12_meses': '6_a_12_meses',\n  '12m+': 'mas_de_1_ano',\n  'mas_de_1_ano': 'mas_de_1_ano',\n  'no_definido': 'no_definido',\n};\nconst INTENCION_TO_USO = {\n  'inversion': 'inversion',\n  'segunda_vivienda': 'segunda',\n  'vivir_permanente': 'vivienda',\n  'evaluando': 'no_definido',\n  'no_definido': 'no_definido',\n};\nconst USO_ENUM = new Set(['vivienda', 'segunda', 'inversion', 'no_definido']);\nconst FORMA_PAGO_ENUM = new Set(['contado', 'credito', 'subsidio', 'mixto', 'no_definido']);\nconst RANGO_ENUM = new Set(['<20M', '20-40M', '40-60M', '>60M', 'no_definido']);\nconst DECISOR_ENUM = new Set(['solo', 'pareja', 'familia', 'no_definido']);\n\nconst nombre = [d.nombre, d.apellido].filter(Boolean).join(' ').trim().slice(0, 150);\nconst whatsapp = d.whatsapp ? String(d.whatsapp).slice(0, 30) : null;\nconst email = d.email ? String(d.email).slice(0, 120) : null;\nconst plazo = PLAZO_MAP[d.plazo] || 'no_definido';\nlet uso = (d.uso && USO_ENUM.has(d.uso)) ? d.uso : null;\nif (!uso && d.intencion) uso = INTENCION_TO_USO[d.intencion] || 'no_definido';\nif (!uso) uso = 'no_definido';\nconst forma_pago = (d.forma_pago && FORMA_PAGO_ENUM.has(d.forma_pago)) ? d.forma_pago : 'no_definido';\nconst pre_aprobacion = typeof d.pre_aprobacion === 'boolean' ? d.pre_aprobacion : null;\nconst decisor = (d.decisor && DECISOR_ENUM.has(d.decisor)) ? d.decisor : 'no_definido';\nconst rango_presupuesto = (d.rango_presupuesto && RANGO_ENUM.has(d.rango_presupuesto)) ? d.rango_presupuesto : 'no_definido';\nconst resumen = (d.resumen || d.resumen_conversacion || '').toString().slice(0, 800);\n\n// --- Validacion de completitud ---\nconst faltantes = [];\nif (!nombre) faltantes.push('nombre');\nif (!whatsapp && !email) faltantes.push('whatsapp_o_email');\n\nconst senalesDefinidas = [\n  plazo !== 'no_definido',\n  rango_presupuesto !== 'no_definido',\n  forma_pago !== 'no_definido',\n  uso !== 'no_definido',\n].filter(Boolean).length;\n\nif (senalesDefinidas < 3) {\n  const senalesFaltantes = [];\n  if (plazo === 'no_definido') senalesFaltantes.push('plazo');\n  if (rango_presupuesto === 'no_definido') senalesFaltantes.push('rango_presupuesto');\n  if (forma_pago === 'no_definido') senalesFaltantes.push('forma_pago');\n  if (uso === 'no_definido') senalesFaltantes.push('uso');\n  faltantes.push(`minimo_3_de_4_senales (faltan: ${senalesFaltantes.join(',')})`);\n}\n\nif (faltantes.length > 0) {\n  return [{ json: {\n    ok: false,\n    reason: 'faltan_datos',\n    faltantes,\n    session_id: d.session_id,\n    tool_output_text: null,\n  } }];\n}\n\n// --- Scoring BANT+ 0-100 ---\nconst weights = {};\n\n// plazo (25)\nconst plazoPts = {\n  'ahora': 25,\n  '1_a_3_meses': 22,\n  '3_a_6_meses': 15,\n  '6_a_12_meses': 8,\n  'mas_de_1_ano': 3,\n  'no_definido': 0,\n};\nweights.plazo = plazoPts[plazo] || 0;\n\n// rango_presupuesto (25)\nconst rangoPts = {\n  '>60M': 25,\n  '40-60M': 22,\n  '20-40M': 18,\n  '<20M': 10,\n  'no_definido': 0,\n};\nweights.rango_presupuesto = rangoPts[rango_presupuesto] || 0;\n\n// forma_pago (15)\nif (forma_pago === 'contado') weights.forma_pago = 15;\nelse if (forma_pago === 'credito' && pre_aprobacion === true) weights.forma_pago = 14;\nelse if (forma_pago === 'credito') weights.forma_pago = 10;\nelse if (forma_pago === 'mixto') weights.forma_pago = 10;\nelse if (forma_pago === 'subsidio') weights.forma_pago = 6;\nelse weights.forma_pago = 0;\n\n// uso (15)\nconst usoPts = { 'inversion': 15, 'segunda': 13, 'vivienda': 10, 'no_definido': 0 };\nweights.uso = usoPts[uso] || 0;\n\n// decisor (10)\nconst decisorPts = { 'solo': 10, 'pareja': 8, 'familia': 5, 'no_definido': 0 };\nweights.decisor = decisorPts[decisor] || 0;\n\n// contacto (10)\nif (whatsapp && email) weights.contacto = 10;\nelse if (whatsapp || email) weights.contacto = 7;\nelse if (nombre) weights.contacto = 3;\nelse weights.contacto = 0;\n\nlet scoreNumeric = Object.values(weights).reduce((a, b) => a + b, 0);\nif (d.override_caliente === true) {\n  scoreNumeric = Math.max(scoreNumeric, 75);\n}\nscoreNumeric = Math.min(100, Math.max(0, scoreNumeric));\n\nconst scoreLabel = scoreNumeric >= 70 ? 'CALIENTE' : scoreNumeric >= 40 ? 'TIBIO' : 'FRIO';\n\nreturn [{ json: {\n  ok: true,\n  session_id: d.session_id,\n  nombre,\n  whatsapp,\n  email,\n  plazo,\n  uso,\n  forma_pago,\n  pre_aprobacion,\n  decisor,\n  rango_presupuesto,\n  intencion: d.intencion || (uso === 'segunda' ? 'segunda_vivienda' : uso === 'vivienda' ? 'vivir_permanente' : uso === 'inversion' ? 'inversion' : 'no_definido'),\n  resumen,\n  score_numeric: scoreNumeric,\n  score: scoreLabel,\n  weights,\n  override_caliente: !!d.override_caliente,\n} }];"
+        "jsCode": "const d = $json;\n\nif (!d.session_id || typeof d.session_id !== 'string') {\n  throw new Error('session_id requerido');\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) {\n  throw new Error('session_id debe ser UUID valido');\n}\n\nconst PLAZO_MAP = {\n  'inmediato': 'ahora', 'ahora': 'ahora',\n  '1-3m': '1_a_3_meses', '1_a_3_meses': '1_a_3_meses',\n  '3-6m': '3_a_6_meses', '3_a_6_meses': '3_a_6_meses',\n  '6-12m': '6_a_12_meses', '6_a_12_meses': '6_a_12_meses',\n  '12m+': 'mas_de_1_ano', 'mas_de_1_ano': 'mas_de_1_ano',\n  'no_definido': 'no_definido',\n};\nconst INTENCION_TO_USO = {\n  'inversion': 'inversion', 'segunda_vivienda': 'segunda',\n  'vivir_permanente': 'vivienda', 'evaluando': 'no_definido',\n  'no_definido': 'no_definido',\n};\nconst USO_ENUM = new Set(['vivienda', 'segunda', 'inversion', 'no_definido']);\nconst FORMA_PAGO_ENUM = new Set(['contado', 'credito', 'subsidio', 'mixto', 'no_definido']);\nconst RANGO_ENUM = new Set(['<20M', '20-40M', '40-60M', '>60M', 'no_definido']);\nconst DECISOR_ENUM = new Set(['solo', 'pareja', 'familia', 'no_definido']);\n\nconst nombre = [d.nombre, d.apellido].filter(Boolean).join(' ').trim().slice(0, 150);\nconst whatsapp = d.whatsapp ? String(d.whatsapp).slice(0, 30) : null;\nconst email = d.email ? String(d.email).slice(0, 120) : null;\nconst plazo = PLAZO_MAP[d.plazo] || 'no_definido';\nlet uso = (d.uso && USO_ENUM.has(d.uso)) ? d.uso : null;\nif (!uso && d.intencion) uso = INTENCION_TO_USO[d.intencion] || 'no_definido';\nif (!uso) uso = 'no_definido';\nconst forma_pago = (d.forma_pago && FORMA_PAGO_ENUM.has(d.forma_pago)) ? d.forma_pago : 'no_definido';\nconst pre_aprobacion = typeof d.pre_aprobacion === 'boolean' ? d.pre_aprobacion : null;\nconst decisor = (d.decisor && DECISOR_ENUM.has(d.decisor)) ? d.decisor : 'no_definido';\nconst rango_presupuesto = (d.rango_presupuesto && RANGO_ENUM.has(d.rango_presupuesto)) ? d.rango_presupuesto : 'no_definido';\nconst resumen = (d.resumen || d.resumen_conversacion || '').toString().slice(0, 800);\n\nconst faltantes = [];\nif (!nombre) faltantes.push('nombre');\nif (!whatsapp && !email) faltantes.push('whatsapp_o_email');\n\nconst senalesDefinidas = [\n  plazo !== 'no_definido',\n  rango_presupuesto !== 'no_definido',\n  forma_pago !== 'no_definido',\n  uso !== 'no_definido',\n].filter(Boolean).length;\n\nif (senalesDefinidas < 3) {\n  const senalesFaltantes = [];\n  if (plazo === 'no_definido') senalesFaltantes.push('plazo');\n  if (rango_presupuesto === 'no_definido') senalesFaltantes.push('rango_presupuesto');\n  if (forma_pago === 'no_definido') senalesFaltantes.push('forma_pago');\n  if (uso === 'no_definido') senalesFaltantes.push('uso');\n  faltantes.push(`minimo_3_de_4_senales (faltan: ${senalesFaltantes.join(',')})`);\n}\n\nif (faltantes.length > 0) {\n  return [{ json: {\n    ok: false,\n    reason: 'faltan_datos',\n    faltantes,\n    session_id: d.session_id,\n    skip_upsert: true,\n    tool_output_text: null,\n  } }];\n}\n\nconst weights = {};\nconst plazoPts = { 'ahora': 25, '1_a_3_meses': 22, '3_a_6_meses': 15, '6_a_12_meses': 8, 'mas_de_1_ano': 3, 'no_definido': 0 };\nweights.plazo = plazoPts[plazo] || 0;\nconst rangoPts = { '>60M': 25, '40-60M': 22, '20-40M': 18, '<20M': 10, 'no_definido': 0 };\nweights.rango_presupuesto = rangoPts[rango_presupuesto] || 0;\nif (forma_pago === 'contado') weights.forma_pago = 15;\nelse if (forma_pago === 'credito' && pre_aprobacion === true) weights.forma_pago = 14;\nelse if (forma_pago === 'credito') weights.forma_pago = 10;\nelse if (forma_pago === 'mixto') weights.forma_pago = 10;\nelse if (forma_pago === 'subsidio') weights.forma_pago = 6;\nelse weights.forma_pago = 0;\nconst usoPts = { 'inversion': 15, 'segunda': 13, 'vivienda': 10, 'no_definido': 0 };\nweights.uso = usoPts[uso] || 0;\nconst decisorPts = { 'solo': 10, 'pareja': 8, 'familia': 5, 'no_definido': 0 };\nweights.decisor = decisorPts[decisor] || 0;\nif (whatsapp && email) weights.contacto = 10;\nelse if (whatsapp || email) weights.contacto = 7;\nelse if (nombre) weights.contacto = 3;\nelse weights.contacto = 0;\n\nlet scoreNumeric = Object.values(weights).reduce((a, b) => a + b, 0);\nif (d.override_caliente === true) {\n  scoreNumeric = Math.max(scoreNumeric, 75);\n}\nscoreNumeric = Math.min(100, Math.max(0, scoreNumeric));\nconst scoreLabel = scoreNumeric >= 70 ? 'CALIENTE' : scoreNumeric >= 40 ? 'TIBIO' : 'FRIO';\n\nreturn [{ json: {\n  ok: true,\n  session_id: d.session_id,\n  skip_upsert: false,\n  nombre, whatsapp, email, plazo, uso, forma_pago, pre_aprobacion, decisor, rango_presupuesto,\n  intencion: d.intencion || (uso === 'segunda' ? 'segunda_vivienda' : uso === 'vivienda' ? 'vivir_permanente' : uso === 'inversion' ? 'inversion' : 'no_definido'),\n  resumen,\n  score_numeric: scoreNumeric,\n  score: scoreLabel,\n  weights,\n  override_caliente: !!d.override_caliente,\n} }];"
       },
       "id": "score",
       "name": "Compute Score",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "version": 2, "caseSensitive": true, "typeValidation": "strict" },
-          "combinator": "and",
-          "conditions": [
-            {
-              "leftValue": "={{ $json.ok }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
-            }
-          ]
-        }
-      },
-      "id": "check-ok",
-      "name": "Datos completos?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -49,27 +35,45 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
           ]
         },
-        "options": { "response": { "response": { "neverError": true } } }
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "fetch-current",
       "name": "Fetch current lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 200]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Construye body del upsert con score_history actualizado.\n\nconst scored = $('Compute Score').first().json;\nconst current = $json;\n\nlet history = [];\nif (Array.isArray(current) && current.length > 0) {\n  history = Array.isArray(current[0].score_history) ? current[0].score_history : [];\n} else if (current && current.score_history) {\n  history = Array.isArray(current.score_history) ? current.score_history : [];\n}\n\nconst newEntry = {\n  at: new Date().toISOString(),\n  action: 'final_score',\n  score_numeric: scored.score_numeric,\n  score_label: scored.score,\n  override_caliente: scored.override_caliente,\n  weights_applied: scored.weights,\n};\n\nconst body = {\n  session_id: scored.session_id,\n  nombre: scored.nombre,\n  whatsapp: scored.whatsapp,\n  email: scored.email,\n  plazo: scored.plazo,\n  uso: scored.uso,\n  forma_pago: scored.forma_pago,\n  pre_aprobacion: scored.pre_aprobacion,\n  decisor: scored.decisor,\n  rango_presupuesto: scored.rango_presupuesto,\n  intencion: scored.intencion,\n  presupuesto: scored.forma_pago, // legacy compat\n  resumen: scored.resumen,\n  score: scored.score,\n  score_numeric: scored.score_numeric,\n  score_history: [...history, newEntry],\n};\n\nreturn [{ json: body }];"
+        "jsCode": "const scored = $('Compute Score').first().json;\n\nif (scored.skip_upsert === true) {\n  return [{ json: { skip: true, pass_through: scored } }];\n}\n\nconst current = $json;\nlet history = [];\nif (Array.isArray(current) && current.length > 0) {\n  history = Array.isArray(current[0].score_history) ? current[0].score_history : [];\n} else if (current && current.score_history) {\n  history = Array.isArray(current.score_history) ? current.score_history : [];\n}\n\nconst newEntry = {\n  at: new Date().toISOString(),\n  action: 'final_score',\n  score_numeric: scored.score_numeric,\n  score_label: scored.score,\n  override_caliente: scored.override_caliente,\n  weights_applied: scored.weights,\n};\n\nconst body = {\n  session_id: scored.session_id,\n  nombre: scored.nombre,\n  whatsapp: scored.whatsapp,\n  email: scored.email,\n  plazo: scored.plazo,\n  uso: scored.uso,\n  forma_pago: scored.forma_pago,\n  pre_aprobacion: scored.pre_aprobacion,\n  decisor: scored.decisor,\n  rango_presupuesto: scored.rango_presupuesto,\n  intencion: scored.intencion,\n  presupuesto: scored.forma_pago,\n  resumen: scored.resumen,\n  score: scored.score,\n  score_numeric: scored.score_numeric,\n  score_history: [...history, newEntry],\n};\n\nreturn [{ json: { skip: false, body, pass_through: scored } }];"
       },
       "id": "build-upsert",
       "name": "Build Upsert body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 200]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -78,56 +82,118 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Prefer", "value": "resolution=merge-duplicates,return=representation" },
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
-        "options": { "response": { "response": { "neverError": true } } }
+        "jsonBody": "={{ JSON.stringify($json.body || {}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "upsert-lead",
       "name": "Upsert Lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 200]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const scored = $('Compute Score').first().json;\nconst upsertResponse = $json;\nlet lead_id = null;\nif (Array.isArray(upsertResponse) && upsertResponse.length > 0) {\n  lead_id = upsertResponse[0].id;\n} else if (upsertResponse && upsertResponse.id) {\n  lead_id = upsertResponse.id;\n}\n\nconst primerNombre = (scored.nombre || '').split(' ')[0] || 'hola';\n\nlet tool_output_text;\nif (scored.score === 'CALIENTE') {\n  tool_output_text = `Listo, ${primerNombre}. Ya guarde tu informacion completa. Un asesor del equipo te va a contactar por WhatsApp en las proximas horas (lun-vie 9-19). Si quieres adelantarte, podes escribirles directamente al +56 9 4032 9987.`;\n} else if (scored.score === 'TIBIO') {\n  tool_output_text = `Genial, ${primerNombre}. Deje tu informacion registrada. Si aun no tenes el brochure te lo puedo enviar ahora mismo por WhatsApp o correo. Y cuando quieras avanzar, me avisas y paso tu caso al equipo.`;\n} else {\n  tool_output_text = `Gracias ${primerNombre}. Dejo tu info registrada. Cuando estes mas cerca de decidir, vuelves cuando quieras — aqui sigue abierto el canal.`;\n}\n\nreturn [{ json: {\n  ok: true,\n  lead_id,\n  score: scored.score,\n  score_numeric: scored.score_numeric,\n  session_id: scored.session_id,\n  tool_output_text,\n} }];"
+        "jsCode": "const scored = $('Compute Score').first().json;\nconst build = $('Build Upsert body').first().json;\nconst upsertResponse = $json;\n\nif (scored.skip_upsert === true) {\n  return [{ json: {\n    ok: false,\n    reason: scored.reason,\n    faltantes: scored.faltantes,\n    session_id: scored.session_id,\n    tool_output_text: null,\n  } }];\n}\n\nlet lead_id = null;\nif (Array.isArray(upsertResponse) && upsertResponse.length > 0) {\n  lead_id = upsertResponse[0].id;\n} else if (upsertResponse && upsertResponse.id) {\n  lead_id = upsertResponse.id;\n}\n\nconst primerNombre = (scored.nombre || '').split(' ')[0] || 'hola';\n\nlet tool_output_text;\nif (scored.score === 'CALIENTE') {\n  tool_output_text = `Listo, ${primerNombre}. Ya guarde tu informacion completa. Un asesor del equipo te va a contactar por WhatsApp en las proximas horas (lun-vie 9-19). Si quieres adelantarte, podes escribirles directamente al +56 9 4032 9987.`;\n} else if (scored.score === 'TIBIO') {\n  tool_output_text = `Genial, ${primerNombre}. Deje tu informacion registrada. Si aun no tenes el brochure te lo puedo enviar ahora mismo por WhatsApp o correo. Y cuando quieras avanzar, me avisas y paso tu caso al equipo.`;\n} else {\n  tool_output_text = `Gracias ${primerNombre}. Dejo tu info registrada. Cuando estes mas cerca de decidir, vuelves cuando quieras — aqui sigue abierto el canal.`;\n}\n\nreturn [{ json: {\n  ok: true,\n  lead_id,\n  score: scored.score,\n  score_numeric: scored.score_numeric,\n  session_id: scored.session_id,\n  tool_output_text,\n} }];"
       },
       "id": "final-output",
       "name": "Final Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Rama de datos incompletos: devuelve al agente lo que falta.\nconst v = $json;\nreturn [{ json: {\n  ok: false,\n  reason: v.reason,\n  faltantes: v.faltantes,\n  session_id: v.session_id,\n  tool_output_text: null,\n} }];"
-      },
-      "id": "missing-output",
-      "name": "Missing Data Output",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        1340,
+        300
+      ]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": { "main": [[{ "node": "Compute Score", "type": "main", "index": 0 }]] },
-    "Compute Score": { "main": [[{ "node": "Datos completos?", "type": "main", "index": 0 }]] },
-    "Datos completos?": {
+    "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Fetch current lead", "type": "main", "index": 0 }],
-        [{ "node": "Missing Data Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Compute Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Fetch current lead": { "main": [[{ "node": "Build Upsert body", "type": "main", "index": 0 }]] },
-    "Build Upsert body": { "main": [[{ "node": "Upsert Lead", "type": "main", "index": 0 }]] },
-    "Upsert Lead": { "main": [[{ "node": "Final Output", "type": "main", "index": 0 }]] }
+    "Compute Score": {
+      "main": [
+        [
+          {
+            "node": "Fetch current lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch current lead": {
+      "main": [
+        [
+          {
+            "node": "Build Upsert body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Upsert body": {
+      "main": [
+        [
+          {
+            "node": "Upsert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Lead": {
+      "main": [
+        [
+          {
+            "node": "Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
 }

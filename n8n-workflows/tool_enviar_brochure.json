@@ -10,7 +10,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -20,18 +23,28 @@
       "name": "Validate & Prepare",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "version": 2, "caseSensitive": true, "typeValidation": "strict" },
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
           "combinator": "and",
           "conditions": [
             {
               "leftValue": "={{ $json.is_valid }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ]
         }
@@ -40,18 +53,28 @@
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "version": 2, "caseSensitive": true, "typeValidation": "strict" },
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
           "combinator": "and",
           "conditions": [
             {
               "leftValue": "={{ $json.canal }}",
               "rightValue": "whatsapp",
-              "operator": { "type": "string", "operation": "equals" }
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
           ]
         }
@@ -60,7 +83,10 @@
       "name": "WhatsApp or Email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [900, 200]
+      "position": [
+        900,
+        200
+      ]
     },
     {
       "parameters": {
@@ -69,20 +95,35 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "apikey", "value": "429683C4C977415CAAFCCE10F7D57E11" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $json.phone_clean, mediatype: 'document', media: $json.brochure_url, fileName: 'Mirador-de-Villarrica-Brochure.pdf', caption: 'Brochure oficial \\u2014 Mirador de Villarrica | Terra Segura Inmobiliaria' }) }}",
-        "options": { "response": { "response": { "neverError": true } } }
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "wa-send-pdf",
       "name": "Evolution Send PDF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 100]
+      "position": [
+        1120,
+        100
+      ]
     },
     {
       "parameters": {
@@ -91,20 +132,35 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "apikey", "value": "429683C4C977415CAAFCCE10F7D57E11" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ (function(){ const prep = $('Validate & Prepare').first().json; const lineas = ['*Informacion detallada del proyecto*', '', '📍 *Ubicacion exacta del proyecto:*', prep.location_url, '', '📋 *Inventario completo en vivo* (94 parcelas, precios, videos por parcela):', prep.sheet_url, '', '🎥 *Tour 360°* del proyecto:', prep.tour_url]; if (prep.recomendacion) { lineas.push('', '⭐ *Nuestra recomendacion para usted:*', prep.recomendacion); } lineas.push('', 'Cualquier consulta, escribanos al +56 9 4032 9987.'); return JSON.stringify({ number: prep.phone_clean, text: lineas.join('\\n') }); })() }}",
-        "options": { "response": { "response": { "neverError": true } } }
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "wa-send-info",
       "name": "Evolution Send Info + Recomendacion",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 100]
+      "position": [
+        1340,
+        100
+      ]
     },
     {
       "parameters": {
@@ -114,7 +170,10 @@
       "name": "WA Success Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 100]
+      "position": [
+        1560,
+        100
+      ]
     },
     {
       "parameters": {
@@ -132,12 +191,15 @@
       "name": "Download Brochure PDF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
         "sendTo": "={{ $('Validate & Prepare').first().json.contacto }}",
-        "subject": "Brochure Mirador de Villarrica \u2014 Terra Segura Inmobiliaria",
+        "subject": "Brochure Mirador de Villarrica — Terra Segura Inmobiliaria",
         "emailType": "html",
         "message": "={{ (function(){ const prep = $('Validate & Prepare').first().json; const nombre = prep.nombre; const rec = prep.recomendacion; const sheet = prep.sheet_url; const loc = prep.location_url; const tour = prep.tour_url; const recHtml = rec ? ('<div style=\"background:#f4a84b14;border-left:4px solid #f4a84b;padding:16px;margin:20px 0;border-radius:4px;\">' + '<h3 style=\"margin:0 0 8px 0;color:#1a3d2e;font-size:16px;\">Nuestra recomendacion para usted</h3>' + '<p style=\"margin:0;color:#333;\">' + rec + '</p>' + '</div>') : ''; return '<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;\">' + '<h2 style=\"color:#1a3d2e;\">Mirador de Villarrica</h2>' + '<p>Estimado/a ' + nombre + ',</p>' + '<p>Le adjuntamos el brochure oficial del proyecto <strong>Mirador de Villarrica</strong> de Terra Segura Inmobiliaria.</p>' + '<p>El proyecto cuenta con <strong>94 parcelas</strong> en <strong>80 hectareas</strong> en Colico, Region de La Araucania, con SAG aprobado y roles listos para inscripcion inmediata.</p>' + '<ul>' + '<li>Parcelas desde 5.000 m\\u00b2 hasta 1 hectarea</li>' + '<li>Precio contado desde $14.490.000 CLP</li>' + '<li>Credito directo desde $17.490.000 CLP (50% pie + 36 cuotas UF)</li>' + '<li>Reserva $500.000 CLP \\u2014 incluye Conservador, notaria, legal y certificados</li>' + '<li>Caminos estabilizados, bosque nativo, vistas al volcan Villarrica y Lago Colico</li>' + '</ul>' + recHtml + '<div style=\"background:#1a3d2e0a;border:1px solid #1a3d2e33;padding:16px;margin:20px 0;border-radius:4px;\">' + '<h3 style=\"margin:0 0 12px 0;color:#1a3d2e;font-size:16px;\">Recursos del proyecto</h3>' + '<p style=\"margin:0 0 10px 0;\"><a href=\"' + loc + '\" style=\"background:#1a3d2e;color:#fff;padding:10px 18px;text-decoration:none;border-radius:4px;display:inline-block;margin:4px 4px 4px 0;\">📍 Ver ubicacion exacta</a>' + '<a href=\"' + sheet + '\" style=\"background:#1a3d2e;color:#fff;padding:10px 18px;text-decoration:none;border-radius:4px;display:inline-block;margin:4px 4px 4px 0;\">📋 Inventario en vivo</a>' + '<a href=\"' + tour + '\" style=\"background:#1a3d2e;color:#fff;padding:10px 18px;text-decoration:none;border-radius:4px;display:inline-block;margin:4px 4px 4px 0;\">🎥 Tour 360°</a></p>' + '<p style=\"margin:10px 0 0 0;font-size:13px;color:#555;\">El inventario en vivo muestra la disponibilidad actualizada de las 94 parcelas, con precios contado y credito, tamanos y videos individuales por parcela.</p>' + '</div>' + '<p>Si tiene alguna consulta, no dude en contactarnos:</p>' + '<ul>' + '<li>WhatsApp: <a href=\"https://wa.me/56940329987\" style=\"color:#1a3d2e;\">+56 9 4032 9987</a></li>' + '<li>Email: diego@terrasegura.cl</li>' + '</ul>' + '<p>Saludos cordiales,<br/><strong>Equipo de Ventas</strong><br/>Terra Segura Inmobiliaria</p>' + '</div>'; })() }}",
         "options": {
@@ -154,10 +216,17 @@
       "name": "Gmail Send Brochure",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "credentials": {
-        "gmailOAuth2": { "id": "12sHtnYC9mtyjrpQ", "name": "Gmail account" }
-      }
+        "gmailOAuth2": {
+          "id": "12sHtnYC9mtyjrpQ",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "cea9cbe3-bdb0-4172-8aa3-7a6b29b7e464"
     },
     {
       "parameters": {
@@ -167,7 +236,10 @@
       "name": "Email Success Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -177,28 +249,119 @@
       "name": "Validation Error Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 420]
+      "position": [
+        900,
+        420
+      ]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": { "main": [[{ "node": "Validate & Prepare", "type": "main", "index": 0 }]] },
-    "Validate & Prepare": { "main": [[{ "node": "Valid?", "type": "main", "index": 0 }]] },
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Valid?": {
       "main": [
-        [{ "node": "WhatsApp or Email?", "type": "main", "index": 0 }],
-        [{ "node": "Validation Error Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "WhatsApp or Email?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Error Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "WhatsApp or Email?": {
       "main": [
-        [{ "node": "Evolution Send PDF", "type": "main", "index": 0 }],
-        [{ "node": "Download Brochure PDF", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Evolution Send PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Brochure PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Evolution Send PDF": { "main": [[{ "node": "Evolution Send Info + Recomendacion", "type": "main", "index": 0 }]] },
-    "Evolution Send Info + Recomendacion": { "main": [[{ "node": "WA Success Output", "type": "main", "index": 0 }]] },
-    "Download Brochure PDF": { "main": [[{ "node": "Gmail Send Brochure", "type": "main", "index": 0 }]] },
-    "Gmail Send Brochure": { "main": [[{ "node": "Email Success Output", "type": "main", "index": 0 }]] }
+    "Evolution Send PDF": {
+      "main": [
+        [
+          {
+            "node": "Evolution Send Info + Recomendacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution Send Info + Recomendacion": {
+      "main": [
+        [
+          {
+            "node": "WA Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Brochure PDF": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send Brochure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send Brochure": {
+      "main": [
+        [
+          {
+            "node": "Email Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
 }

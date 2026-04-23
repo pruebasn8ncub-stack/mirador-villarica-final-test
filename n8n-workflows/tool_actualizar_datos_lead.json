@@ -4,72 +4,76 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"session_id\": \"uuid-del-session\",\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Perez\",\n  \"whatsapp\": \"+56912345678\",\n  \"email\": \"juan@ejemplo.cl\",\n  \"plazo\": \"1_a_3_meses\",\n  \"uso\": \"inversion\",\n  \"forma_pago\": \"contado\",\n  \"pre_aprobacion\": false,\n  \"decisor\": \"pareja\",\n  \"rango_presupuesto\": \"20-40M\",\n  \"resumen\": \"Menciono interes en parcela cerca del volcan\"\n}"
+        "jsonExample": "{\n  \"session_id\": \"uuid-del-session\",\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Perez\",\n  \"whatsapp\": \"+56912345678\",\n  \"email\": \"juan@ejemplo.cl\",\n  \"plazo\": \"1_a_3_meses\",\n  \"uso\": \"inversion\",\n  \"forma_pago\": \"contado\",\n  \"pre_aprobacion\": false,\n  \"decisor\": \"pareja\",\n  \"rango_presupuesto\": \"20-40M\",\n  \"parcela_interes\": \"28\",\n  \"pie_disponible\": \"8M\",\n  \"resumen\": \"Menciono interes en parcela cerca del volcan\"\n}"
       },
       "id": "trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Valida y normaliza el payload de actualizacion parcial.\n// Solo session_id es obligatorio. Los demas campos son opcionales.\n// No sobrescribe con null: si un campo no viene, no se toca.\n\nconst d = $json;\n\nif (!d.session_id || typeof d.session_id !== 'string') {\n  throw new Error('session_id requerido');\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) {\n  throw new Error('session_id debe ser UUID valido');\n}\n\n// Normalizacion de plazo (acepta valores del gate form y del BANT+ canonico)\nconst PLAZO_MAP = {\n  'inmediato': 'ahora',\n  'ahora': 'ahora',\n  '1-3m': '1_a_3_meses',\n  '1_a_3_meses': '1_a_3_meses',\n  '3-6m': '3_a_6_meses',\n  '3_a_6_meses': '3_a_6_meses',\n  '6-12m': '6_a_12_meses',\n  '6_a_12_meses': '6_a_12_meses',\n  '12m+': 'mas_de_1_ano',\n  'mas_de_1_ano': 'mas_de_1_ano',\n  'no_definido': 'no_definido',\n};\n\nconst USO_ENUM = new Set(['vivienda', 'segunda', 'inversion', 'no_definido']);\nconst FORMA_PAGO_ENUM = new Set(['contado', 'credito', 'subsidio', 'mixto', 'no_definido']);\nconst RANGO_ENUM = new Set(['<20M', '20-40M', '40-60M', '>60M', 'no_definido']);\nconst DECISOR_ENUM = new Set(['solo', 'pareja', 'familia', 'no_definido']);\n\n// Mapping legacy: intencion -> uso (compatibilidad con prompt v2)\nconst INTENCION_TO_USO = {\n  'inversion': 'inversion',\n  'segunda_vivienda': 'segunda',\n  'vivir_permanente': 'vivienda',\n  'evaluando': 'no_definido',\n  'no_definido': 'no_definido',\n};\n\nconst patch = {};\nconst fieldsUpdated = [];\n\n// Nombre completo (concatena nombre + apellido si vienen ambos)\nif (d.nombre || d.apellido) {\n  const nombreCompleto = [d.nombre, d.apellido].filter(Boolean).join(' ').trim().slice(0, 150);\n  if (nombreCompleto) {\n    patch.nombre = nombreCompleto;\n    fieldsUpdated.push('nombre');\n  }\n}\nif (d.whatsapp) {\n  patch.whatsapp = String(d.whatsapp).slice(0, 30);\n  fieldsUpdated.push('whatsapp');\n}\nif (d.email) {\n  patch.email = String(d.email).slice(0, 120);\n  fieldsUpdated.push('email');\n}\nif (d.plazo) {\n  const norm = PLAZO_MAP[d.plazo] || 'no_definido';\n  patch.plazo = norm;\n  fieldsUpdated.push('plazo');\n}\n// uso puede venir como 'uso' (nuevo) o 'intencion' (legacy)\nif (d.uso && USO_ENUM.has(d.uso)) {\n  patch.uso = d.uso;\n  fieldsUpdated.push('uso');\n} else if (d.intencion) {\n  const mapped = INTENCION_TO_USO[d.intencion];\n  if (mapped) {\n    patch.uso = mapped;\n    patch.intencion = d.intencion; // guardar tambien legacy para no perder data\n    fieldsUpdated.push('uso', 'intencion');\n  }\n}\nif (d.forma_pago && FORMA_PAGO_ENUM.has(d.forma_pago)) {\n  patch.forma_pago = d.forma_pago;\n  fieldsUpdated.push('forma_pago');\n}\nif (typeof d.pre_aprobacion === 'boolean') {\n  patch.pre_aprobacion = d.pre_aprobacion;\n  fieldsUpdated.push('pre_aprobacion');\n}\nif (d.decisor && DECISOR_ENUM.has(d.decisor)) {\n  patch.decisor = d.decisor;\n  fieldsUpdated.push('decisor');\n}\nif (d.rango_presupuesto && RANGO_ENUM.has(d.rango_presupuesto)) {\n  patch.rango_presupuesto = d.rango_presupuesto;\n  fieldsUpdated.push('rango_presupuesto');\n}\nif (d.resumen) {\n  patch.resumen = String(d.resumen).slice(0, 800);\n  fieldsUpdated.push('resumen');\n}\n\nif (fieldsUpdated.length === 0) {\n  return [{ json: {\n    session_id: d.session_id,\n    patch: null,\n    fields_updated: [],\n    skip: true,\n  } }];\n}\n\nreturn [{ json: {\n  session_id: d.session_id,\n  patch,\n  fields_updated: fieldsUpdated,\n  skip: false,\n} }];"
+        "jsCode": "// Valida y normaliza el payload de actualizacion parcial.\n// Solo session_id es obligatorio. Los demas campos son opcionales.\n// No sobrescribe con null: si un campo no viene, no se toca.\n\nconst d = $json;\n\nif (!d.session_id || typeof d.session_id !== 'string') {\n  throw new Error('session_id requerido');\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(d.session_id)) {\n  throw new Error('session_id debe ser UUID valido');\n}\n\nconst PLAZO_MAP = {\n  'inmediato': 'ahora',\n  'ahora': 'ahora',\n  '1-3m': '1_a_3_meses',\n  '1_a_3_meses': '1_a_3_meses',\n  '3-6m': '3_a_6_meses',\n  '3_a_6_meses': '3_a_6_meses',\n  '6-12m': '6_a_12_meses',\n  '6_a_12_meses': '6_a_12_meses',\n  '12m+': 'mas_de_1_ano',\n  'mas_de_1_ano': 'mas_de_1_ano',\n  'no_definido': 'no_definido',\n};\n\nconst USO_ENUM = new Set(['vivienda', 'segunda', 'inversion', 'no_definido']);\nconst FORMA_PAGO_ENUM = new Set(['contado', 'credito', 'subsidio', 'mixto', 'no_definido']);\nconst RANGO_ENUM = new Set(['<20M', '20-40M', '40-60M', '>60M', 'no_definido']);\nconst DECISOR_ENUM = new Set(['solo', 'pareja', 'familia', 'no_definido']);\n\nconst INTENCION_TO_USO = {\n  'inversion': 'inversion',\n  'segunda_vivienda': 'segunda',\n  'vivir_permanente': 'vivienda',\n  'evaluando': 'no_definido',\n  'no_definido': 'no_definido',\n};\n\nconst patch = {};\nconst fieldsUpdated = [];\n\nif (d.nombre || d.apellido) {\n  const nombreCompleto = [d.nombre, d.apellido].filter(Boolean).join(' ').trim().slice(0, 150);\n  if (nombreCompleto) {\n    patch.nombre = nombreCompleto;\n    fieldsUpdated.push('nombre');\n  }\n}\nif (d.whatsapp) {\n  patch.whatsapp = String(d.whatsapp).slice(0, 30);\n  fieldsUpdated.push('whatsapp');\n}\nif (d.email) {\n  patch.email = String(d.email).slice(0, 120);\n  fieldsUpdated.push('email');\n}\nif (d.plazo) {\n  const norm = PLAZO_MAP[d.plazo] || 'no_definido';\n  patch.plazo = norm;\n  fieldsUpdated.push('plazo');\n}\nif (d.uso && USO_ENUM.has(d.uso)) {\n  patch.uso = d.uso;\n  fieldsUpdated.push('uso');\n} else if (d.intencion) {\n  const mapped = INTENCION_TO_USO[d.intencion];\n  if (mapped) {\n    patch.uso = mapped;\n    patch.intencion = d.intencion;\n    fieldsUpdated.push('uso', 'intencion');\n  }\n}\nif (d.forma_pago && FORMA_PAGO_ENUM.has(d.forma_pago)) {\n  patch.forma_pago = d.forma_pago;\n  fieldsUpdated.push('forma_pago');\n}\nif (typeof d.pre_aprobacion === 'boolean') {\n  patch.pre_aprobacion = d.pre_aprobacion;\n  fieldsUpdated.push('pre_aprobacion');\n}\nif (d.decisor && DECISOR_ENUM.has(d.decisor)) {\n  patch.decisor = d.decisor;\n  fieldsUpdated.push('decisor');\n}\nif (d.rango_presupuesto && RANGO_ENUM.has(d.rango_presupuesto)) {\n  patch.rango_presupuesto = d.rango_presupuesto;\n  fieldsUpdated.push('rango_presupuesto');\n}\nif (d.resumen) {\n  patch.resumen = String(d.resumen).slice(0, 800);\n  fieldsUpdated.push('resumen');\n}\n// Parcela de interes (texto libre: numero o codigo tipo 28 o B5)\nif (d.parcela_interes) {\n  patch.parcela_interes = String(d.parcela_interes).slice(0, 30);\n  fieldsUpdated.push('parcela_interes');\n}\n// Pie disponible (solo aplica si forma_pago es credito, pero aceptamos cualquier entrada)\nif (d.pie_disponible) {\n  patch.pie_disponible = String(d.pie_disponible).slice(0, 30);\n  fieldsUpdated.push('pie_disponible');\n}\n\nif (fieldsUpdated.length === 0) {\n  return [{ json: {\n    session_id: d.session_id,\n    patch: null,\n    fields_updated: [],\n    skip: true,\n  } }];\n}\n\nreturn [{ json: {\n  session_id: d.session_id,\n  patch,\n  fields_updated: fieldsUpdated,\n  skip: false,\n} }];"
       },
       "id": "validate",
       "name": "Validate & Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "version": 2, "caseSensitive": true, "typeValidation": "strict" },
-          "combinator": "and",
-          "conditions": [
-            {
-              "leftValue": "={{ $json.skip }}",
-              "rightValue": false,
-              "operator": { "type": "boolean", "operation": "equals" }
-            }
-          ]
-        }
-      },
-      "id": "skip-check",
-      "name": "Skip if empty?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $json.session_id }}&select=id,score_history",
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $json.session_id }}&select=id,score_history,parcela_interes",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
           ]
         },
-        "options": { "response": { "response": { "neverError": true } } }
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "fetch-current",
       "name": "Fetch current lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 200]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Construye body final del PATCH con score_history actualizado.\n\nconst validated = $('Validate & Normalize').first().json;\nconst current = $json;\n\nlet leadId = null;\nlet history = [];\nif (Array.isArray(current) && current.length > 0) {\n  leadId = current[0].id;\n  history = Array.isArray(current[0].score_history) ? current[0].score_history : [];\n} else if (current && current.id) {\n  leadId = current.id;\n  history = Array.isArray(current.score_history) ? current.score_history : [];\n}\n\nif (!leadId) {\n  // Lead no existe todavia (edge case: session sin gate). No falla: devuelve skip.\n  return [{ json: {\n    ok: false,\n    reason: 'lead_no_existe',\n    session_id: validated.session_id,\n  } }];\n}\n\nconst newEntry = {\n  at: new Date().toISOString(),\n  action: 'partial_update',\n  fields_updated: validated.fields_updated,\n};\n\nconst body = {\n  ...validated.patch,\n  score_history: [...history, newEntry],\n};\n\nreturn [{ json: {\n  session_id: validated.session_id,\n  lead_id: leadId,\n  body,\n  fields_updated: validated.fields_updated,\n} }];"
+        "jsCode": "// Construye body final del PATCH con score_history actualizado\n// y merge acumulativo para parcela_interes.\n//\n// Acumulativos (no pisan, agregan): parcela_interes (lista separada por comas)\n// Sobrescribibles (se reemplazan): todos los demas campos.\n\nconst validated = $('Validate & Normalize').first().json;\nconst current = $json;\n\nlet leadId = null;\nlet history = [];\nlet currentParcela = '';\nif (Array.isArray(current) && current.length > 0) {\n  leadId = current[0].id;\n  history = Array.isArray(current[0].score_history) ? current[0].score_history : [];\n  currentParcela = current[0].parcela_interes || '';\n} else if (current && current.id) {\n  leadId = current.id;\n  history = Array.isArray(current.score_history) ? current.score_history : [];\n  currentParcela = current.parcela_interes || '';\n}\n\nif (!leadId) {\n  return [{ json: {\n    ok: false,\n    reason: 'lead_no_existe',\n    session_id: validated.session_id,\n  } }];\n}\n\n// Merge acumulativo para parcela_interes.\nconst patch = { ...validated.patch };\nconst fieldsActuallyChanged = [...validated.fields_updated];\n\nif (patch.parcela_interes) {\n  const nuevos = String(patch.parcela_interes)\n    .split(',')\n    .map(s => s.trim())\n    .filter(Boolean);\n  const existentes = currentParcela\n    .split(',')\n    .map(s => s.trim())\n    .filter(Boolean);\n  const setExistentes = new Set(existentes.map(s => s.toLowerCase()));\n  const aAgregar = nuevos.filter(n => !setExistentes.has(n.toLowerCase()));\n\n  if (aAgregar.length === 0) {\n    // La parcela ya estaba en la lista: no agrega nada.\n    delete patch.parcela_interes;\n    const idx = fieldsActuallyChanged.indexOf('parcela_interes');\n    if (idx !== -1) fieldsActuallyChanged.splice(idx, 1);\n  } else {\n    const merged = [...existentes, ...aAgregar].join(', ').slice(0, 200);\n    patch.parcela_interes = merged;\n  }\n}\n\nconst newEntry = {\n  at: new Date().toISOString(),\n  action: 'partial_update',\n  fields_updated: fieldsActuallyChanged,\n};\n\nconst body = {\n  ...patch,\n  score_history: [...history, newEntry],\n};\n\nreturn [{ json: {\n  session_id: validated.session_id,\n  lead_id: leadId,\n  body,\n  fields_updated: fieldsActuallyChanged,\n} }];"
       },
       "id": "build-patch",
       "name": "Build PATCH body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 200]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -78,56 +82,118 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Prefer", "value": "return=minimal" },
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.body) }}",
-        "options": { "response": { "response": { "neverError": true } } }
+        "jsonBody": "={{ JSON.stringify($json.body || {}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "patch-lead",
       "name": "PATCH lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 200]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const prepared = $('Build PATCH body').first().json;\n\nif (prepared.ok === false) {\n  return [{ json: {\n    ok: false,\n    reason: prepared.reason,\n    tool_output_text: null,\n  } }];\n}\n\nreturn [{ json: {\n  ok: true,\n  lead_id: prepared.lead_id,\n  session_id: prepared.session_id,\n  fields_saved: prepared.fields_updated,\n  tool_output_text: null,\n} }];"
+        "jsCode": "const prepared = $('Build PATCH body').first().json;\n\nif (prepared.ok === false) {\n  return [{ json: { ok: false, reason: prepared.reason, session_id: prepared.session_id, tool_output_text: null } }];\n}\n\nif (prepared.skipped === true) {\n  return [{ json: { ok: true, skipped: true, reason: prepared.reason, lead_id: prepared.lead_id, session_id: prepared.session_id, tool_output_text: null } }];\n}\n\nreturn [{ json: { ok: true, lead_id: prepared.lead_id, session_id: prepared.session_id, fields_saved: prepared.fields_updated, tool_output_text: null } }];"
       },
       "id": "final-output",
       "name": "Final Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: {\n  ok: true,\n  skipped: true,\n  reason: 'no_fields_to_update',\n  tool_output_text: null,\n} }];"
-      },
-      "id": "skipped-output",
-      "name": "Skipped Output",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        1340,
+        300
+      ]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": { "main": [[{ "node": "Validate & Normalize", "type": "main", "index": 0 }]] },
-    "Validate & Normalize": { "main": [[{ "node": "Skip if empty?", "type": "main", "index": 0 }]] },
-    "Skip if empty?": {
+    "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Fetch current lead", "type": "main", "index": 0 }],
-        [{ "node": "Skipped Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Validate & Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Fetch current lead": { "main": [[{ "node": "Build PATCH body", "type": "main", "index": 0 }]] },
-    "Build PATCH body": { "main": [[{ "node": "PATCH lead", "type": "main", "index": 0 }]] },
-    "PATCH lead": { "main": [[{ "node": "Final Output", "type": "main", "index": 0 }]] }
+    "Validate & Normalize": {
+      "main": [
+        [
+          {
+            "node": "Fetch current lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch current lead": {
+      "main": [
+        [
+          {
+            "node": "Build PATCH body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build PATCH body": {
+      "main": [
+        [
+          {
+            "node": "PATCH lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PATCH lead": {
+      "main": [
+        [
+          {
+            "node": "Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
 }

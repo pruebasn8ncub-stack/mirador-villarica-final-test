@@ -10,58 +10,78 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
         "url": "https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/export?format=csv&gid=1975618999",
         "options": {
-          "redirect": { "redirect": { "followRedirects": true } },
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          },
           "timeout": 10000,
-          "response": { "response": { "responseFormat": "text" } }
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
         }
       },
       "id": "fetch-sheet",
       "name": "Fetch Google Sheet CSV",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
-        "url": "https://mindicador.cl/api/uf",
-        "options": {
-          "timeout": 5000,
-          "response": { "response": { "neverError": true } }
-        }
-      },
-      "id": "fetch-uf",
-      "name": "Fetch UF",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [680, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse Google Sheet CSV + UF actual. Devuelve info completa del lote solicitado\n// o lista completa de disponibles si no viene numero.\n// Campos por lote: numero, estado, tamano_m2, precio_contado, descuento_pct,\n//                  precio_credito, pie_minimo, cuota_mensual_clp, cuota_mensual_uf.\n\nconst uf = $json;\nconst ufValor = uf && uf.serie && uf.serie[0] && typeof uf.serie[0].valor === 'number'\n  ? uf.serie[0].valor\n  : null;\nconst ufFecha = uf && uf.serie && uf.serie[0] ? uf.serie[0].fecha : null;\n\nconst sheetItem = $('Fetch Google Sheet CSV').first().json;\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\nif (!csvText || csvText.length < 100) {\n  return [{ json: {\n    ok: false,\n    error: 'csv_fetch_failed',\n    tool_output_text: 'No pude consultar el inventario en este momento. Deja que Diego te confirme por WhatsApp.',\n  } }];\n}\n\nconst input = $('Execute Workflow Trigger').first().json || {};\nconst numero = (input.numero ?? '').toString().trim().toUpperCase();\n\n// CSV parser (maneja comillas y comas dentro de campos)\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [];\n  let field = '';\n  let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else { inQuotes = !inQuotes; }\n    } else if (c === ',' && !inQuotes) {\n      row.push(field); field = '';\n    } else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else {\n      field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nconst parseMoney = (s) => {\n  if (!s) return null;\n  const t = s.toString();\n  if (t.includes('#DIV') || t.includes('#REF') || t.includes('#VALUE')) return null;\n  const cleaned = t.replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseSize = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseIntSafe = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst normalizeEstado = (raw) => {\n  const e = (raw || '').toString().trim().toLowerCase();\n  if (e.startsWith('disponi')) return 'disponible';\n  if (e.startsWith('reserv')) return 'reservado';\n  if (e.startsWith('vendi')) return 'vendido';\n  return e || 'desconocido';\n};\n\nconst clpToUf = (clp) => {\n  if (clp === null || !ufValor) return null;\n  return Math.round((clp / ufValor) * 100) / 100;\n};\n\nconst rows = parseCsv(csvText);\nconst parcelas = [];\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  const cuotaClp = parseMoney(r[11]);\n  parcelas.push({\n    numero: lote.toUpperCase(),\n    destacada: ((r[0] || '').toString().trim() === '⭐'),\n    estado: normalizeEstado(r[2]),\n    tamano_m2: parseSize(r[3]),\n    precio_contado: parseMoney(r[6]),\n    descuento_pct: parseIntSafe(r[7]),\n    precio_credito: parseMoney(r[9]),\n    pie_minimo_50pct: parseMoney(r[10]),\n    cuota_mensual_clp: cuotaClp,\n    cuota_mensual_uf: clpToUf(cuotaClp),\n  });\n}\n\nconst fmtClp = (n) => (n === null || n === undefined) ? '—' : `$${n.toLocaleString('es-CL')}`;\nconst fmtUf = (n) => (n === null || n === undefined) ? '—' : `${n.toFixed(2)} UF`;\n\nfunction lotText(p) {\n  if (p.estado === 'disponible') {\n    const dest = p.destacada ? ' ⭐' : '';\n    return `Parcela ${p.numero}${dest} · ${p.tamano_m2} m² · disponible · contado ${fmtClp(p.precio_contado)} (dcto ${p.descuento_pct || 0}%) · crédito ${fmtClp(p.precio_credito)} con 50% pie ${fmtClp(p.pie_minimo_50pct)} + 36 cuotas de ${fmtUf(p.cuota_mensual_uf)} (~${fmtClp(p.cuota_mensual_clp)} al valor UF de hoy).`;\n  }\n  if (p.estado === 'reservado') return `Parcela ${p.numero} · ${p.tamano_m2} m² · reservada.`;\n  if (p.estado === 'vendido') return `Parcela ${p.numero} · ${p.tamano_m2} m² · vendida.`;\n  return `Parcela ${p.numero} · estado no definido.`;\n}\n\n// Modo 1: consulta puntual por numero\nif (numero) {\n  const match = parcelas.find(p => p.numero === numero);\n  if (!match) {\n    return [{ json: {\n      ok: false,\n      query: { numero },\n      uf_valor_clp: ufValor,\n      uf_fecha: ufFecha,\n      tool_output_text: `No encuentro la parcela ${numero} en el inventario. Las numeradas van del 1 al 74 y hay lotes B1 al B20 de ampliación.`,\n    } }];\n  }\n  return [{ json: {\n    ok: true,\n    query: { numero },\n    uf_valor_clp: ufValor,\n    uf_fecha: ufFecha,\n    parcela: match,\n    tool_output_text: lotText(match),\n  } }];\n}\n\n// Modo 2: sin numero → lista todos los disponibles\nconst disponibles = parcelas.filter(p => p.estado === 'disponible');\n// Orden: destacadas primero, luego por precio contado asc (null al final)\ndisponibles.sort((a, b) => {\n  if (a.destacada !== b.destacada) return a.destacada ? -1 : 1;\n  const pa = a.precio_contado ?? Infinity;\n  const pb = b.precio_contado ?? Infinity;\n  if (pa !== pb) return pa - pb;\n  return a.numero.localeCompare(b.numero, 'es', { numeric: true });\n});\n\nif (disponibles.length === 0) {\n  return [{ json: {\n    ok: true,\n    query: {},\n    uf_valor_clp: ufValor,\n    uf_fecha: ufFecha,\n    total_disponibles: 0,\n    parcelas: [],\n    tool_output_text: 'En este momento no tengo parcelas disponibles. ¿Te aviso cuando entre alguna?',\n  } }];\n}\n\nconst lines = disponibles.map(lotText).join('\\n');\nconst text = `Tengo ${disponibles.length} parcelas disponibles ahora:\\n${lines}`;\n\nreturn [{ json: {\n  ok: true,\n  query: {},\n  uf_valor_clp: ufValor,\n  uf_fecha: ufFecha,\n  total_disponibles: disponibles.length,\n  parcelas: disponibles,\n  tool_output_text: text,\n} }];"
+        "jsCode": "// Lee el Google Sheet CSV y devuelve la ficha de las parcelas consultadas.\n// No consulta UF ni calcula nada — solo estructura lo que viene en el Sheet.\n\nconst sheetItem = $('Fetch Google Sheet CSV').first().json;\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\nif (!csvText || csvText.length < 100) {\n  return [{ json: {\n    ok: false,\n    error: 'csv_fetch_failed',\n    tool_output_text: 'No pude consultar el inventario en este momento.',\n  } }];\n}\n\nconst input = $('Execute Workflow Trigger').first().json || {};\nconst numeroRaw = (input.numero ?? '').toString().trim();\nconst numerosQuery = numeroRaw\n  ? numeroRaw.split(/[,\\s]+/).map(n => n.trim().toUpperCase()).filter(Boolean)\n  : [];\n\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [];\n  let field = '';\n  let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else { inQuotes = !inQuotes; }\n    } else if (c === ',' && !inQuotes) {\n      row.push(field); field = '';\n    } else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else {\n      field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nconst parseMoney = (s) => {\n  if (!s) return null;\n  const t = s.toString();\n  if (t.includes('#DIV') || t.includes('#REF') || t.includes('#VALUE')) return null;\n  const cleaned = t.replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseSize = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst parseIntSafe = (s) => {\n  if (!s) return null;\n  const cleaned = s.toString().replace(/[^0-9]/g, '');\n  return cleaned ? parseInt(cleaned, 10) : null;\n};\nconst normalizeEstado = (raw) => {\n  const e = (raw || '').toString().trim().toLowerCase();\n  if (e.startsWith('disponi')) return 'disponible';\n  if (e.startsWith('reserv')) return 'reservado';\n  if (e.startsWith('vendi')) return 'vendido';\n  return e || 'desconocido';\n};\n\nconst rows = parseCsv(csvText);\nconst parcelas = [];\nfor (const r of rows) {\n  if (!r || r.length < 3) continue;\n  const lote = (r[1] || '').toString().trim();\n  if (!/^(\\d{1,3}|B\\d{1,2})$/i.test(lote)) continue;\n  parcelas.push({\n    numero: lote.toUpperCase(),\n    destacada: ((r[0] || '').toString().trim() === '⭐'),\n    estado: normalizeEstado(r[2]),\n    tamano_m2: parseSize(r[3]),\n    precio_contado: parseMoney(r[6]),\n    descuento_pct: parseIntSafe(r[7]),\n    precio_credito: parseMoney(r[9]),\n    pie_minimo_50pct: parseMoney(r[10]),\n    cuota_mensual_clp: parseMoney(r[11]),\n  });\n}\n\nconst fmtClp = (n) => (n === null || n === undefined) ? '—' : `$${n.toLocaleString('es-CL')}`;\nconst fmtSize = (n) => (n === null || n === undefined) ? '—' : `${n.toLocaleString('es-CL')} m²`;\n\nfunction fichaDisponible(p) {\n  const lines = [\n    `📍 *Lote:* ${p.numero}${p.destacada ? ' ⭐' : ''}`,\n    `✅ *Estado:* Disponible`,\n    `📏 *Tamaño:* ${fmtSize(p.tamano_m2)}`,\n    `💵 *Precio contado:* ${fmtClp(p.precio_contado)}${p.descuento_pct ? ` (${p.descuento_pct}% dcto)` : ''}`,\n    `🏦 *Precio crédito:* ${fmtClp(p.precio_credito)}`,\n    `💰 *Pie mínimo 50%:* ${fmtClp(p.pie_minimo_50pct)}`,\n    `🗓️ *Valor cuota (36 meses):* ${fmtClp(p.cuota_mensual_clp)}`,\n  ];\n  return lines.join('\\n');\n}\n\nfunction fichaParcela(p) {\n  if (p.estado === 'disponible') return fichaDisponible(p);\n  if (p.estado === 'vendido') return `Parcela ${p.numero}: vendida`;\n  if (p.estado === 'reservado') return `Parcela ${p.numero}: reservada`;\n  return `Parcela ${p.numero}: estado no definido`;\n}\n\nif (numerosQuery.length > 0) {\n  const resultados = [];\n  const noEncontradas = [];\n\n  for (const num of numerosQuery) {\n    const match = parcelas.find(p => p.numero === num);\n    if (!match) noEncontradas.push(num);\n    else resultados.push(match);\n  }\n\n  const fichas = resultados.map(fichaParcela).join('\\n\\n');\n  let textoSalida = fichas;\n\n  if (noEncontradas.length > 0) {\n    const nfLine = noEncontradas.length === 1\n      ? `Parcela ${noEncontradas[0]}: no existe en el inventario (lotes válidos: 1–74 y B1–B20).`\n      : `Parcelas no encontradas: ${noEncontradas.join(', ')} (lotes válidos: 1–74 y B1–B20).`;\n    textoSalida = textoSalida ? `${textoSalida}\\n\\n${nfLine}` : nfLine;\n  }\n\n  return [{ json: {\n    ok: resultados.length > 0,\n    query: { numeros: numerosQuery },\n    parcelas: resultados,\n    no_encontradas: noEncontradas,\n    tool_output_text: textoSalida,\n  } }];\n}\n\nconst disponibles = parcelas.filter(p => p.estado === 'disponible');\ndisponibles.sort((a, b) => {\n  if (a.destacada !== b.destacada) return a.destacada ? -1 : 1;\n  const pa = a.precio_contado ?? Infinity;\n  const pb = b.precio_contado ?? Infinity;\n  if (pa !== pb) return pa - pb;\n  return a.numero.localeCompare(b.numero, 'es', { numeric: true });\n});\n\nif (disponibles.length === 0) {\n  return [{ json: {\n    ok: true,\n    query: {},\n    total_disponibles: 0,\n    parcelas: [],\n    tool_output_text: 'En este momento no hay parcelas disponibles.',\n  } }];\n}\n\nconst fichasTodas = disponibles.map(fichaDisponible).join('\\n\\n');\nconst text = `Parcelas disponibles (${disponibles.length}):\\n\\n${fichasTodas}`;\n\nreturn [{ json: {\n  ok: true,\n  query: {},\n  total_disponibles: disponibles.length,\n  parcelas: disponibles,\n  tool_output_text: text,\n} }];"
       },
       "id": "parse",
       "name": "Parse and Respond",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [[{ "node": "Fetch Google Sheet CSV", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Fetch Google Sheet CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch Google Sheet CSV": {
-      "main": [[{ "node": "Fetch UF", "type": "main", "index": 0 }]]
-    },
-    "Fetch UF": {
-      "main": [[{ "node": "Parse and Respond", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse and Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
 }
