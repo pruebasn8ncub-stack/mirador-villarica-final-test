@@ -25,18 +25,26 @@ const TOUR_360_URL = 'https://lanube360.com/mirador-de-villarrica/';
 
 /**
  * Renderiza texto del bot con soporte mínimo de markdown:
- * **negrita**, saltos de línea simples y párrafos (línea en blanco).
- * Evita dependencias externas para mantener el bundle liviano.
+ * **negrita** (markdown estándar) y *negrita* (estilo WhatsApp, que es
+ * el formato que devuelve la tool de parcelas). Además respeta saltos
+ * de línea simples y párrafos. Evita dependencias externas.
  */
 function FormattedContent({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*\n]+\*\*)/g);
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
   return (
     <p className="whitespace-pre-line break-words leading-snug">
       {parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
+        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
           return (
             <strong key={i} className="font-semibold text-bosque-900">
               {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+          return (
+            <strong key={i} className="font-semibold text-bosque-900">
+              {part.slice(1, -1)}
             </strong>
           );
         }
