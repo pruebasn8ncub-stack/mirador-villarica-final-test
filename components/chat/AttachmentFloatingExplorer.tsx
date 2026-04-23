@@ -7,14 +7,19 @@ import {
   X,
   Compass,
   Table as TableIcon,
+  Map,
   Loader2,
   RefreshCw,
   Search,
   SlidersHorizontal,
   ChevronDown,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 
-type Tab = 'tour' | 'inventory';
+type Tab = 'tour' | 'inventory' | 'masterplan';
+
+const MASTERPLAN_URL = '/assets/master-plan.jpg';
 
 interface AttachmentFloatingExplorerProps {
   tourUrl: string;
@@ -146,6 +151,9 @@ export function AttachmentFloatingExplorer({
 
   // Tour state
   const [tourLoaded, setTourLoaded] = useState(false);
+
+  // Masterplan state
+  const [masterplanZoom, setMasterplanZoom] = useState(1);
 
   // Inventory state
   const [invLoading, setInvLoading] = useState(false);
@@ -285,11 +293,23 @@ export function AttachmentFloatingExplorer({
         onClick={() => openWith('tour')}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.98 }}
-        className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-[12.5px] font-semibold transition-colors hover:bg-bosque-700"
+        className="flex flex-1 items-center justify-center gap-1.5 px-2 py-2.5 text-[12px] font-semibold transition-colors hover:bg-bosque-700"
         aria-label="Abrir tour 360°"
       >
-        <Compass className="h-4 w-4" strokeWidth={2.25} />
+        <Compass className="h-3.5 w-3.5" strokeWidth={2.25} />
         Tour 360°
+      </motion.button>
+      <div aria-hidden="true" className="w-px bg-crema/20" />
+      <motion.button
+        type="button"
+        onClick={() => openWith('masterplan')}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        className="flex flex-1 items-center justify-center gap-1.5 px-2 py-2.5 text-[12px] font-semibold transition-colors hover:bg-bosque-700"
+        aria-label="Ver masterplan del proyecto"
+      >
+        <Map className="h-3.5 w-3.5" strokeWidth={2.25} />
+        Masterplan
       </motion.button>
       <div aria-hidden="true" className="w-px bg-crema/20" />
       <motion.button
@@ -297,10 +317,10 @@ export function AttachmentFloatingExplorer({
         onClick={() => openWith('inventory')}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.98 }}
-        className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-[12.5px] font-semibold transition-colors hover:bg-bosque-700"
+        className="flex flex-1 items-center justify-center gap-1.5 px-2 py-2.5 text-[12px] font-semibold transition-colors hover:bg-bosque-700"
         aria-label="Ver inventario de parcelas"
       >
-        <TableIcon className="h-4 w-4" strokeWidth={2.25} />
+        <TableIcon className="h-3.5 w-3.5" strokeWidth={2.25} />
         Inventario
       </motion.button>
     </motion.div>
@@ -308,6 +328,7 @@ export function AttachmentFloatingExplorer({
 
   const tabs: { id: Tab; label: string; icon: typeof Compass }[] = [
     { id: 'tour', label: 'Tour 360°', icon: Compass },
+    { id: 'masterplan', label: 'Masterplan', icon: Map },
     { id: 'inventory', label: 'Inventario', icon: TableIcon },
   ];
 
@@ -315,13 +336,17 @@ export function AttachmentFloatingExplorer({
     title ??
     (tab === 'tour'
       ? 'Tour 360° · Mirador de Villarrica'
-      : 'Inventario · Parcelas disponibles');
+      : tab === 'masterplan'
+        ? 'Masterplan · Mirador de Villarrica'
+        : 'Inventario · Parcelas disponibles');
   const headerCaption =
     caption ??
     (tab === 'tour'
       ? 'Recorre el proyecto desde tu dispositivo'
-      : 'Precios, tamaños y cuotas actualizados en tiempo real');
-  const HeaderIcon = tab === 'tour' ? Compass : TableIcon;
+      : tab === 'masterplan'
+        ? 'Plano comercial — 74 parcelas desde 5.000 m²'
+        : 'Precios, tamaños y cuotas actualizados en tiempo real');
+  const HeaderIcon = tab === 'tour' ? Compass : tab === 'masterplan' ? Map : TableIcon;
 
   const floating =
     open && mounted
@@ -438,6 +463,57 @@ export function AttachmentFloatingExplorer({
                   <div className="border-t border-bosque-100 bg-crema px-4 py-2.5">
                     <p className="text-[11.5px] leading-snug text-bosque-700">
                       Tip: Arrastra para mirar alrededor. En móvil, moviendo el teléfono también.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {tab === 'masterplan' && (
+                <div
+                  id="panel-masterplan"
+                  role="tabpanel"
+                  className="relative flex flex-1 flex-col overflow-hidden bg-bosque-900"
+                >
+                  <div className="relative flex-1 overflow-auto">
+                    <div className="flex min-h-full min-w-full items-center justify-center p-2">
+                      <img
+                        src={MASTERPLAN_URL}
+                        alt="Masterplan Mirador de Villarrica"
+                        style={{ transform: `scale(${masterplanZoom})`, transformOrigin: 'center center' }}
+                        className="max-w-none select-none transition-transform duration-150 ease-out"
+                        draggable={false}
+                      />
+                    </div>
+                    <div className="pointer-events-none absolute bottom-3 right-3 flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setMasterplanZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
+                        className="pointer-events-auto rounded-full bg-bosque-800/90 p-2 text-crema shadow-lg backdrop-blur transition-colors hover:bg-bosque-700"
+                        aria-label="Alejar"
+                      >
+                        <ZoomOut className="h-4 w-4" strokeWidth={2.25} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMasterplanZoom(1)}
+                        className="pointer-events-auto rounded-full bg-bosque-800/90 px-3 py-2 text-[11px] font-semibold text-crema shadow-lg backdrop-blur transition-colors hover:bg-bosque-700"
+                        aria-label="Reset zoom"
+                      >
+                        {Math.round(masterplanZoom * 100)}%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMasterplanZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
+                        className="pointer-events-auto rounded-full bg-bosque-800/90 p-2 text-crema shadow-lg backdrop-blur transition-colors hover:bg-bosque-700"
+                        aria-label="Acercar"
+                      >
+                        <ZoomIn className="h-4 w-4" strokeWidth={2.25} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="border-t border-bosque-100 bg-crema px-4 py-2.5">
+                    <p className="text-[11.5px] leading-snug text-bosque-700">
+                      Plano comercial oficial: distribución de lotes, caminos internos, ubicación y distancias a lugares cercanos.
                     </p>
                   </div>
                 </div>
