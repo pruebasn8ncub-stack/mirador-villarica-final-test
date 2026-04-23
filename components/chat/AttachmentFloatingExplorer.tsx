@@ -15,7 +15,6 @@ import {
 type Tab = 'tour' | 'inventory';
 
 interface AttachmentFloatingExplorerProps {
-  initialTab?: Tab;
   tourUrl: string;
   title?: string;
   caption?: string;
@@ -87,7 +86,6 @@ function cleanMoney(raw: string): string {
 }
 
 export function AttachmentFloatingExplorer({
-  initialTab = 'tour',
   tourUrl,
   title,
   caption,
@@ -95,7 +93,12 @@ export function AttachmentFloatingExplorer({
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tab, setTab] = useState<Tab>('tour');
+
+  const openWith = (t: Tab) => {
+    setTab(t);
+    setOpen(true);
+  };
 
   // Tour state
   const [tourLoaded, setTourLoaded] = useState(false);
@@ -166,28 +169,14 @@ export function AttachmentFloatingExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tab]);
 
-  // Al abrir, respetar initialTab
-  useEffect(() => {
-    if (open) setTab(initialTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return invRows;
     return invRows.filter((r) => r.lote.toLowerCase().includes(q));
   }, [invRows, query]);
 
-  const ctaLabel =
-    initialTab === 'inventory'
-      ? 'Ver inventario de parcelas'
-      : 'Abrir tour 360°';
-  const CtaIcon = initialTab === 'inventory' ? TableIcon : Compass;
-
   const inlinePreview = (
-    <motion.button
-      type="button"
-      onClick={() => setOpen(true)}
+    <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{
         opacity: 1,
@@ -203,14 +192,32 @@ export function AttachmentFloatingExplorer({
         y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
         boxShadow: { duration: 1.8, repeat: Infinity, repeatDelay: 0.6, ease: 'easeOut' },
       }}
-      whileHover={{ scale: 1.01 }}
-      whileTap={{ scale: 0.98 }}
-      className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-bosque-800 px-3.5 py-2.5 text-[12.5px] font-semibold text-crema transition-colors hover:bg-bosque-700"
-      aria-label={ctaLabel}
+      className="mt-2 flex w-full overflow-hidden rounded-lg bg-bosque-800 text-crema shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset]"
     >
-      <CtaIcon className="h-4 w-4" strokeWidth={2.25} />
-      {ctaLabel}
-    </motion.button>
+      <motion.button
+        type="button"
+        onClick={() => openWith('tour')}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-[12.5px] font-semibold transition-colors hover:bg-bosque-700"
+        aria-label="Abrir tour 360°"
+      >
+        <Compass className="h-4 w-4" strokeWidth={2.25} />
+        Tour 360°
+      </motion.button>
+      <div aria-hidden="true" className="w-px bg-crema/20" />
+      <motion.button
+        type="button"
+        onClick={() => openWith('inventory')}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 text-[12.5px] font-semibold transition-colors hover:bg-bosque-700"
+        aria-label="Ver inventario de parcelas"
+      >
+        <TableIcon className="h-4 w-4" strokeWidth={2.25} />
+        Inventario
+      </motion.button>
+    </motion.div>
   );
 
   const tabs: { id: Tab; label: string; icon: typeof Compass }[] = [

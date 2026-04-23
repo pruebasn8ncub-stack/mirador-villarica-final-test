@@ -21,9 +21,8 @@ import { AttachmentVideo } from './AttachmentVideo';
 import { AttachmentLeadForm } from './AttachmentLeadForm';
 import { AttachmentHandoff } from './AttachmentHandoff';
 
-const TOUR_360_TOKEN = '[TOUR360]';
+const EXPLORER_TOKEN = '[EXPLORER]';
 const TOUR_360_URL = 'https://lanube360.com/mirador-de-villarrica/';
-const INVENTORY_TOKEN = '[INVENTARIO]';
 
 /**
  * Renderiza texto del bot con soporte mínimo de markdown:
@@ -74,12 +73,10 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
-  const hasTourToken = !isUser && message.content.includes(TOUR_360_TOKEN);
-  const hasInventoryToken = !isUser && message.content.includes(INVENTORY_TOKEN);
-  let displayContent = message.content;
-  if (hasTourToken) displayContent = displayContent.replace(TOUR_360_TOKEN, '');
-  if (hasInventoryToken) displayContent = displayContent.replace(INVENTORY_TOKEN, '');
-  displayContent = displayContent.trim();
+  const hasExplorerToken = !isUser && message.content.includes(EXPLORER_TOKEN);
+  const displayContent = hasExplorerToken
+    ? message.content.replace(EXPLORER_TOKEN, '').trim()
+    : message.content;
 
   /** Detecta si todas las attachments del mensaje son rich-cards full-width
    *  (se renderizan sin burbuja de fondo para dejar el layout del diseño). */
@@ -275,11 +272,8 @@ export function MessageBubble({
           }
         })}
 
-        {(hasTourToken || hasInventoryToken) && (
-          <AttachmentFloatingExplorer
-            initialTab={hasInventoryToken && !hasTourToken ? 'inventory' : 'tour'}
-            tourUrl={TOUR_360_URL}
-          />
+        {hasExplorerToken && (
+          <AttachmentFloatingExplorer tourUrl={TOUR_360_URL} />
         )}
       </div>
     </div>
