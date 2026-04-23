@@ -475,12 +475,12 @@ export function AttachmentFloatingExplorer({
                   className="relative flex flex-1 flex-col overflow-hidden bg-bosque-900"
                 >
                   <div className="relative flex-1 overflow-auto">
-                    <div className="flex min-h-full min-w-full items-center justify-center p-2">
+                    <div className="flex h-full w-full items-center justify-center p-3">
                       <img
                         src={MASTERPLAN_URL}
                         alt="Masterplan Mirador de Villarrica"
                         style={{ transform: `scale(${masterplanZoom})`, transformOrigin: 'center center' }}
-                        className="max-w-none select-none transition-transform duration-150 ease-out"
+                        className="max-h-full max-w-full select-none object-contain transition-transform duration-150 ease-out"
                         draggable={false}
                       />
                     </div>
