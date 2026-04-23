@@ -9,6 +9,7 @@ import { AttachmentGallery } from './AttachmentGallery';
 import { AttachmentFloatingGallery } from './AttachmentFloatingGallery';
 import { AttachmentFloatingTour360 } from './AttachmentFloatingTour360';
 import { AttachmentFloatingMasterplan } from './AttachmentFloatingMasterplan';
+import { AttachmentFloatingInventory } from './AttachmentFloatingInventory';
 import { AttachmentWhatsAppLink } from './AttachmentWhatsAppLink';
 import { AttachmentPropertyCard } from './AttachmentPropertyCard';
 import { AttachmentPropertyCarousel } from './AttachmentPropertyCarousel';
@@ -22,6 +23,7 @@ import { AttachmentHandoff } from './AttachmentHandoff';
 
 const TOUR_360_TOKEN = '[TOUR360]';
 const TOUR_360_URL = 'https://lanube360.com/mirador-de-villarrica/';
+const INVENTORY_TOKEN = '[INVENTARIO]';
 
 /**
  * Renderiza texto del bot con soporte mínimo de markdown:
@@ -73,9 +75,11 @@ export function MessageBubble({
   const isUser = message.role === 'user';
 
   const hasTourToken = !isUser && message.content.includes(TOUR_360_TOKEN);
-  const displayContent = hasTourToken
-    ? message.content.replace(TOUR_360_TOKEN, '').trim()
-    : message.content;
+  const hasInventoryToken = !isUser && message.content.includes(INVENTORY_TOKEN);
+  let displayContent = message.content;
+  if (hasTourToken) displayContent = displayContent.replace(TOUR_360_TOKEN, '');
+  if (hasInventoryToken) displayContent = displayContent.replace(INVENTORY_TOKEN, '');
+  displayContent = displayContent.trim();
 
   /** Detecta si todas las attachments del mensaje son rich-cards full-width
    *  (se renderizan sin burbuja de fondo para dejar el layout del diseño). */
@@ -276,6 +280,13 @@ export function MessageBubble({
             url={TOUR_360_URL}
             title="Tour 360° · Mirador de Villarrica"
             caption="Recorre el proyecto desde tu dispositivo"
+          />
+        )}
+
+        {hasInventoryToken && (
+          <AttachmentFloatingInventory
+            title="Inventario · Parcelas disponibles"
+            caption="Precios, tamaños y cuotas actualizados en tiempo real"
           />
         )}
       </div>
