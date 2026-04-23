@@ -20,6 +20,9 @@ import { AttachmentVideo } from './AttachmentVideo';
 import { AttachmentLeadForm } from './AttachmentLeadForm';
 import { AttachmentHandoff } from './AttachmentHandoff';
 
+const TOUR_360_TOKEN = '[TOUR360]';
+const TOUR_360_URL = 'https://lanube360.com/mirador-de-villarrica/';
+
 /**
  * Renderiza texto del bot con soporte mínimo de markdown:
  * **negrita**, saltos de línea simples y párrafos (línea en blanco).
@@ -60,6 +63,11 @@ export function MessageBubble({
   onAction,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+
+  const hasTourToken = !isUser && message.content.includes(TOUR_360_TOKEN);
+  const displayContent = hasTourToken
+    ? message.content.replace(TOUR_360_TOKEN, '').trim()
+    : message.content;
 
   /** Detecta si todas las attachments del mensaje son rich-cards full-width
    *  (se renderizan sin burbuja de fondo para dejar el layout del diseño). */
@@ -103,7 +111,7 @@ export function MessageBubble({
                 : 'bg-white text-bosque-900 rounded-bl-sm border border-bosque-100 shadow-chat-bubble-bot'
             )}
           >
-            {message.content && <FormattedContent text={message.content} />}
+            {displayContent && <FormattedContent text={displayContent} />}
           </div>
         )}
 
@@ -255,6 +263,13 @@ export function MessageBubble({
           }
         })}
 
+        {hasTourToken && (
+          <AttachmentFloatingTour360
+            url={TOUR_360_URL}
+            title="Tour 360° · Mirador de Villarrica"
+            caption="Recorre el proyecto desde tu dispositivo"
+          />
+        )}
       </div>
     </div>
   );

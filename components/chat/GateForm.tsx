@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Loader2, Lock, MessageCircle } from 'lucide-react';
+import { ArrowRight, Loader2, Lock, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LeadGateData } from '@/lib/chat/types';
 import { FormField } from './FormField';
@@ -40,7 +40,7 @@ function validate(values: LeadGateData): Errors {
 export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
   const [values, setValues] = useState<LeadGateData>({
     nombre: defaultValues?.nombre ?? '',
-    whatsapp: defaultValues?.whatsapp ?? '',
+    whatsapp: defaultValues?.whatsapp ?? '+569 ',
     email: defaultValues?.email ?? '',
   });
   const [errors, setErrors] = useState<Errors>({});
@@ -99,23 +99,50 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="chat-dotgrid flex flex-1 min-h-0 flex-col overflow-y-auto px-5 pb-4 pt-4"
+      className="chat-dotgrid relative flex flex-1 min-h-0 flex-col overflow-y-auto px-5 pb-5 pt-5"
       noValidate
     >
+      {/* Tarjeta intro — elevada con detalle mostaza y sparkle icon */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="relative mb-2 rounded-xl bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(26,61,46,0.04),0_4px_16px_rgba(26,61,46,0.06)] ring-1 ring-bosque-100/60"
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-white via-white to-crema-100/60 px-4 py-3.5 ring-1 ring-bosque-100/70 shadow-[0_1px_2px_rgba(26,61,46,0.04),0_8px_24px_-12px_rgba(26,61,46,0.12)]"
       >
-        <p className="text-[12.5px] leading-snug text-bosque-700">
-          Antes de continuar, necesito algunos datos para darte una{' '}
-          <strong className="font-semibold text-bosque-900">atención personalizada</strong>{' '}
-          y enviarte <strong className="font-semibold text-bosque-900">información exclusiva del proyecto</strong>.
-        </p>
+        {/* Borde superior acento mostaza — detalle editorial */}
+        <span
+          aria-hidden
+          className="absolute inset-x-4 top-0 h-[2px] rounded-full bg-gradient-to-r from-transparent via-mostaza to-transparent opacity-70"
+        />
+        {/* Ornamento esquina — círculo difuso bosque */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-bosque-500/[0.06] blur-xl"
+        />
+
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-mostaza/90 to-mostaza-400 shadow-[0_2px_6px_-1px_rgba(244,168,75,0.45)]">
+            <Sparkles className="h-[14px] w-[14px] text-white" strokeWidth={2.5} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="mb-0.5 text-[10px] font-semibold uppercase leading-none tracking-[0.16em] text-mostaza-500">
+              Atención exclusiva
+            </p>
+            <p className="text-[13px] leading-snug text-bosque-800">
+              Necesito tus datos para enviarte{' '}
+              <strong className="font-semibold text-bosque-900">información exclusiva</strong>{' '}
+              y darte atención personalizada.
+            </p>
+          </div>
+        </div>
       </motion.div>
 
-      <div className="flex flex-col gap-2">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col gap-3"
+      >
         <FormField
           label="Nombre y apellido"
           icon="user"
@@ -151,82 +178,114 @@ export function GateForm({ onSubmit, error, defaultValues }: GateFormProps) {
         {error && (
           <div
             role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700"
+            className="rounded-xl border border-red-200 bg-red-50/80 px-3.5 py-2.5 text-[12px] font-medium text-red-700 backdrop-blur-sm"
           >
             {error}
           </div>
         )}
 
-        <div className="mt-0.5 flex flex-col gap-1.5">
+        {/* Botones — separación clara con divider sutil arriba */}
+        <div className="relative mt-2 flex flex-col gap-2.5">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-1 left-1/2 h-px w-16 -translate-x-1/2 bg-gradient-to-r from-transparent via-bosque-200/80 to-transparent"
+          />
+
+          {/* CTA primario — gradiente profundo + shine hover */}
           <button
             type="submit"
             disabled={submitting !== null}
             className={cn(
-              'flex items-center justify-center gap-2 rounded-xl border-2 border-transparent px-4 py-2.5 text-sm font-semibold transition-all',
+              'group relative flex items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-3 text-[13.5px] font-semibold tracking-[0.01em] transition-all duration-300',
               submitting === 'web'
-                ? 'cursor-wait bg-bosque-400 text-crema'
-                : 'bg-gradient-launcher text-crema shadow-md hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]',
-              submitting && submitting !== 'web' && 'opacity-60'
+                ? 'cursor-wait bg-bosque-500 text-crema'
+                : 'bg-gradient-to-br from-bosque-700 via-bosque-800 to-bosque-900 text-crema shadow-[0_4px_14px_-3px_rgba(26,61,46,0.45),0_1px_2px_rgba(26,61,46,0.2),inset_0_1px_0_rgba(255,255,255,0.08)] hover:-translate-y-0.5 hover:shadow-[0_8px_22px_-4px_rgba(26,61,46,0.55),0_2px_4px_rgba(26,61,46,0.25),inset_0_1px_0_rgba(255,255,255,0.12)] active:translate-y-0 active:shadow-[0_2px_8px_-2px_rgba(26,61,46,0.4)]',
+              submitting && submitting !== 'web' && 'opacity-55'
             )}
           >
+            {/* Shine travel — detalle luxury */}
+            {submitting !== 'web' && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+              />
+            )}
+            {/* Borde interior highlight top */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-mostaza/40 to-transparent"
+            />
+
             {submitting === 'web' ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Conectando…
+                <Loader2 className="h-[15px] w-[15px] animate-spin" />
+                <span>Conectando…</span>
               </>
             ) : (
               <>
-                Continuar aquí en el chat
-                <ArrowRight className="h-4 w-4" />
+                <span>Continuar aquí en el chat</span>
+                <ArrowRight className="h-[15px] w-[15px] transition-transform duration-300 group-hover:translate-x-0.5" strokeWidth={2.5} />
               </>
             )}
           </button>
 
+          {/* CTA secundario — WhatsApp, vidrio suave + borde emerald */}
           <button
             type="button"
             onClick={() => runSubmit('whatsapp')}
             disabled={submitting !== null}
             className={cn(
-              'flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold transition-all',
+              'group relative flex items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-[11px] text-[13.5px] font-semibold tracking-[0.01em] text-white transition-all duration-300',
               submitting === 'whatsapp'
-                ? 'cursor-wait border-emerald-400 bg-emerald-50 text-emerald-700'
-                : 'border-emerald-500 bg-white text-emerald-700 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md active:scale-[0.98]',
-              submitting && submitting !== 'whatsapp' && 'opacity-60'
+                ? 'cursor-wait bg-[#1ebe57]'
+                : 'bg-[#25D366] shadow-[0_4px_14px_-3px_rgba(37,211,102,0.45),0_1px_2px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.15)] hover:-translate-y-0.5 hover:bg-[#22c45e] hover:shadow-[0_8px_22px_-4px_rgba(37,211,102,0.55)] active:translate-y-0',
+              submitting && submitting !== 'whatsapp' && 'opacity-55'
             )}
           >
+            {/* Shine travel igual que el botón primario */}
+            {submitting !== 'whatsapp' && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+              />
+            )}
             {submitting === 'whatsapp' ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Abriendo WhatsApp…
+                <Loader2 className="h-[15px] w-[15px] animate-spin" />
+                <span>Abriendo WhatsApp…</span>
               </>
             ) : (
-              <>
-                <MessageCircle className="h-4 w-4" strokeWidth={2.5} />
-                Continuar por WhatsApp
-              </>
+              <span>Continuar por WhatsApp</span>
             )}
           </button>
         </div>
 
-        <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
-          <p className="flex h-4 items-center gap-1 text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-bosque-800">
-            <Lock aria-hidden className="h-3 w-3 shrink-0" strokeWidth={2.5} />
-            <span>Conversación privada</span>
-          </p>
-          <p className="flex h-4 items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-bosque-800">
-            <span>Powered by</span>
-            <img
-              src="/assets/terra-segura-logo.webp"
-              alt="Terra Segura"
-              className="h-4 w-auto object-contain"
-              style={{
-                filter:
-                  'brightness(0) saturate(100%) invert(17%) sepia(44%) saturate(626%) hue-rotate(108deg) brightness(94%) contrast(92%)',
-              }}
-            />
-          </p>
+        {/* Footer — divider superior + ítems refinados */}
+        <div className="relative mt-3 pt-3">
+          <span
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bosque-200/60 to-transparent"
+          />
+          <div className="flex items-center justify-between gap-2 px-0.5">
+            <p className="flex items-center gap-1.5 text-[9.5px] font-semibold uppercase leading-none tracking-[0.12em] text-bosque-700">
+              <Lock aria-hidden className="h-[11px] w-[11px] shrink-0 text-bosque-600" strokeWidth={2.5} />
+              <span>Conversación privada</span>
+            </p>
+            <p className="flex items-center gap-1.5 whitespace-nowrap text-[9.5px] font-semibold uppercase leading-none tracking-[0.1em] text-bosque-700">
+              <span className="opacity-75">Powered by</span>
+              <img
+                src="/assets/terra-segura-logo.webp"
+                alt="Terra Segura"
+                className="h-[15px] w-auto object-contain"
+                style={{
+                  filter:
+                    'brightness(0) saturate(100%) invert(17%) sepia(44%) saturate(626%) hue-rotate(108deg) brightness(94%) contrast(92%)',
+                }}
+              />
+            </p>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </form>
   );
 }

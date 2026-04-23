@@ -52,9 +52,14 @@ export function GateModal({ onSubmit, onClose, error }: GateModalProps) {
         initial={{ opacity: 0, y: 16, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 12, scale: 0.97 }}
-        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 flex max-h-[92svh] w-full max-w-[440px] flex-col overflow-hidden rounded-3xl bg-crema shadow-2xl ring-1 ring-bosque-900/5"
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 flex max-h-[92svh] w-full max-w-[440px] flex-col overflow-hidden rounded-[28px] bg-crema shadow-[0_40px_80px_-20px_rgba(0,0,0,0.45),0_20px_40px_-12px_rgba(26,61,46,0.35),0_0_0_1px_rgba(26,61,46,0.08)] ring-1 ring-white/40"
       >
+        {/* Halo ambient dorado — detalle luxury que separa del fondo */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -inset-px rounded-[28px] bg-gradient-to-b from-mostaza/[0.04] via-transparent to-transparent"
+        />
         {/* Header idéntico al de ChatWindow — avatar de Lucía + estado online */}
         <header className="chat-header-glass flex items-center justify-between gap-3 px-4 pb-3 pt-3 text-crema md:pt-4">
           <div className="flex min-w-0 items-center gap-3">
