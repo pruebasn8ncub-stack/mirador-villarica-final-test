@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { motion } from 'framer-motion';
-import { Send, X, RefreshCw, Minus, Lock } from 'lucide-react';
+import { Send, X, RefreshCw, Minus, Lock, MessageSquarePlus } from 'lucide-react';
 import type { LeadGateData, Message } from '@/lib/chat/types';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -24,6 +24,8 @@ interface ChatWindowProps {
   onClose: () => void;
   onReset: () => void;
   onMinimize?: () => void;
+  /** Abre el modal de anotación de la conversación (depuración interna). */
+  onFeedback?: () => void;
   isSending: boolean;
   error: string | null;
   /** Si true, bloquea el chat y muestra el gate form. */
@@ -54,6 +56,7 @@ export function ChatWindow({
   onClose,
   onReset,
   onMinimize,
+  onFeedback,
   isSending,
   error,
   gateRequired = false,
@@ -200,6 +203,17 @@ export function ChatWindow({
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
+          {onFeedback && messages.length > 0 && (
+            <button
+              type="button"
+              onClick={onFeedback}
+              className="rounded-full p-2 text-crema/80 transition-colors hover:bg-white/10 hover:text-crema"
+              aria-label="Anotar conversación"
+              title="Anotar conversación"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onReset}

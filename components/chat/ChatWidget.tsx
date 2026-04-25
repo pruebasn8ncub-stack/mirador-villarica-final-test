@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { ChatLauncher } from './ChatLauncher';
 import { ChatWindow } from './ChatWindow';
 import { GateModal } from './GateModal';
+import { FeedbackModal } from './FeedbackModal';
 import {
   clearMessages,
   getOrCreateSessionId,
@@ -306,6 +307,7 @@ export function ChatWidget() {
   const [gateError, setGateError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [prefillInput, setPrefillInput] = useState<string>('');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const firstMessageSent = useRef(false);
   const streamTimers = useRef<number[]>([]);
 
@@ -552,9 +554,20 @@ export function ChatWidget() {
             onSend={handleSend}
             onClose={() => setIsOpen(false)}
             onReset={handleReset}
+            onFeedback={() => setFeedbackOpen(true)}
             isSending={isSending}
             error={error}
             prefillInput={prefillInput}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {feedbackOpen && gatePassed && sessionId && (
+          <FeedbackModal
+            key="feedback-modal"
+            sessionId={sessionId}
+            messages={messages}
+            onClose={() => setFeedbackOpen(false)}
           />
         )}
       </AnimatePresence>
