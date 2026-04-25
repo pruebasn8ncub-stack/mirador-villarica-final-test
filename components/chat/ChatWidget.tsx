@@ -18,6 +18,7 @@ import { sendChatMessage, ChatApiError } from '@/lib/chat/api';
 import { ensureSession, submitLeadGate, LeadGateError } from '@/lib/chat/lead';
 import type { Attachment, LeadGateData, Message } from '@/lib/chat/types';
 import { GALERIA, PROYECTO } from '@/data/content';
+import { CHAT_OPEN_EVENT, buildPrefillFromContext, type ChatOpenContext } from '@/lib/chat-events';
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_CHAT_MOCKS === '1';
 
@@ -304,8 +305,24 @@ export function ChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const [gateError, setGateError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [prefillInput, setPrefillInput] = useState<string>('');
   const firstMessageSent = useRef(false);
   const streamTimers = useRef<number[]>([]);
+
+  // Bus global: cualquier componente del sitio puede abrir el chat con
+  // un mensaje sembrado (ej. click en parcela del master plan interactivo).
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const ce = ev as CustomEvent<ChatOpenContext>;
+      const text = buildPrefillFromContext(ce.detail || {});
+      setIsOpen(true);
+      // Doble setState con clave temporal nueva: si ya había prefill igual,
+      // forzamos re-fire del effect downstream agregando un sufijo invisible.
+      setPrefillInput(text ? `${text}` : '');
+    };
+    window.addEventListener(CHAT_OPEN_EVENT, handler);
+    return () => window.removeEventListener(CHAT_OPEN_EVENT, handler);
+  }, []);
 
   /**
    * Al abrir el chat, mostrar typing indicator por 2s antes de renderizar la
@@ -537,6 +554,7 @@ export function ChatWidget() {
             onReset={handleReset}
             isSending={isSending}
             error={error}
+            prefillInput={prefillInput}
           />
         )}
       </AnimatePresence>

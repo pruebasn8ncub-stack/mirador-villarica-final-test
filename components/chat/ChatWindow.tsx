@@ -30,6 +30,8 @@ interface ChatWindowProps {
   gateRequired?: boolean;
   onGateSubmit?: (data: LeadGateData) => Promise<void> | void;
   gateError?: string | null;
+  /** Texto sugerido para sembrar en el input (no envía solo). Cambia → reemplaza input. */
+  prefillInput?: string;
 }
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -57,6 +59,7 @@ export function ChatWindow({
   gateRequired = false,
   onGateSubmit,
   gateError,
+  prefillInput,
 }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const [scrolledTop, setScrolledTop] = useState(true);
@@ -91,6 +94,20 @@ export function ChatWindow({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Prefill desde contexto externo (ej: click en parcela del master plan).
+  // Cambia el valor → reemplaza el input y enfoca para que el usuario pueda enviar/editar.
+  useEffect(() => {
+    if (!prefillInput) return;
+    setInput(prefillInput);
+    requestAnimationFrame(() => {
+      const ta = inputRef.current;
+      if (!ta) return;
+      ta.focus();
+      const len = prefillInput.length;
+      ta.setSelectionRange(len, len);
+    });
+  }, [prefillInput]);
 
   // Auto-grow del textarea (máx 4 líneas)
   useLayoutEffect(() => {

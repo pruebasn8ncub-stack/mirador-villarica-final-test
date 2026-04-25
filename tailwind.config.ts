@@ -39,7 +39,13 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['var(--font-fraunces)', 'Georgia', 'ui-serif', 'serif'],
+        display: ['var(--font-fraunces)', 'Georgia', 'ui-serif', 'serif'],
+      },
+      letterSpacing: {
+        'display': '-0.02em',
+        'eyebrow': '0.18em',
       },
       boxShadow: {
         // Shadow layering para look premium
@@ -79,6 +85,10 @@ const config: Config = {
         'lucia-nod': 'luciaNod 3.5s ease-in-out infinite',
         // Badge "1 mensaje nuevo" con pop inicial + pulse discreto
         'badge-pop': 'badgePop 2.4s ease-in-out infinite',
+        // Pulso para parcelas activas en master plan
+        'parcela-pulse': 'parcelaPulse 2s ease-in-out infinite',
+        // Shimmer skeleton
+        'shimmer': 'shimmer 2s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -168,6 +178,21 @@ const config: Config = {
         badgePop: {
           '0%, 100%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(1.15)' },
+        },
+        // Indicador de scroll en el hero (gota descendiendo por la línea)
+        'scroll-hint': {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(300%)' },
+        },
+        // Pulso sutil sobre parcela hover/seleccionada en master plan
+        parcelaPulse: {
+          '0%, 100%': { opacity: '0.85' },
+          '50%': { opacity: '1' },
+        },
+        // Shimmer para skeletons
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
         },
       },
     },
