@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { MessageCircle, Maximize2, Filter, MapPin, Loader2, X, type LucideIcon } from 'lucide-react';
+import useSWR from 'swr';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { MessageCircle, Maximize2, Filter, MapPin, Loader2, X, ZoomIn, ZoomOut, RotateCcw, type LucideIcon } from 'lucide-react';
 import {
   PARCELAS_GEO,
   SVG_VIEWBOX,
@@ -24,6 +26,12 @@ interface InventarioResponse {
   parcelas: ParcelaInventario[];
 }
 
+const FALLBACK_INV = buildMockInventario();
+const fetcher = (url: string) => fetch(url).then((r) => {
+  if (!r.ok) throw new Error('inv fetch failed');
+  return r.json() as Promise<InventarioResponse>;
+});
+
 const TAMANO_FILTERS = [
   { label: 'Todos', min: 0,    max: Infinity },
   { label: '5–6k m²', min: 5000, max: 6499 },
@@ -32,31 +40,23 @@ const TAMANO_FILTERS = [
 ];
 
 export function MasterPlanInteractivo() {
-  const [inv, setInv] = useState<ParcelaInventario[]>(() => buildMockInventario());
-  const [loading, setLoading] = useState(true);
   const [tamanoFilter, setTamanoFilter] = useState(0);
   const [hoverLote, setHoverLote] = useState<number | null>(null);
   const [selectedLote, setSelectedLote] = useState<number | null>(null);
 
-  // Fetch inicial + refresh cada 30s
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch('/api/inventario', { cache: 'no-store' });
-        if (!res.ok) throw new Error('inv fetch failed');
-        const data: InventarioResponse = await res.json();
-        if (!cancelled) setInv(data.parcelas);
-      } catch {
-        // silent fallback al mock inicial
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  // SWR: fetch inicial + revalidación cada 30s + retry on focus.
+  // Fallback inmediato al mock para SSR + primer render.
+  const { data, isLoading, isValidating } = useSWR<InventarioResponse>(
+    '/api/inventario',
+    fetcher,
+    {
+      refreshInterval: 30_000,
+      revalidateOnFocus: true,
+      fallbackData: { source: 'mock', counts: { disponible: 0, reservada: 0, vendida: 0 }, parcelas: FALLBACK_INV },
+      dedupingInterval: 10_000,
     }
-    load();
-    const interval = setInterval(load, 30_000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  );
+  const inv = data?.parcelas ?? FALLBACK_INV;
 
   const parcelas: Parcela[] = useMemo(
     () => mergeParcelas(PARCELAS_GEO, inv),
@@ -125,10 +125,10 @@ export function MasterPlanInteractivo() {
               </div>
             );
           })}
-          {loading && (
+          {(isLoading || isValidating) && (
             <span className="flex items-center gap-1.5 text-[12px] text-bosque-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.4} />
-              Sincronizando…
+              {isLoading ? 'Cargando…' : 'Sincronizando…'}
             </span>
           )}
         </motion.div>
@@ -167,22 +167,61 @@ export function MasterPlanInteractivo() {
           className="relative mt-10 overflow-hidden rounded-[28px] bg-white shadow-card-hover ring-1 ring-bosque-100"
         >
           <div className="relative aspect-[10/7] w-full">
-            <Image
-              src="/assets/master-plan.jpg"
-              alt="Plano comercial Mirador de Villarrica"
-              fill
-              priority
-              sizes="(min-width: 1024px) 1100px, 100vw"
-              className="object-cover opacity-95"
-            />
-
-            <svg
-              viewBox={`0 0 ${SVG_VIEWBOX.width} ${SVG_VIEWBOX.height}`}
-              className="absolute inset-0 h-full w-full"
-              preserveAspectRatio="xMidYMid meet"
-              role="img"
-              aria-label="Master plan interactivo con parcelas clickeables"
+            <TransformWrapper
+              initialScale={1}
+              minScale={1}
+              maxScale={4}
+              wheel={{ step: 0.15 }}
+              doubleClick={{ disabled: false, step: 1.6 }}
+              panning={{ velocityDisabled: false }}
+              limitToBounds
             >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <>
+                  <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5 rounded-xl bg-white/90 p-1 shadow-md backdrop-blur-sm">
+                    <button
+                      onClick={() => zoomIn()}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-bosque-700 transition hover:bg-bosque-50"
+                      aria-label="Acercar"
+                    >
+                      <ZoomIn className="h-4 w-4" strokeWidth={2.2} />
+                    </button>
+                    <button
+                      onClick={() => zoomOut()}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-bosque-700 transition hover:bg-bosque-50"
+                      aria-label="Alejar"
+                    >
+                      <ZoomOut className="h-4 w-4" strokeWidth={2.2} />
+                    </button>
+                    <button
+                      onClick={() => resetTransform()}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-bosque-700 transition hover:bg-bosque-50"
+                      aria-label="Vista inicial"
+                    >
+                      <RotateCcw className="h-4 w-4" strokeWidth={2.2} />
+                    </button>
+                  </div>
+
+                  <TransformComponent
+                    wrapperClass="!w-full !h-full"
+                    contentClass="!w-full !h-full"
+                  >
+                    <div className="relative h-full w-full">
+                      <Image
+                        src="/assets/master-plan.jpg"
+                        alt="Plano comercial Mirador de Villarrica"
+                        fill
+                        priority
+                        sizes="(min-width: 1024px) 1100px, 100vw"
+                        className="object-cover opacity-95"
+                      />
+                      <svg
+                        viewBox={`0 0 ${SVG_VIEWBOX.width} ${SVG_VIEWBOX.height}`}
+                        className="absolute inset-0 h-full w-full"
+                        preserveAspectRatio="xMidYMid meet"
+                        role="img"
+                        aria-label="Master plan interactivo con parcelas clickeables"
+                      >
               {parcelas.map((p) => {
                 const c = ESTADO_COLORS[p.estado];
                 const isVisible = visible.has(p.lote);
@@ -221,7 +260,12 @@ export function MasterPlanInteractivo() {
                   </g>
                 );
               })}
-            </svg>
+                      </svg>
+                    </div>
+                  </TransformComponent>
+                </>
+              )}
+            </TransformWrapper>
           </div>
         </motion.div>
 

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Inter } from 'next/font/google';
-// import { Analytics } from '@vercel/analytics/react'; // habilitar tras `npm install @vercel/analytics`
+import { Analytics } from '@vercel/analytics/react';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PROYECTO, DIEGO } from '@/data/content';
 import './globals.css';
@@ -132,7 +132,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans bg-crema text-bosque-900 antialiased">
         {children}
         <ChatWidget />
-        {/* <Analytics /> habilitar tras npm install @vercel/analytics */}
+        <Analytics />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

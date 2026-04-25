@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Car, MapPin, Plane, Trees, Waves, Mountain, Coffee, Compass } from 'lucide-react';
+import Map, { Marker, NavigationControl, FullscreenControl, ScaleControl } from 'react-map-gl/mapbox';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { DISTANCIAS } from '@/data/content';
 import { cn } from '@/lib/utils';
 
@@ -15,17 +17,16 @@ const QUE_HAY_CERCA = [
   { icon: Plane,    titulo: 'Aeropuerto Araucanía', desc: 'Vuelo directo Santiago–Temuco (1h 20). 45 min al proyecto.' },
 ];
 
-// Coordenadas aproximadas del proyecto en Colico, Araucanía.
 const LAT = -39.0833;
 const LNG = -71.9667;
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 export function Ubicacion() {
-  const [showMap, setShowMap] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
 
-  const mapEmbedUrl =
-    `https://www.google.com/maps?q=${LAT},${LNG}&hl=es&z=11&output=embed`;
-  const directionsUrl =
-    `https://www.google.com/maps/dir/?api=1&destination=${LAT},${LNG}&travelmode=driving`;
+  const hasMapbox = !!MAPBOX_TOKEN;
+  const fallbackEmbedUrl = `https://www.google.com/maps?q=${LAT},${LNG}&hl=es&z=11&output=embed`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${LAT},${LNG}&travelmode=driving`;
 
   return (
     <section id="ubicacion" className="relative bg-white py-24 md:py-32">
@@ -60,32 +61,33 @@ export function Ubicacion() {
           className="mt-10 grid gap-6 lg:grid-cols-12"
         >
           <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] shadow-card-hover ring-1 ring-bosque-100 lg:col-span-7 lg:aspect-auto">
-            {!showMap ? (
-              <button
-                onClick={() => setShowMap(true)}
-                className="group relative h-full w-full"
-                aria-label="Cargar mapa interactivo"
+            {hasMapbox && !showFallback ? (
+              <Map
+                mapboxAccessToken={MAPBOX_TOKEN}
+                initialViewState={{ longitude: LNG, latitude: LAT, zoom: 10.5 }}
+                mapStyle="mapbox://styles/mapbox/outdoors-v12"
+                style={{ width: '100%', height: '100%', minHeight: '420px' }}
+                onError={() => setShowFallback(true)}
               >
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: 'url(/assets/banner-volcan.jpg)' }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-bosque-950/70 via-bosque-950/30 to-bosque-950/55" />
-                <div className="relative flex h-full flex-col items-center justify-center gap-4 p-8 text-center text-crema">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-mostaza/95 text-bosque-900 shadow-xl">
-                    <MapPin className="h-6 w-6" strokeWidth={2.4} />
-                  </span>
-                  <p className="font-display text-xl tracking-display md:text-2xl">
-                    Ver en Google Maps
-                  </p>
-                  <p className="text-[12px] uppercase tracking-eyebrow text-crema/70">
-                    Toca para cargar el mapa interactivo
-                  </p>
-                </div>
-              </button>
+                <Marker longitude={LNG} latitude={LAT} anchor="bottom">
+                  <div className="flex flex-col items-center" aria-label="Ubicación de Mirador de Villarrica">
+                    <div className="rounded-full bg-mostaza px-3 py-1 text-[11px] font-bold text-bosque-900 shadow-lg ring-2 ring-white">
+                      Mirador
+                    </div>
+                    <div className="-mt-1 h-3 w-3 rotate-45 bg-mostaza shadow" />
+                    <span className="relative mt-1 flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mostaza opacity-60" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-mostaza ring-2 ring-white" />
+                    </span>
+                  </div>
+                </Marker>
+                <NavigationControl position="top-right" showCompass={false} />
+                <FullscreenControl position="top-right" />
+                <ScaleControl position="bottom-left" maxWidth={120} unit="metric" />
+              </Map>
             ) : (
               <iframe
-                src={mapEmbedUrl}
+                src={fallbackEmbedUrl}
                 title="Ubicación de Mirador de Villarrica en Colico"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -123,6 +125,12 @@ export function Ubicacion() {
                 <Compass className="h-3.5 w-3.5" strokeWidth={2.4} />
                 Cómo llegar
               </a>
+              {!hasMapbox && (
+                <p className="mt-3 flex items-start gap-1.5 text-[11px] text-bosque-500/85">
+                  <MapPin className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={2.4} />
+                  Mapa interactivo disponible al configurar <code className="rounded bg-bosque-50 px-1 text-[10.5px]">NEXT_PUBLIC_MAPBOX_TOKEN</code>.
+                </p>
+              )}
             </div>
           </div>
         </motion.div>

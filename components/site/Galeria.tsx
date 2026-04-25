@@ -1,9 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Lightbox from 'yet-another-react-lightbox';
+import Captions from 'yet-another-react-lightbox/plugins/captions';
+import Zoom from 'yet-another-react-lightbox/plugins/zoom';
+import Counter from 'yet-another-react-lightbox/plugins/counter';
+import 'yet-another-react-lightbox/styles.css';
+import 'yet-another-react-lightbox/plugins/captions.css';
+import 'yet-another-react-lightbox/plugins/counter.css';
 import { GALERIA } from '@/data/content';
 
 const fadeUp = {
@@ -12,28 +18,12 @@ const fadeUp = {
 };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
-// Patrón asimétrico tipo masonry (col-span / row-span repetidos cada 9)
 const PATTERN = [
   'col-span-2 row-span-2', '', '', '', 'col-span-2', '', '', '', 'row-span-2',
 ];
 
 export function Galeria() {
-  const [open, setOpen] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (open === null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(null);
-      if (e.key === 'ArrowLeft') setOpen((i) => (i === null ? null : (i + GALERIA.length - 1) % GALERIA.length));
-      if (e.key === 'ArrowRight') setOpen((i) => (i === null ? null : (i + 1) % GALERIA.length));
-    };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  const [index, setIndex] = useState<number>(-1);
 
   return (
     <section
@@ -58,7 +48,7 @@ export function Galeria() {
           </div>
           <p className="max-w-md text-[14.5px] leading-relaxed text-bosque-700/80">
             Bosque nativo, vista al volcán, lago Colico a 20 minutos. Toca cualquier foto para
-            agrandarla.
+            agrandar, hacer zoom o navegar con las flechas.
           </p>
         </motion.div>
 
@@ -73,7 +63,7 @@ export function Galeria() {
             <motion.button
               key={g.src}
               variants={fadeUp}
-              onClick={() => setOpen(i)}
+              onClick={() => setIndex(i)}
               type="button"
               className={`group relative overflow-hidden rounded-2xl shadow-card transition hover:-translate-y-1 hover:shadow-card-hover ${PATTERN[i % PATTERN.length]}`}
               aria-label={`Ampliar imagen ${i + 1}: ${g.alt}`}
@@ -95,63 +85,26 @@ export function Galeria() {
         </motion.div>
       </div>
 
-      <AnimatePresence>
-        {open !== null && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setOpen(null)}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-bosque-950/92 backdrop-blur-sm"
-          >
-            <button
-              onClick={(e) => { e.stopPropagation(); setOpen(null); }}
-              aria-label="Cerrar galería"
-              className="absolute right-5 top-5 flex h-12 w-12 items-center justify-center rounded-full border border-crema/20 text-crema/85 transition hover:bg-crema/10"
-            >
-              <X className="h-5 w-5" strokeWidth={2.4} />
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); setOpen((i) => (i === null ? null : (i + GALERIA.length - 1) % GALERIA.length)); }}
-              aria-label="Anterior"
-              className="absolute left-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-crema/20 text-crema/85 transition hover:bg-crema/10 md:left-8 md:h-14 md:w-14"
-            >
-              <ChevronLeft className="h-6 w-6" strokeWidth={2.4} />
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); setOpen((i) => (i === null ? null : (i + 1) % GALERIA.length)); }}
-              aria-label="Siguiente"
-              className="absolute right-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-crema/20 text-crema/85 transition hover:bg-crema/10 md:right-8 md:h-14 md:w-14"
-            >
-              <ChevronRight className="h-6 w-6" strokeWidth={2.4} />
-            </button>
-
-            <motion.div
-              key={open}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.25 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative h-[80vh] w-[88vw] max-w-6xl"
-            >
-              <Image
-                src={GALERIA[open].src}
-                alt={GALERIA[open].alt}
-                fill
-                sizes="88vw"
-                priority
-                className="object-contain"
-              />
-              <p className="absolute -bottom-9 left-0 right-0 text-center text-[12.5px] text-crema/75">
-                {GALERIA[open].alt} · {open + 1} / {GALERIA.length}
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Lightbox
+        index={index}
+        open={index >= 0}
+        close={() => setIndex(-1)}
+        slides={GALERIA.map((g) => ({
+          src: g.src,
+          alt: g.alt,
+          description: g.alt,
+        }))}
+        plugins={[Captions, Zoom, Counter]}
+        captions={{ descriptionTextAlign: 'center', descriptionMaxLines: 2 }}
+        zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }}
+        counter={{ container: { style: { top: 'unset', bottom: 0 } } }}
+        controller={{ closeOnBackdropClick: true }}
+        styles={{
+          container: { backgroundColor: 'rgba(7, 20, 16, 0.95)' },
+          slide: { padding: '24px' },
+        }}
+        animation={{ swipe: 240, fade: 220 }}
+      />
     </section>
   );
 }
