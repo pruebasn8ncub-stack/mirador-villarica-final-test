@@ -6,6 +6,7 @@ import {
   supabaseUpsert,
 } from '@/lib/chat/supabase';
 import { isAuthed } from '@/lib/feedback/auth';
+import { REVIEWERS } from '@/lib/feedback/reviewers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,9 @@ const messageSchema = z.object({
 
 const feedbackSchema = z.object({
   session_id: z.string().regex(UUID_RE, 'session_id debe ser UUID'),
-  reviewer_name: z.string().trim().min(2).max(120),
+  reviewer_name: z.enum(REVIEWERS as unknown as [string, ...string[]], {
+    errorMap: () => ({ message: 'reviewer_name no está en la lista permitida' }),
+  }),
   annotation: z.string().trim().min(3).max(4000),
   messages: z.array(messageSchema).min(1).max(500),
   user_agent: z.string().max(500).optional(),

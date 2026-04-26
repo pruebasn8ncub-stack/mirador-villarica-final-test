@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
-import { X, Send, CheckCircle2 } from 'lucide-react';
+import { X, Send, CheckCircle2, ChevronDown } from 'lucide-react';
 import type { Message } from '@/lib/chat/types';
+import { REVIEWERS, isValidReviewer } from '@/lib/feedback/reviewers';
 import { cn } from '@/lib/utils';
 
 const REVIEWER_NAME_KEY = 'mirador_reviewer_name';
@@ -52,7 +53,7 @@ export function FeedbackModal({ sessionId, messages, onClose }: FeedbackModalPro
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(REVIEWER_NAME_KEY);
-      if (saved) setReviewerName(saved);
+      if (saved && isValidReviewer(saved)) setReviewerName(saved);
     } catch {
       // localStorage bloqueado — ignorar
     }
@@ -82,7 +83,7 @@ export function FeedbackModal({ sessionId, messages, onClose }: FeedbackModalPro
   const counterDanger = counter >= MAX_ANNOTATION;
 
   const canSubmit =
-    reviewerName.trim().length >= 2 &&
+    isValidReviewer(reviewerName) &&
     annotation.trim().length >= 3 &&
     !submitting &&
     !success;
@@ -94,7 +95,7 @@ export function FeedbackModal({ sessionId, messages, onClose }: FeedbackModalPro
     setSubmitting(true);
 
     try {
-      window.localStorage.setItem(REVIEWER_NAME_KEY, reviewerName.trim());
+      window.localStorage.setItem(REVIEWER_NAME_KEY, reviewerName);
     } catch {
       // ignorar
     }
@@ -105,7 +106,7 @@ export function FeedbackModal({ sessionId, messages, onClose }: FeedbackModalPro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
-          reviewer_name: reviewerName.trim(),
+          reviewer_name: reviewerName,
           annotation: annotation.trim(),
           messages: serializeMessages(messages),
           user_agent:
@@ -224,17 +225,31 @@ export function FeedbackModal({ sessionId, messages, onClose }: FeedbackModalPro
             <span className="text-[11px] font-semibold uppercase tracking-wide text-bosque-700">
               Tu nombre <span className="text-red-500">*</span>
             </span>
-            <input
-              type="text"
-              value={reviewerName}
-              onChange={(e) => setReviewerName(e.target.value.slice(0, 120))}
-              placeholder="Ej. Diego Cavagnaro"
-              required
-              minLength={2}
-              maxLength={120}
-              disabled={submitting || success}
-              className="rounded-lg border border-bosque-200 bg-white px-3 py-2 text-sm text-bosque-900 placeholder:text-bosque-400 focus:border-bosque-400 focus:outline-none focus:ring-2 focus:ring-bosque-200 disabled:opacity-60"
-            />
+            <div className="relative">
+              <select
+                value={reviewerName}
+                onChange={(e) => setReviewerName(e.target.value)}
+                required
+                disabled={submitting || success}
+                className={cn(
+                  'w-full appearance-none rounded-lg border border-bosque-200 bg-white px-3 py-2 pr-9 text-sm focus:border-bosque-400 focus:outline-none focus:ring-2 focus:ring-bosque-200 disabled:opacity-60',
+                  reviewerName ? 'text-bosque-900' : 'text-bosque-400'
+                )}
+              >
+                <option value="" disabled>
+                  Selecciona tu nombre…
+                </option>
+                {REVIEWERS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bosque-500"
+                aria-hidden="true"
+              />
+            </div>
           </label>
 
           <label className="flex flex-col gap-1">
