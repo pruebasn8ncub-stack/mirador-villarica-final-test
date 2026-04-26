@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { ChatLauncher } from './ChatLauncher';
 import { ChatWindow } from './ChatWindow';
@@ -297,6 +298,7 @@ async function mockReply(
 }
 
 export function ChatWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [leadData, setLeadData] = useState<LeadGateData | null>(null);
@@ -525,6 +527,7 @@ export function ChatWidget() {
   }, [sessionId, leadData, streamOpeningMessages]);
 
   if (!mounted) return null;
+  if (pathname?.startsWith('/anotaciones')) return null;
 
   return (
     <>

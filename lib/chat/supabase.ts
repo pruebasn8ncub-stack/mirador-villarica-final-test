@@ -52,3 +52,49 @@ export async function supabaseUpsert<T>(
   if (options.returnRepresentation === false) return [] as T[];
   return (await res.json()) as T[];
 }
+
+interface SelectOptions {
+  query?: string;
+  exactCount?: boolean;
+}
+
+export interface SelectResult<T> {
+  rows: T[];
+  count: number | null;
+}
+
+export async function supabaseSelect<T>(
+  table: string,
+  options: SelectOptions = {},
+  config = getSupabaseConfig()
+): Promise<SelectResult<T>> {
+  if (!config) throw new Error('Supabase not configured');
+
+  const qs = options.query ? `?${options.query}` : '';
+  const res = await fetch(`${config.url}/rest/v1/${table}${qs}`, {
+    method: 'GET',
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      ...(options.exactCount ? { Prefer: 'count=exact' } : {}),
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Supabase ${table} select ${res.status}: ${body}`);
+  }
+
+  let count: number | null = null;
+  if (options.exactCount) {
+    const range = res.headers.get('content-range');
+    if (range) {
+      const total = range.split('/')[1];
+      count = total === '*' ? null : Number(total);
+    }
+  }
+  const rows = (await res.json()) as T[];
+  return { rows, count };
+}
+
