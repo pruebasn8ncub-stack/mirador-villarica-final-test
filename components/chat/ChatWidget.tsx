@@ -527,7 +527,23 @@ export function ChatWidget() {
   }, [sessionId, leadData, streamOpeningMessages]);
 
   if (!mounted) return null;
-  if (pathname?.startsWith('/anotaciones')) return null;
+  if (pathname?.startsWith('/anotaciones') || pathname?.startsWith('/panel')) return null;
+
+  const handleLauncherClick = () => {
+    setIsOpen(true);
+    void fetch('/api/widget-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId || undefined,
+        event_type: 'launcher_clicked',
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+      }),
+    }).catch(() => {
+      /* fire-and-forget */
+    });
+  };
 
   return (
     <>
@@ -536,7 +552,7 @@ export function ChatWidget() {
           ocupa su rol. Evita el "botón X flotante" duplicado que confunde. */}
       <AnimatePresence>
         {!isOpen && (
-          <ChatLauncher key="launcher" isOpen={false} onClick={() => setIsOpen(true)} />
+          <ChatLauncher key="launcher" isOpen={false} onClick={handleLauncherClick} />
         )}
       </AnimatePresence>
       <AnimatePresence>

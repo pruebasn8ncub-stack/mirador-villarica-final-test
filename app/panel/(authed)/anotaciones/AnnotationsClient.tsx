@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Calendar,
   User,
-  LogOut,
   Download,
   X,
   Copy,
@@ -19,8 +17,8 @@ import {
   Clock,
   Hash,
   ChevronRight,
-  Loader2,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -133,14 +131,12 @@ function downloadCsv(items: FeedbackItem[]) {
 }
 
 export function AnnotationsClient() {
-  const router = useRouter();
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [reviewer, setReviewer] = useState('');
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [sessionFilter, setSessionFilter] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   // Deep link inicial
   useEffect(() => {
@@ -186,13 +182,6 @@ export function AnnotationsClient() {
     [data, selectedId]
   );
 
-  async function handleLogout() {
-    setLoggingOut(true);
-    await fetch('/api/feedback/auth', { method: 'DELETE' });
-    router.replace('/anotaciones/login');
-    router.refresh();
-  }
-
   const total = data?.total ?? data?.items.length ?? 0;
   const reviewersList = data?.reviewers ?? [];
   const sessionsCount = data?.sessions_count ?? 0;
@@ -202,35 +191,14 @@ export function AnnotationsClient() {
     !!debouncedQ || !!reviewer || datePreset !== 'all' || !!sessionFilter;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[1400px] flex-col px-4 py-6 md:px-8 md:py-8">
-      {/* Header */}
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="mb-1.5 flex items-center gap-2 text-bosque-700">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-mostaza" />
-            <span className="text-[10.5px] font-semibold uppercase tracking-eyebrow">
-              Mirador · Panel interno
-            </span>
-          </div>
-          <h1 className="font-display text-3xl font-medium tracking-display text-bosque-900 md:text-4xl">
-            Anotaciones de brokers
-          </h1>
-          <p className="mt-1 text-sm text-bosque-700">
-            Feedback dejado por el equipo de ventas sobre conversaciones de Lucía.
-          </p>
-        </div>
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="flex items-center gap-1.5 rounded-lg border border-bosque-200 bg-white px-3 py-1.5 text-xs font-medium text-bosque-700 transition-colors hover:bg-bosque-50 disabled:opacity-50"
-        >
-          {loggingOut ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <LogOut className="h-3.5 w-3.5" />
-          )}
-          Cerrar sesión
-        </button>
+    <main className="mx-auto flex max-w-[1400px] flex-col px-4 py-6 md:px-8 md:py-8">
+      <header className="mb-5">
+        <h1 className="font-display text-3xl font-medium tracking-display text-bosque-900 md:text-4xl">
+          Anotaciones de brokers
+        </h1>
+        <p className="mt-1 text-sm text-bosque-700">
+          Feedback dejado por el equipo de ventas sobre conversaciones de Lucía.
+        </p>
       </header>
 
       {/* Stats */}
