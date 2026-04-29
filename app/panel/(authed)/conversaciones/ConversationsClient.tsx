@@ -62,6 +62,37 @@ interface ConvoMessage {
   raw: unknown;
 }
 
+interface CostTurn {
+  execution_id: string | null;
+  workflow: string;
+  model: string | null;
+  provider: string | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cached_tokens: number;
+  reasoning_tokens: number;
+  cost_usd: number;
+  cost_input_usd: number;
+  cost_output_usd: number;
+  duration_ms: number | null;
+  exec_started_at: string;
+  exec_ended_at: string;
+  matched: boolean;
+}
+
+interface CostTotals {
+  cost_usd: number;
+  cost_input_usd: number;
+  cost_output_usd: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cached_tokens: number;
+  reasoning_tokens: number;
+  llm_calls: number;
+}
+
 interface ConvoDetail {
   session_id: string;
   messages: ConvoMessage[];
@@ -74,6 +105,41 @@ interface ConvoDetail {
     created_at: string;
   }[];
   events: { event_type: string; created_at: string }[];
+  costs: CostTurn[];
+  cost_totals: CostTotals;
+}
+
+function fmtUsd(n: number): string {
+  if (n === 0) return '$0';
+  if (n < 0.01) return `$${n.toFixed(6)}`;
+  return `$${n.toFixed(4)}`;
+}
+
+function fmtTok(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toString();
+}
+
+// Agrupa los costs por "turno": executions con timestamp dentro de 10 segundos = mismo turno
+function groupCostsByTurn(costs: CostTurn[]): CostTurn[][] {
+  if (costs.length === 0) return [];
+  const sorted = [...costs].sort(
+    (a, b) => new Date(a.exec_started_at).getTime() - new Date(b.exec_started_at).getTime()
+  );
+  const turns: CostTurn[][] = [];
+  let current: CostTurn[] = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1].exec_started_at).getTime();
+    const curr = new Date(sorted[i].exec_started_at).getTime();
+    if (curr - prev < 10000) {
+      current.push(sorted[i]);
+    } else {
+      turns.push(current);
+      current = [sorted[i]];
+    }
+  }
+  turns.push(current);
+  return turns;
 }
 
 const fetcher = async <T,>(url: string): Promise<T> => {
@@ -299,6 +365,21 @@ function ConversationDrawer({
     | null
     | undefined;
 
+  // Agrupa costs por turno y empareja con mensajes del assistant en orden
+  const turnCosts = useMemo(() => {
+    if (!data) return new Map<number, CostTurn[]>();
+    const grouped = groupCostsByTurn(data.costs);
+    const map = new Map<number, CostTurn[]>();
+    let turnIdx = 0;
+    for (const m of data.messages) {
+      if (m.role === 'assistant' && turnIdx < grouped.length) {
+        map.set(m.id, grouped[turnIdx]);
+        turnIdx++;
+      }
+    }
+    return map;
+  }, [data]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -360,6 +441,20 @@ function ConversationDrawer({
                 )}
               </div>
             )}
+            {data?.cost_totals && data.cost_totals.llm_calls > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10.5px]">
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-mostaza/15 px-2 py-0.5 font-display text-[11px] font-medium tabular-nums text-bosque-900"
+                  title={`Input ${fmtUsd(data.cost_totals.cost_input_usd)} · Output ${fmtUsd(data.cost_totals.cost_output_usd)}`}
+                >
+                  💰 {fmtUsd(data.cost_totals.cost_usd)}
+                </span>
+                <Tag>
+                  {fmtTok(data.cost_totals.total_tokens)} tok ·{' '}
+                  {data.cost_totals.llm_calls} calls
+                </Tag>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -419,7 +514,11 @@ function ConversationDrawer({
                 ) : (
                   <ul className="space-y-2.5">
                     {data.messages.map((m) => (
-                      <MessageBubble key={m.id} m={m} />
+                      <MessageBubble
+                        key={m.id}
+                        m={m}
+                        turnCosts={turnCosts.get(m.id)}
+                      />
                     ))}
                   </ul>
                 )}
@@ -437,6 +536,11 @@ function ConversationDrawer({
               </span>
             )}
             <span>{data?.messages.length ?? 0} mensajes</span>
+            {data?.cost_totals && data.cost_totals.llm_calls > 0 && (
+              <span className="font-display tabular-nums text-bosque-900">
+                {fmtUsd(data.cost_totals.cost_usd)}
+              </span>
+            )}
           </div>
           {lead && (
             <Link
@@ -453,7 +557,13 @@ function ConversationDrawer({
   );
 }
 
-function MessageBubble({ m }: { m: ConvoMessage }) {
+function MessageBubble({
+  m,
+  turnCosts,
+}: {
+  m: ConvoMessage;
+  turnCosts?: CostTurn[];
+}) {
   const isUser = m.role === 'user';
   const isTool = m.role === 'tool';
   const isSystem = m.role === 'system';
@@ -476,8 +586,10 @@ function MessageBubble({ m }: { m: ConvoMessage }) {
     );
   }
 
+  const turnTotal = turnCosts?.reduce((s, c) => s + c.cost_usd, 0) ?? 0;
+
   return (
-    <li className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+    <li className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
       <div
         className={cn(
           'max-w-[78%] rounded-2xl px-3 py-2 text-[13px] leading-snug shadow-sm',
@@ -505,7 +617,44 @@ function MessageBubble({ m }: { m: ConvoMessage }) {
           <p className="italic opacity-60">[mensaje sin texto]</p>
         )}
       </div>
+      {!isUser && turnCosts && turnCosts.length > 0 && (
+        <TurnCostStrip turnCosts={turnCosts} total={turnTotal} />
+      )}
     </li>
+  );
+}
+
+function TurnCostStrip({
+  turnCosts,
+  total,
+}: {
+  turnCosts: CostTurn[];
+  total: number;
+}) {
+  return (
+    <div className="ml-1 flex max-w-[78%] flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-bosque-500">
+      <span
+        className="font-display tabular-nums text-bosque-700"
+        title={`Total del turno (${turnCosts.length} ${turnCosts.length === 1 ? 'agente' : 'agentes'})`}
+      >
+        {fmtUsd(total)}
+      </span>
+      {turnCosts.map((c) => {
+        const modelShort = (c.model || 'unknown').split('/').pop();
+        return (
+          <span
+            key={c.execution_id || `${c.workflow}-${c.exec_started_at}`}
+            className="flex items-center gap-1 tabular-nums"
+            title={`${c.workflow} · ${c.model}\nIn ${c.prompt_tokens.toLocaleString('es-CL')} (${fmtUsd(c.cost_input_usd)}) · Out ${c.completion_tokens.toLocaleString('es-CL')} (${fmtUsd(c.cost_output_usd)})${c.cached_tokens ? `\n${c.cached_tokens} cached` : ''}${c.reasoning_tokens ? `\n${c.reasoning_tokens} reasoning` : ''}`}
+          >
+            <span className="text-bosque-400">·</span>
+            <span className="text-bosque-600">{modelShort}</span>
+            <span>{fmtTok(c.total_tokens)}t</span>
+            <span className="text-bosque-700">{fmtUsd(c.cost_usd)}</span>
+          </span>
+        );
+      })}
+    </div>
   );
 }
 

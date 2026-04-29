@@ -56,8 +56,18 @@ export async function GET(
     return NextResponse.json({ error: 'Storage not configured' }, { status: 503 });
   }
 
+  const safe = async <T,>(p: Promise<{ rows: T[]; count: number | null }>) => {
+    try { return await p; } catch { return { rows: [] as T[], count: 0 }; }
+  };
+
+  const num = (v: number | string | null | undefined): number => {
+    if (v == null) return 0;
+    const n = typeof v === 'string' ? parseFloat(v) : v;
+    return Number.isFinite(n) ? n : 0;
+  };
+
   try {
-    const [history, leadRes, sessionRes, feedbackRes, eventsRes] = await Promise.all([
+    const [history, leadRes, sessionRes, feedbackRes, eventsRes, costsRes] = await Promise.all([
       supabaseSelect<ChatHistoryRow>(
         'mirador_chat_history',
         {
@@ -94,6 +104,32 @@ export async function GET(
         },
         config
       ),
+      safe(
+        supabaseSelect<{
+          execution_id: string | null;
+          workflow: string;
+          model_real: string | null;
+          provider: string | null;
+          prompt_tokens: number | null;
+          completion_tokens: number | null;
+          total_tokens: number | null;
+          cached_tokens: number | null;
+          reasoning_tokens: number | null;
+          cost_usd: number | string | null;
+          cost_input_usd: number | string | null;
+          cost_output_usd: number | string | null;
+          duration_ms: number | null;
+          exec_started_at: string;
+          exec_ended_at: string;
+          span_id: string | null;
+        }>(
+          'mirador_session_costs',
+          {
+            query: `select=execution_id,workflow,model_real,provider,prompt_tokens,completion_tokens,total_tokens,cached_tokens,reasoning_tokens,cost_usd,cost_input_usd,cost_output_usd,duration_ms,exec_started_at,exec_ended_at,span_id&session_id=eq.${sid}&order=exec_started_at.asc&limit=500`,
+          },
+          config
+        )
+      ),
     ]);
 
     const messages = history.rows.map((r) => ({
@@ -103,6 +139,50 @@ export async function GET(
       raw: r.message,
     }));
 
+    const costs = costsRes.rows.map((r) => ({
+      execution_id: r.execution_id,
+      workflow: r.workflow,
+      model: r.model_real,
+      provider: r.provider,
+      prompt_tokens: num(r.prompt_tokens),
+      completion_tokens: num(r.completion_tokens),
+      total_tokens: num(r.total_tokens),
+      cached_tokens: num(r.cached_tokens),
+      reasoning_tokens: num(r.reasoning_tokens),
+      cost_usd: num(r.cost_usd),
+      cost_input_usd: num(r.cost_input_usd),
+      cost_output_usd: num(r.cost_output_usd),
+      duration_ms: r.duration_ms,
+      exec_started_at: r.exec_started_at,
+      exec_ended_at: r.exec_ended_at,
+      matched: r.span_id !== null,
+    }));
+
+    const cost_totals = costs.reduce(
+      (acc, c) => ({
+        cost_usd: acc.cost_usd + c.cost_usd,
+        cost_input_usd: acc.cost_input_usd + c.cost_input_usd,
+        cost_output_usd: acc.cost_output_usd + c.cost_output_usd,
+        prompt_tokens: acc.prompt_tokens + c.prompt_tokens,
+        completion_tokens: acc.completion_tokens + c.completion_tokens,
+        total_tokens: acc.total_tokens + c.total_tokens,
+        cached_tokens: acc.cached_tokens + c.cached_tokens,
+        reasoning_tokens: acc.reasoning_tokens + c.reasoning_tokens,
+        llm_calls: acc.llm_calls + 1,
+      }),
+      {
+        cost_usd: 0,
+        cost_input_usd: 0,
+        cost_output_usd: 0,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cached_tokens: 0,
+        reasoning_tokens: 0,
+        llm_calls: 0,
+      }
+    );
+
     return NextResponse.json({
       session_id: sid,
       messages,
@@ -110,6 +190,8 @@ export async function GET(
       session: sessionRes.rows[0] || null,
       feedback: feedbackRes.rows,
       events: eventsRes.rows,
+      costs,
+      cost_totals,
     });
   } catch (err) {
     return NextResponse.json(
