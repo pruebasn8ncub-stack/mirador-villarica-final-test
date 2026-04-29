@@ -8,6 +8,7 @@ import {
   Users,
   MessagesSquare,
   StickyNote,
+  DollarSign,
   LogOut,
   Loader2,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ const TABS: TabDef[] = [
   { href: '/panel/leads', label: 'Leads', icon: Users },
   { href: '/panel/conversaciones', label: 'Conversaciones', icon: MessagesSquare },
   { href: '/panel/anotaciones', label: 'Anotaciones', icon: StickyNote },
+  { href: '/panel/costos', label: 'Costos', icon: DollarSign },
 ];
 
 export function PanelShell({ children }: { children: React.ReactNode }) {
