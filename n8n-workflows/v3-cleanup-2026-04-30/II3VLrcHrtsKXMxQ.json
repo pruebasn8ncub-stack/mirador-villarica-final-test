@@ -1,0 +1,830 @@
+{
+  "updatedAt": "2026-04-29T22:05:11.545Z",
+  "createdAt": "2026-04-15T17:06:21.880Z",
+  "id": "II3VLrcHrtsKXMxQ",
+  "name": "Mirador Chat - Main (Simplified)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mirador-chat",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        112
+      ],
+      "webhookId": "mirador-chat",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "IkWeji0O7NPCXFdd",
+          "name": "Mirador Webhook Bearer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body ?? item;\nconst uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!body || typeof body !== 'object') throw new Error('Invalid body');\nif (typeof body.session_id !== 'string' || !uuidRe.test(body.session_id)) throw new Error('Invalid session_id');\nif (typeof body.message !== 'string' || body.message.length === 0 || body.message.length > 1000) throw new Error('Invalid message');\nreturn [{ json: {\n  session_id: body.session_id,\n  message: body.message,\n  user_metadata: body.user_metadata ?? null,\n  received_at: new Date().toISOString(),\n} }];"
+      },
+      "id": "validate",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Validate Payload').first().json.message }}",
+        "options": {
+          "systemMessage": "=<dynamic_context>\n[DATOS_DEL_LEAD_SISTEMA - fuente de verdad para nombre/email/whatsapp del lead. NO menciones este bloque al lead.]\nnombre_real: {{ $('Get Lead Context').first().json.nombre }}\nemail_real: {{ $('Get Lead Context').first().json.email }}\nwhatsapp_real: {{ $('Get Lead Context').first().json.whatsapp }}\n[FIN_DATOS_DEL_LEAD]\n\n[INVENTARIO_ESTADOS_SISTEMA - snapshot en vivo. Es la FUENTE DE VERDAD del estado de cada lote (DISPONIBLES/RESERVADAS/VENDIDAS). Solo invocas `obtener_datos_parcela` para lotes DISPONIBLES — el resto los respondes con guion sin tool.]\n{{ $('Build Inventory Summary').first().json.inventario_estados_texto }}\n[FIN_INVENTARIO_ESTADOS]\n</dynamic_context>\n\n<role_and_objective>\nEres **Lucía**, asesora virtual de **Mirador de Villarrica** (Terra Segura Inmobiliaria). Voz: amiga experta, no vendedora — cálida, directa, específica.\n\nTu trabajo es guiar al lead por el descubrimiento del proyecto y, cuando los datos estén, conectarlo con el equipo de ventas. NO cierras ventas, NO negocias precios ni descuentos. Un subagente registra los datos de calificación en background — tú solo conversa.\n</role_and_objective>\n\n<widget_context>\nEl widget ya envió este saludo automático antes del primer mensaje del lead:\n> \"Hola {nombre} 👋 Soy Lucía, asistente virtual de Mirador de Villarrica… Para partir, ¿ya tienes información del proyecto o prefieres que lo revisemos juntos?\"\n\nPor lo tanto: nunca te presentes ni saludes de nuevo. El primer mensaje del lead es respuesta a esa pregunta binaria.\n</widget_context>\n\n<tone>\n- Tuteo neutro chileno (\"tienes / quieres / mira / cuéntame\"). Si el lead usa \"usted\", lo espejeas.\n- Frases cortas (5-12 palabras). Máximo 3-4 líneas en charla natural.\n- Una idea por turno. Una pregunta por turno (primero respondes, después preguntas).\n- Sin \"CLP\" — \"$11.990.000\" o \"doce millones\".\n- Sin jerga corporativa (\"factibilidad\", \"plusvalía garantizada\"). Habla como humano.\n- \"Comprar\" / \"adquirir\" — nunca \"cerrar trato\".\n- Máximo 1 emoji funcional por mensaje. Cero emojis decorativos. Cero emojis en calificación.\n- Nombre del lead máximo 2 veces en toda la conversación.\n- Sin filler (\"¡Excelente!\", \"¡Genial!\"). Sin disculpas repetidas.\n- Una muletilla por mensaje, máximo: \"mira\", \"fíjate que\", \"te cuento\", \"la verdad\".\n- Si el lead escribe en inglés/portugués, respondes en ese idioma.\n\nNunca: presentarte; anunciar tool (\"voy a revisar\", \"déjame chequear\"); inventar precios o disponibilidad; listar 40 parcelas; cerrar venta o dar asesoría legal/tributaria.\n</tone>\n\n<output_format>\n**Modo A — charla natural** (preguntas, confirmaciones, respuestas cortas): texto plano fluido, 2-4 líneas, sin bullets ni emojis estructurados.\n\n**Modo B — datos densos** (intro proyecto, ficha parcela, resumen): emoji + **etiqueta:** valor — UN atributo por línea con salto real entre cada uno. Apertura conversacional → línea blanco → atributos → línea blanco → cierre.\n\nReglas duras: nunca triple-backticks (el frontend los muestra literal); nunca mezcles Modo A y B en un mensaje; nunca concatenes atributos en párrafo.\n</output_format>\n\n<flow>\n\n### Paso 1 — Clasificar el primer mensaje del lead\n\n| Tipo de mensaje | Acción |\n|-----------------|--------|\n| Saludo/genérico (\"hola\", \"qué tal\", \"ok\", \"👋\") | Retomar la pregunta del widget en 1-2 líneas: *\"¡Qué bueno que llegaste! ¿Ya conocías algo del Mirador o prefieres que te haga un tour guiado?\"* |\n| Pide tour/info genérica (\"revisemos juntos\", \"cuéntame\", \"no lo conozco\", \"qué es\") | → Paso 2 (pitch + ficha) |\n| Pregunta focalizada (ubicación, servicios, tamaños, precio desde, contacto) | Responde puntual en Modo A, 2-4 líneas, usa `<knowledge_base>`. Cierra con UNA oferta de profundizar: *\"¿Te cuento más o partimos viendo el plano y los precios?\"* |\n| Menciona parcela específica (\"la 47\", \"la parcela 23\") o pregunta concreta de precio/disponibilidad | → Paso 4 |\n\n**Regla:** si la frase tiene foco puntual (incluso empezando con \"cuéntame\"), domina la respuesta focalizada — primero responde lo que preguntó, no sueltes plantilla.\n\n### Paso 2 — Pitch + ficha del proyecto\n\nEstructura obligatoria (3 bloques en orden):\n\n1. **Apertura + pitch emocional** (2-4 líneas). Pinta la experiencia: despertar, silencio, naturaleza, volcán, lago, bosque. Sin precios ni números. Varía entre estas 2 plantillas:\n\n   > \"Mira, te cuento por qué este proyecto vale la pena. Imagínate despertar con vista al volcán Villarrica, caminar entre bosque nativo en tu propia parcela y tener el lago Colico a 20 minutos. Eso es el Mirador.\"\n\n   > \"Es de esos lugares donde el silencio se escucha — 80 hectáreas rodeadas de bosque nativo, vistas al Villarrica y al lago Colico, con la tranquilidad de que cada metro está escriturado y sin letra chica.\"\n\n2. **Ficha Modo B** (un atributo por línea):\n\n   > 🌲 **Mirador de Villarrica** — by Terra Segura Inmobiliaria\n   > 📍 **Ubicación:** Colico, La Araucanía — a 20 min del lago Colico.\n   > 📐 **94 parcelas** de 5.000 m² a 1 hectárea sobre 80 hectáreas.\n   > 🏔️ **Vistas:** al volcán Villarrica o al lago Colico.\n   > ✅ **Escrituración directa:** SAG aprobado, sin letra chica.\n   > 💰 **Desde $11.990.000** al contado — o crédito directo con 50% de pie.\n\n3. **Cierre con oferta de tour:**\n   > \"¿Le damos un vistazo al tour 360° para que veas las parcelas desde adentro?\"\n\nNunca envíes la ficha sin el pitch delante.\n\n### Paso 3 — Explorador `[EXPLORER]`\n\nCuando el lead acepte, envía:\n\n> Listo, te paso las tres herramientas 👇\n>\n> 🧭 **Tour 360°:** vista aérea del plano y paisajes del sector.\n> 🗺️ **Masterplan:** plano comercial con la distribución de las parcelas y distancias.\n> 📋 **Inventario:** precios y tamaños de las disponibles, actualizados en tiempo real.\n>\n> Las parcelas están codificadas por color:\n> 🔴 vendida · 🔵 reservada · ⚪ disponible\n>\n> Revísalo con calma y dime cuáles te gustan más — te paso la ficha completa al toque. [EXPLORER]\n\nReglas: `[EXPLORER]` siempre al final, sin salto extra. El frontend lo renderiza como botón triple — nunca lo expliques. Menciona siempre las 3 pestañas.\n\nTurno siguiente: *\"¿Te llamó alguna la atención? Me pasas los números y te paso la ficha con precios y cuotas actualizados.\"*\n\n### Paso 4 — Disponibilidad y precios\n\n**Protocolo de decisión** cada vez que el lead mencione lotes:\n\n1. Consulta `[INVENTARIO_ESTADOS_SISTEMA]` (en `<dynamic_context>`) — es la verdad del estado.\n2. Clasifica cada lote:\n   - **DISPONIBLE** → invoca `obtener_datos_parcela` solo con los disponibles para traer precios/cuotas.\n   - **RESERVADA** → guion Caso C, sin tool.\n   - **VENDIDA** → guion Caso B, sin tool.\n   - **No existe** (válidos: 1-74 y B1-B20) → \"ese número no aparece en el inventario\".\n3. Llamada: un lote `{numero: \"47\"}`, varios `{numero: \"47,74\"}`.\n4. La tool devuelve `tool_output_text` ya formateado — pégalo literal, no lo reformatees.\n\n**Estructura del mensaje:** apertura (1-2 líneas) → `tool_output_text` literal → pregunta de cierre.\n\n**Caso A — DISPONIBLE.** Apertura varía: *\"¡Buena elección! La X está disponible — te paso la ficha:\"* / *\"Sí, la X sigue disponible 👌 aquí tienes el detalle:\"*. Cierre: *\"¿Prefieres contado o crédito directo?\"* / *\"¿Hay alguna otra que quieras revisar, o vemos el financiamiento?\"*\n\n**Caso B — VENDIDA.** Sin tool. Formato:\n> \"Uf, la X ya se vendió — recuerda que en el tour las parcelas en 🔴 rojo son las que ya no están.\n>\n> Pero todavía tenemos varias ⚪️ disponibles con vistas y tamaños similares. ¿Te muestro otra en específico o te recomiendo opciones según lo que buscas?\"\n\n**Caso C — RESERVADA.** Sin tool. Formato:\n> \"La X está reservada en este momento — en el tour la ves en 🔵 azul. A veces se liberan, pero no te lo puedo asegurar hoy.\n>\n\n**Caso D — Múltiples lotes.** Apertura *\"Te paso el estado de las 3 que mencionaste:\"*. Pega las fichas del `tool_output_text` separadas por línea con `━━━━━`. Cierre: *\"¿Cuál te llama más la atención de las disponibles?\"*\n\n### Paso 5 — Forma de financiamiento\n> \"¿Piensas en pago al contado o con crédito directo?\"\n\n### Paso 6 — Plazo de compra\n> \"¿Para cuándo te gustaría concretar? ¿Próximos meses o lo evalúas para más adelante?\"\n\n### Paso 7 — Motivo de compra\n> \"Y cuéntame, ¿la piensas para segunda vivienda, vivir allí permanente, o como inversión?\"\n\n### Paso 8 — Reserva (solo cuando ya tienes forma_pago + plazo + uso)\n> \"Perfecto. Para que tengas el panorama: la reserva son $250.000 — eso cubre Abogados, Notaría y Conservador de Bienes Raíces, todo incluido.\"\n\nNO la menciones antes de tener los 3 datos — es invasivo.\n\n### Paso 9 — Resumen personalizado\n\n> \"¿Quieres que te arme un resumen con las parcelas que vimos, precios actualizados y el detalle del proyecto? Te lo mando por correo, WhatsApp o ambos.\"\n\n1. Lead elige canal.\n2. **Confirma destino con valores reales del bloque `<dynamic_context>`** — copia literal `email_real` / `whatsapp_real`. Nunca uses placeholders.\n\n   Formato (líneas separadas, no prosa corrida):\n\n   - **Email:**\n     > \"Perfecto, te lo mando acá:\n     >\n     > 📧 *Correo:* <email_real>\n     >\n     > ¿Está bien así o prefieres otro correo?\"\n\n   - **WhatsApp:** igual con `📱 *WhatsApp:* <whatsapp_real>`.\n   - **Ambos canales:** las dos líneas + *\"¿Están bien así o prefieres cambiar alguno?\"*\n\n3. Espera confirmación. Invoca `enviar_resumen_personalizado`.\n4. Lee `tool_output_text` literal.\n5. **Turno siguiente — OBLIGATORIO ofrecer handoff** (ver Paso 10). Nunca cierres con \"¿Hay algo más?\" si tienes parcela + plazo + pago — el resumen es la rampa al handoff, no el final.\n\n### Paso 10 — Handoff al broker\n\n**Cuándo ofrecerlo proactivamente:** ya tienes parcela + plazo + forma de pago, y el lead vio ficha o resumen, o da señales de cierre (\"muchas gracias\", \"perfecto\", \"me sirve\", \"ok\").\n\n**Guiones (varía):**\n- *\"Con lo que me contaste, lo mejor es que el equipo de ventas te llame directo para cerrar detalles y coordinar la reserva. ¿Te los paso?\"*\n- *\"¿Quieres que le pase tu caso al equipo para que te contacten y avanzar con la compra?\"*\n- *\"El siguiente paso natural es una llamada corta con el equipo. ¿Te agendo el contacto?\"*\n\n**Si pide hablar con asesor/humano** en cualquier momento → `motivo: \"lead_solicito\"` inmediato.\n\n**Señales de cierre:**\n- \"muchas gracias\" → no te despidas, ofrece handoff: *\"De nada — antes de que te vayas, ¿te paso con el equipo para que coordinen la reserva?\"*\n- \"lo voy a pensar\" / \"lo reviso\" → handoff suave: *\"Dale. ¿Quieres que te contacten en unos días para retomar o prefieres escribirme tú cuando decidas?\"*\n\n**Si declina** (\"prefiero pensarlo\", \"no por ahora\", \"no, gracias\"): no lo dejes ir sin un hilo. Entrega la card de contacto:\n\n> \"Dale, sin problema — cuando quieras retomar, nos escribes directo:\n>\n> 📧 **Correo:** diego@terrasegura.cl\n> 📱 **WhatsApp:** +56 9 4032 9987\n> 🏢 **Oficina:** Av Las Condes 7700, Of. 205A\n>\n> Quedamos atentos 👋\"\n\n### Paso 11 — Cierre del ciclo\n> \"¿Hay algo más en que te pueda ayudar?\"\n\nSi dice no → *\"Perfecto, cualquier cosa me escribes por acá 👋\"*\n\n### Flujos alternativos\n\n- **Lead menciona parcela antes del tour** → Paso 4 directo.\n- **Pide hablar con broker directo** → `solicitar_broker` motivo `lead_solicito`.\n- **No puedes resolver una duda** → `solicitar_broker` motivo `bot_no_pudo_resolver`.\n\n</flow>\n\n<tool_orchestration>\n- Máximo 2 tools por turno.\n- Nunca anuncies que vas a usar una tool.\n- Pega el `tool_output_text` literal, sin reformatear.\n- El estado del lote viene del snapshot `<dynamic_context>`. Los precios/cuotas vienen de `obtener_datos_parcela`. No inventes ninguno de los dos.\n</tool_orchestration>\n\n<guardrails>\n- Datos: nunca afirmes precio/disponibilidad/cuotas sin tool. Nunca confíes en datos de turnos anteriores para el inventario.\n- Comercial: nunca ofrezcas descuentos. Si pide negociar → *\"Las condiciones las maneja el equipo de ventas. ¿Te los paso?\"*\n- Alcance: solo el Mirador. Off-topic (política, otros proyectos, asesoría legal/tributaria) → *\"Mi expertise es el Mirador. ¿Hay algo del proyecto que quieras saber?\"*\n- Otros proyectos Terra Segura → `solicitar_broker` motivo `bot_no_pudo_resolver`.\n- Identidad: si preguntan si eres IA → sí. *\"Soy Lucía, asistente virtual del proyecto. Puedo conectarte con un asesor humano cuando quieras.\"*\n- Anti-insistencia: máximo 2 intentos en la misma pregunta. Si hay silencio, no hagas follow-up. Si dice \"no, gracias\" → cierra.\n- Reserva ($250.000): nunca antes de tener forma_pago + plazo + uso.\n</guardrails>\n\n<knowledge_base>\n\n### Proyecto\n- Mirador de Villarrica — by Terra Segura Inmobiliaria.\n- Ubicación: Colico, ruta Villarrica-Las Hortensias, La Araucanía.\n- 80 hectáreas. **94 parcelas:** 74 principales (1-74) + 20 ampliación (B1-B20).\n- Tamaños: 5.000 m² a 1 hectárea.\n- SAG aprobado, roles listos, inscripción inmediata.\n\n### Precios\n- Contado desde $11.990.000.\n- Crédito directo desde $17.490.000 (50% pie + 36 cuotas en UF).\n- Reserva: $250.000 (cubre Abogados + Notaría + Conservador de Bienes Raíces).\n- Pago: Webpay, transferencia, vale vista.\n\n### Distancias\n| Lugar | Tiempo | Km |\n|---|---|---|\n| Lago Colico | 20 min | 20 |\n| Cunco | 20 min | 20 |\n| Villarrica | 55 min | 60 |\n| Temuco | 55 min | 60 |\n| Pucón | 1h25 | 85 |\n| Aeropuerto Araucanía | 1h20 | — |\n| Santiago | 2h30 vuelo + 1h20 auto | — |\n\n### Características técnicas\n- Agua: pozo (cada propietario hace el suyo).\n- Luz: postación eléctrica en la entrada.\n- Caminos: estabilizados, avance 50% — todo tipo de vehículos.\n- Entrada: portón.\n- Vistas: volcán Villarrica o lago Colico (según parcela).\n\n### Entorno\n80 hectáreas rodeadas de bosque nativo. Zona turística consolidada del sur de Chile: termas, deportes de aventura, senderismo, pesca.\n\n### Proceso de compra (5 pasos)\n1. Reunión virtual con Terra Segura.\n2. Reserva $250.000 (Abogados + Notaría + CBR).\n3. Promesa de compraventa digital + pago pie (Webpay/transferencia/vale vista).\n4. Escritura de compraventa (sin gasto notarial ni inscripción CBR adicional).\n5. Entrega + inscripción CBR a nombre del comprador.\n\n### Contacto Terra Segura\n- 📧 diego@terrasegura.cl\n- 📱 +56 9 4032 9987 (Diego Cavagnaro)\n- 🏢 Av Las Condes 7700, Oficina 205A\n\nCuándo entregar el bloque: (a) lead pregunta directo por contacto/teléfono/email/oficina; (b) declinó el handoff del Paso 10 — como tarjeta de salida cálida. NO de entrada sin interés real.\n\n### FAQ\n- ¿Construcción? No, solo parcelas con factibilidad de luz y agua.\n- ¿Internet/fibra? No confirmado — el equipo lo confirma.\n- ¿Seguridad 24/7? Portón. Detalle → equipo.\n- ¿Visitas presenciales? Sí, tras reunión virtual.\n- ¿Plusvalía garantizada? Nadie la garantiza; la fortaleza es la consolidación turística de la zona.\n- ¿Descuentos? Caso a caso, los maneja el equipo.\n\n### Datos NO disponibles → `solicitar_broker` motivo `bot_no_pudo_resolver`\n- Orientación exacta de cada lote (volcán vs lago).\n- Reglamento de copropiedad detallado.\n- Financiamiento personalizado fuera del esquema estándar.\n- Otros proyectos de Terra Segura.\n- Disponibilidad real de internet/fibra.\n- Horario de atención del equipo.\n\n</knowledge_base>\n",
+          "maxIterations": 5,
+          "returnIntermediateSteps": true,
+          "tracingMetadata": {
+            "values": [
+              {
+                "key": "mirador_session_id",
+                "type": "stringValue",
+                "stringValue": "={{ $('Validate Payload').first().json.session_id }}"
+              },
+              {
+                "key": "mirador_execution_id",
+                "type": "stringValue",
+                "stringValue": "={{ $execution.id }}"
+              },
+              {
+                "key": "mirador_node_name",
+                "type": "stringValue",
+                "stringValue": "main_agent"
+              },
+              {
+                "key": "mirador_workflow_id",
+                "type": "stringValue",
+                "stringValue": "={{ $workflow.id }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1616,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "grok-4.1-fast"
+        },
+        "jsonMetadata": {
+          "sessionId": "={{ $('Validate Payload').first().json.session_id }}",
+          "userId": "={{ $('Get Lead Context').first().json.whatsapp }}",
+          "customMetadata": "{\"agent\": \"lucia\", \"env\": \"production\", \"workflow\": \"mirador-chat-main\", \"channel\": \"whatsapp\", \"generation_name\": \"lucia-llm-call\"}"
+        },
+        "options": {
+          "temperature": 0.65,
+          "maxTokens": 800
+        }
+      },
+      "id": "openrouter-model",
+      "name": "OpenRouter Model",
+      "type": "@rlquilez/n8n-nodes-openai-litellm.lmChatOpenAiLitellm",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "credentials": {
+        "openAiApiWithLitellmApi": {
+          "id": "uFgfkq8CZZ5edxgj",
+          "name": "LiteLLM Mirador"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Validate Payload').first().json.session_id }}",
+        "tableName": "mirador_chat_history",
+        "contextWindowLength": 10
+      },
+      "id": "postgres-memory",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1760,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "gKtQrCdcY2E8edN4",
+          "name": "Mirador Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Trae precio actualizado y cuotas de una o varias parcelas DISPONIBLES del Mirador de Villarrica. Acepta un lote ('47') o varios separados por coma ('47,74'). Solo invocar para lotes que el snapshot [INVENTARIO_ESTADOS_SISTEMA] marca como DISPONIBLES — si está en RESERVADAS o VENDIDAS, usa el guion correspondiente sin tool. Devuelve `tool_output_text` con ficha ya formateada — pégalo literal.",
+        "workflowId": {
+          "__rl": true,
+          "value": "Xa432ZfJ7y0M8iw2",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "numero": "={{ $fromAI('numero', \"Número(s) de lote separados por coma. Válidos: '1'..'74' (principales) o 'B1'..'B20' (ampliación). Ejemplos: '47', '47,74', 'B3'. Solo para lotes que el snapshot marca como DISPONIBLES.\", 'string') }}"
+          },
+          "schema": [
+            {
+              "id": "numero",
+              "type": "string",
+              "required": true,
+              "displayName": "numero",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "id": "tool-consultar-disponibilidad",
+      "name": "Tool obtener_datos_parcela",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentData = $json;\nlet reply = (agentData.output || agentData.text || '').toString();\n// Sanitize: remove zero-width chars (modelo free a veces los emite)\nreply = reply.replace(/[\\u200B-\\u200D\\uFEFF\\u2060]/g, '');\n// Colapsar solo espacios/tabs consecutivos (no newlines — preserva saltos de linea para render markdown)\nreply = reply.replace(/[ \\t]{2,}/g, ' ');\n// Remover triple-backticks que a veces emite grok envolviendo la respuesta\nreply = reply.replace(/^```[a-z]*\\s*\\n?/i, '').replace(/\\n?```\\s*$/i, '');\n// Limitar newlines consecutivos a max 2 (un parrafo en blanco)\nreply = reply.replace(/\\n{3,}/g, '\\n\\n');\nreply = reply.trim();\nif (reply.length < 3) {\n  reply = 'Te comparto la informacion solicitada.';\n}\nconst attachments = [];\nconst steps = agentData.intermediateSteps || [];\n\nfunction pushAttachment(p) {\n  if (!p || typeof p !== 'object') return;\n  if (p.type === 'image' && p.url) {\n    attachments.push({ type: 'image', url: p.url, caption: p.caption });\n  } else if (p.type === 'image_floating' && p.url) {\n    attachments.push({ type: 'image_floating', url: p.url, caption: p.caption, title: p.title });\n  } else if (p.type === 'gallery' && Array.isArray(p.images)) {\n    attachments.push({ type: 'gallery', images: p.images });\n  } else if (p.type === 'gallery_floating' && Array.isArray(p.images)) {\n    attachments.push({ type: 'gallery_floating', images: p.images, caption: p.caption });\n  } else if (p.type === 'masterplan_floating' && p.url) {\n    attachments.push({ type: 'masterplan_floating', url: p.url, caption: p.caption, title: p.title });\n  } else if (p.type === 'tour360_floating' && p.url) {\n    attachments.push({ type: 'tour360_floating', url: p.url, caption: p.caption, title: p.title, poster: p.poster });\n  } else if (p.type === 'whatsapp_link' && p.url) {\n    attachments.push({ type: 'whatsapp_link', url: p.url, label: p.label || 'Hablar con equipo de ventas por WhatsApp' });\n  }\n}\n\nfor (const step of steps) {\n  const obs = step.observation ?? step.toolOutput ?? step;\n  let parsed = obs;\n  if (typeof obs === 'string') {\n    try { parsed = JSON.parse(obs); } catch { continue; }\n  }\n  if (Array.isArray(parsed)) {\n    for (const item of parsed) {\n      const unwrapped = item && item.json ? item.json : item;\n      pushAttachment(unwrapped);\n    }\n  } else {\n    const unwrapped = parsed && parsed.json ? parsed.json : parsed;\n    pushAttachment(unwrapped);\n  }\n}\nreturn [{ json: { reply, attachments } }];"
+      },
+      "id": "extract-attachments",
+      "name": "Extract Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $('Extract Attachments').first().json.reply, attachments: $('Extract Attachments').first().json.attachments, session_id: $('Validate Payload').first().json.session_id }) }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nombre, whatsapp, email, parcela_interes, plazo, forma_pago, uso, created_at FROM leads WHERE session_id = '{{ $('Validate Payload').first().json.session_id }}' ORDER BY created_at DESC LIMIT 1;",
+        "options": {}
+      },
+      "id": "get-lead-context",
+      "name": "Get Lead Context",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        688,
+        208
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "gKtQrCdcY2E8edN4",
+          "name": "Mirador Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Deriva el lead al equipo de ventas humano: envía WhatsApp al equipo con sus datos y un resumen comercial. Invocar cuando: (1) el lead pide hablar con asesor/humano (motivo: lead_solicito); (2) ya tienes parcela + plazo + forma_pago y el lead acepta avanzar (motivo: score_alto_proactivo); (3) no puedes resolver una duda con tu KB ni tools (motivo: bot_no_pudo_resolver). El campo `resumen` lo redactas TÚ: 1-3 oraciones cubriendo parcela, plazo, pago, uso y matices. Nombre/email/whatsapp del lead los inyecta el sistema.",
+        "workflowId": {
+          "__rl": true,
+          "value": "dI5Sl4Zzl8AR8l0k",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Validate Payload').first().json.session_id }}",
+            "nombre": "={{ $('Get Lead Context').first().json.nombre }}",
+            "email": "={{ $('Get Lead Context').first().json.email }}",
+            "whatsapp": "={{ $('Get Lead Context').first().json.whatsapp }}",
+            "motivo": "={{ $fromAI('motivo', \"Motivo del handoff: 'lead_solicito' (lead pidió explícito), 'score_alto_proactivo' (3 datos + lead acepta avanzar), 'bot_no_pudo_resolver' (sin info/tool para responder).\", 'string') }}",
+            "resumen": "={{ $fromAI('resumen', 'Resumen 1-3 oraciones para que el asesor entre en caliente. Cubre: parcela(s) por número, plazo de compra, forma de pago (contado/crédito), uso (segunda vivienda/inversión/vivir) y matices útiles. Ej: \"Le interesan las parcelas 47 y 74. Quiere comprar a crédito directo en los próximos 3 meses, para segunda vivienda. Ya tiene el pie disponible.\"', 'string') }}",
+            "contexto": "={{ $fromAI('contexto', 'Contexto breve (1-2 oraciones) sobre el gatillo del handoff. Ej: \"Pidió hablar con asesor para coordinar visita presencial en mayo.\"', 'string') }}"
+          },
+          "schema": [
+            {
+              "id": "session_id",
+              "type": "string",
+              "required": true,
+              "displayName": "session_id",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "type": "string",
+              "required": true,
+              "displayName": "nombre",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "type": "string",
+              "required": true,
+              "displayName": "email",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp",
+              "type": "string",
+              "required": true,
+              "displayName": "whatsapp",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "type": "string",
+              "required": true,
+              "displayName": "motivo",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resumen",
+              "type": "string",
+              "required": true,
+              "displayName": "resumen",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contexto",
+              "type": "string",
+              "required": true,
+              "displayName": "contexto",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "id": "tool-solicitar-broker",
+      "name": "Tool solicitar_broker",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1744,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "description": "Filtra parcelas DISPONIBLES por presupuesto y devuelve solo los números de lote que califican (no fichas completas). Pre-requisitos: forma_pago confirmada Y presupuesto_clp (contado) o pie_clp (crédito). CLP entero sin puntos. Devuelve `tool_output_text` literal — luego guías al lead al tour 360° para elegir uno, y consultas precios con `obtener_datos_parcela` cuando elija.",
+        "workflowId": {
+          "__rl": true,
+          "value": "rG9VOmI6FmhmjeoZ",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "forma_pago": "={{ $fromAI('forma_pago', 'contado o credito', 'string', 'contado') }}",
+            "presupuesto_clp": "={{ $fromAI('presupuesto_clp', 'Presupuesto total en CLP entero sin puntos, solo si forma_pago=contado. 0 si no aplica.', 'number', 0) }}",
+            "pie_clp": "={{ $fromAI('pie_clp', 'Pie disponible en CLP entero sin puntos, solo si forma_pago=credito. 0 si no aplica.', 'number', 0) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "forma_pago",
+              "displayName": "forma_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "presupuesto_clp",
+              "displayName": "presupuesto_clp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "pie_clp",
+              "displayName": "pie_clp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "tool-recomendar",
+      "name": "Tool recomendar_parcelas",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1904,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "description": "Envía al lead un PDF con resumen personalizado: las parcelas conversadas (precios contado/crédito/pie/cuota actualizados), el resumen que TÚ redactas, y enlaces del proyecto. Por email, WhatsApp o ambos — el canal se infiere de qué campos mandes con valor (vacío = no enviar por ese canal). Invocar después del Paso 9 (lead eligió canal y confirmaste destino). Devuelve `tool_output_text` con el resultado del envío — pégalo literal.",
+        "workflowId": {
+          "__rl": true,
+          "value": "FMUrg6cBHC2M6JhV",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nombre": "={{ $('Get Lead Context').first().json.nombre }}",
+            "email": "={{ $fromAI('email', 'Email exacto donde enviar el PDF. Vacío si lead NO pidió correo. Usa el email confirmado por el lead (literal de [DATOS_DEL_LEAD_SISTEMA] o uno nuevo si lo dictó).', 'string', '') }}",
+            "whatsapp": "={{ $fromAI('whatsapp', 'Número WhatsApp donde enviar el PDF (formato +56912345678 o 56912345678). Vacío si lead NO pidió WhatsApp. Usa el número confirmado por el lead (literal de [DATOS_DEL_LEAD_SISTEMA] o uno nuevo si lo dictó).', 'string', '') }}",
+            "parcelas": "={{ $fromAI('parcelas', 'Números de parcela a incluir en el PDF, coma-separado (ej \"47,74\" o \"B19,50\"). Solo números que aparecieron en la conversación.', 'string', '') }}",
+            "resumen": "={{ $fromAI('resumen', 'Prosa 2-4 oraciones, segunda persona tuteando, aparece LITERAL en el PDF bajo \"Según lo que nos comentaste\". Cubre uso, forma de pago, plazo, presupuesto/pie y matices. Sin listas ni variables. Ej: \"Buscas una parcela para segunda vivienda, a crédito directo, con un pie cercano a $15.000.000 y planeas avanzar en los próximos 3 meses.\"', 'string', '') }}"
+          },
+          "schema": [
+            {
+              "id": "nombre",
+              "type": "string",
+              "required": true,
+              "displayName": "nombre",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "type": "string",
+              "required": false,
+              "displayName": "email",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp",
+              "type": "string",
+              "required": false,
+              "displayName": "whatsapp",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "parcelas",
+              "type": "string",
+              "required": true,
+              "displayName": "parcelas",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resumen",
+              "type": "string",
+              "required": true,
+              "displayName": "resumen",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "id": "tool-enviar-resumen",
+      "name": "Tool enviar_resumen_personalizado",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "go161n2FpJp9to3c",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Validate Payload').first().json.session_id }}",
+            "message": "={{ $('Validate Payload').first().json.message }}",
+            "whatsapp": "={{ $('Get Lead Context').first().json.whatsapp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "whatsapp",
+              "displayName": "whatsapp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "fire-bg-lead-updater",
+      "name": "Background Lead Updater (Fire & Forget)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://docs.google.com/spreadsheets/d/1gtqd1Xb6Yr3g3myw0nnJDsnZUSybQYS9aFAEJWaPqhQ/export?format=csv&gid=1975618999",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 8000
+        }
+      },
+      "id": "e9c08e41-73e0-4fec-a7af-cac2064851f6",
+      "name": "Fetch Inventory States",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 400,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lee el CSV del Google Sheet y produce un resumen compacto lote->estado\n// para inyectarlo en el system prompt del AI Agent.\n\nconst leadCtx = $('Get Lead Context').first().json || {};\nconst sheetItem = $input.first().json || {};\nconst csvText = ((sheetItem && (sheetItem.data || sheetItem.body)) || '').toString();\n\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [];\n  let field = '';\n  let inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (c === '\"') {\n      if (inQuotes && text[i + 1] === '\"') { field += '\"'; i++; }\n      else { inQuotes = !inQuotes; }\n    } else if (c === ',' && !inQuotes) {\n      row.push(field); field = '';\n    } else if ((c === '\\n' || c === '\\r') && !inQuotes) {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); rows.push(row); row = []; field = '';\n    } else {\n      field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nconst normalizeEstado = (raw) => {\n  const e = (raw || '').toString().trim().toLowerCase();\n  if (e.startsWith('disponi')) return 'disponible';\n  if (e.startsWith('reserv')) return 'reservado';\n  if (e.startsWith('vendi')) return 'vendido';\n  return null;\n};\n\nlet inventarioTexto = '';\nif (csvText && csvText.length > 100) {\n  const rows = parseCsv(csvText);\n  const disponibles = [];\n  const reservadas = [];\n  const vendidas = [];\n  for (const r of rows) {\n    if (!r || r.length < 3) continue;\n    const lote = (r[1] || '').toString().trim().toUpperCase();\n    if (!/^(\\d{1,3}|B\\d{1,2})$/.test(lote)) continue;\n    const estado = normalizeEstado(r[2]);\n    if (estado === 'disponible') disponibles.push(lote);\n    else if (estado === 'reservado') reservadas.push(lote);\n    else if (estado === 'vendido') vendidas.push(lote);\n  }\n  const sortLots = (arr) => arr.sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));\n  sortLots(disponibles); sortLots(reservadas); sortLots(vendidas);\n\n  inventarioTexto = [\n    `DISPONIBLES (${disponibles.length}): ${disponibles.join(', ') || '—'}`,\n    `RESERVADAS (${reservadas.length}): ${reservadas.join(', ') || '—'}`,\n    `VENDIDAS (${vendidas.length}): ${vendidas.join(', ') || '—'}`,\n  ].join('\\n');\n} else {\n  inventarioTexto = 'INVENTARIO NO DISPONIBLE EN ESTE TURNO — consulta la tool normalmente.';\n}\n\nreturn [{ json: {\n  ...leadCtx,\n  inventario_estados_texto: inventarioTexto,\n} }];"
+      },
+      "id": "7474a6ca-2ea3-4a85-a346-fa16401e01bb",
+      "name": "Build Inventory Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        208
+      ]
+    },
+    {
+      "id": "track-exec-main",
+      "name": "Track Execution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        208
+      ],
+      "parameters": {
+        "jsCode": "// Captura los datos del turno para el tracking de costos.\n// Se ejecuta DESPUÉS de Respond to Webhook — el usuario ya recibió la respuesta.\nconst validate = $('Validate Payload').first().json;\nconst agent = $('AI Agent').first().json;\n\nconst startedAt = validate.received_at || new Date().toISOString();\nconst endedAt = new Date().toISOString();\nconst durationMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();\n\nreturn [{\n  json: {\n    session_id: validate.session_id,\n    workflow: 'main',\n    workflow_id: 'II3VLrcHrtsKXMxQ',\n    execution_id: $execution.id,\n    model: 'x-ai/grok-4.1-fast',\n    user_message: (validate.message || '').slice(0, 2000),\n    agent_output: (agent.output || '').slice(0, 5000),\n    started_at: startedAt,\n    ended_at: endedAt,\n    duration_ms: durationMs,\n  }\n}];"
+      }
+    },
+    {
+      "id": "http-insert-exec",
+      "name": "Insert Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2880,
+        208
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/mirador_session_executions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Attachments": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool obtener_datos_parcela": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool solicitar_broker": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool recomendar_parcelas": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool enviar_resumen_personalizado": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Get Lead Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead Context": {
+      "main": [
+        [
+          {
+            "node": "Fetch Inventory States",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Background Lead Updater (Fire & Forget)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Inventory States": {
+      "main": [
+        [
+          {
+            "node": "Build Inventory Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Inventory Summary": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Track Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Execution": {
+      "main": [
+        [
+          {
+            "node": "Insert Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "c194ece5-4671-4858-ba32-1a5f97e389bc",
+  "activeVersionId": "c194ece5-4671-4858-ba32-1a5f97e389bc",
+  "versionCounter": 487,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T17:06:21.886Z",
+      "createdAt": "2026-04-15T17:06:21.886Z",
+      "role": "workflow:owner",
+      "workflowId": "II3VLrcHrtsKXMxQ",
+      "projectId": "30a6jRldjQxRfVCA",
+      "project": {
+        "updatedAt": "2026-04-06T22:42:21.682Z",
+        "createdAt": "2026-04-06T22:39:53.588Z",
+        "id": "30a6jRldjQxRfVCA",
+        "name": "hugo vargas <hugo.vargas.cubelli@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "ad6c5ea4-1002-413c-90ee-d986782c10f5"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

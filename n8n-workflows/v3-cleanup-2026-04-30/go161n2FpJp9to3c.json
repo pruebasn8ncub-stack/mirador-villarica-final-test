@@ -1,0 +1,431 @@
+{
+  "updatedAt": "2026-04-29T22:05:12.166Z",
+  "createdAt": "2026-04-22T12:55:56.291Z",
+  "id": "go161n2FpJp9to3c",
+  "name": "Mirador Background - Lead Updater",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"session_id\": \"uuid-del-session\",\n  \"message\": \"ultimo mensaje del lead\",\n  \"whatsapp\": \"+56XXXXXXXXX\"\n}"
+      },
+      "id": "trigger-bg",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT message FROM mirador_chat_history WHERE session_id = $1 ORDER BY id ASC LIMIT 200;",
+        "options": {
+          "queryReplacement": "={{ $json.session_id }}"
+        }
+      },
+      "id": "fetch-history",
+      "name": "Fetch Chat History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        464,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "gKtQrCdcY2E8edN4",
+          "name": "Mirador Supabase Postgres"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reune todas las filas del query en un historial plano (orden cronologico ASC ya viene del SQL).\n// Formato de salida:\n//   usuario: ...\n//   Agente: ...\nconst rows = $input.all();\nconst input = $('Execute Workflow Trigger').first().json;\n\nfunction parseMsg(raw) {\n  if (!raw) return null;\n  let obj = raw;\n  if (typeof raw === 'string') {\n    try { obj = JSON.parse(raw); } catch { return null; }\n  }\n  const type = obj.type || obj.role;\n  const content = (obj.data && obj.data.content) || obj.content || '';\n  if (!type || !content) return null;\n  const roleLabel = (type === 'human' || type === 'user') ? 'usuario' : 'Agente';\n  return `${roleLabel}: ${String(content).replace(/\\s+/g, ' ').slice(0, 500)}`;\n}\n\nconst lines = rows\n  .map(r => parseMsg(r.json.message))\n  .filter(Boolean);\n\nconst history = lines.length > 0 ? lines.join('\\n') : '(sin historial previo)';\n\nreturn [{ json: {\n  session_id: input.session_id,\n  message: input.message,\n  chat_history: history,\n} }];"
+      },
+      "id": "format-history",
+      "name": "Format History",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {
+          "systemMessage": "Sos un extractor silencioso de datos del lead. Compara (1) la tabla \"Datos ya guardados\" con (2) la conversacion completa entre usuario y Agente. Si la conversacion contiene datos claros para campos monitoreados que en la tabla estan vacios o desactualizados, llama la tool `actualizar_datos_lead` con esos campos. Tu unica salida valida es la llamada a la tool, o nada si no hay cambios. NO escribas texto explicativo.\n\nCampos monitoreados (SOLO estos):\n- parcela_interes (acumulativo): numero o codigo de parcela (ej \"28\", \"B5\"). Se extrae si el lead la menciona explicito (\"la 65\", \"me interesa la 28\") o si el Agente la propuso y el lead confirmo (\"si\", \"esa\", \"dale\", \"esa me sirve\"). Pasa SOLO los numeros nuevos no presentes ya en la tabla.\n- forma_pago (unico valor): contado | credito | no_definido.\n- plazo (unico valor): ahora | 1_a_3_meses | 3_a_6_meses | 6_a_12_meses | mas_de_1_ano | no_definido.\n- uso (unico valor): vivienda | segunda | inversion | no_definido.\n\nReglas:\n1. Recorre TODA la conversacion, no solo el ultimo turno. Lo que importa es: que esta claro hoy en la conversacion vs que tiene la tabla.\n2. Por cada campo donde la tabla difiere de lo claro en la conversacion, incluilo en la llamada. Los demas campos: cadena vacia.\n3. Si la tabla ya coincide con la conversacion, NO llames la tool.\n4. Si el lead corrige (\"mejor a credito\"), llama la tool con el nuevo valor — el sistema sobrescribe.\n5. Llama la tool UNA sola vez por turno con todos los campos pendientes juntos.\n6. NO inventes. Datos ambiguos → no se guardan.\n7. parcela_interes acumula: si el lead nombra varias, podes mandarlas todas separadas por coma (ej \"28, 65\"). El sistema agrega solo las nuevas.\n\nMapeo plazo desde lenguaje natural del lead:\n- \"ahora\", \"ya\", \"lo antes posible\", \"esta semana\", \"ahora mismo\" → ahora\n- \"un mes\", \"dos meses\", \"tres meses\", \"1-3 meses\", \"proximos meses\" → 1_a_3_meses\n- \"cuatro/cinco/seis meses\", \"3 a 6\" → 3_a_6_meses\n- \"seis a doce\", \"medio año\", \"fin de año\" → 6_a_12_meses\n- \"mas de un año\", \"el proximo año\", \"para 2027+\" → mas_de_1_ano\n- \"estoy viendo\", \"evaluando\", \"no se aun\" → no_definido\n\nMapeo uso desde lenguaje natural del lead:\n- \"para vivir\", \"primera vivienda\", \"es para mi casa\", \"me mudo\" → vivienda\n- \"casa de descanso\", \"fin de semana\", \"veraneo\", \"segunda casa\" → segunda\n- \"inversion\", \"para arrendar\", \"negocio\", \"para vender despues\", \"plusvalia\" → inversion\n- \"no se todavia\", \"depende\", \"estoy viendo\" → no_definido\n\nEjemplos de extraccion:\nAgente: \"¿Te muestro la 47?\" → Usuario: \"si\" → parcela_interes=\"47\".\nAgente: \"La 65 esta disponible...\" → Usuario: \"ok dale\" → parcela_interes=\"65\".\nUsuario: \"contado\" (responde a pregunta del Agente sobre forma de pago) → forma_pago=\"contado\".\nUsuario: \"lo antes posible\" → plazo=\"ahora\".\nUsuario: \"es para mi primera casa\" → uso=\"vivienda\".\nUsuario: \"lo veo como inversion para arrendar\" → uso=\"inversion\".",
+          "maxIterations": 3,
+          "returnIntermediateSteps": false
+        }
+      },
+      "id": "agent-bg",
+      "name": "AI Agent (Background)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1360,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-2.5-flash"
+        },
+        "jsonMetadata": {
+          "sessionId": "={{ $('Execute Workflow Trigger').first().json.session_id }}",
+          "userId": "={{ $('Execute Workflow Trigger').first().json.whatsapp || $('Execute Workflow Trigger').first().json.session_id }}",
+          "customMetadata": "{\"agent\": \"background_extractor\", \"env\": \"production\", \"workflow\": \"mirador-background-lead-updater\", \"generation_name\": \"background-extractor-call\"}"
+        },
+        "options": {
+          "temperature": 0,
+          "maxTokens": 800
+        }
+      },
+      "id": "gemini-model",
+      "name": "Gemini Flash Lite",
+      "type": "@rlquilez/n8n-nodes-openai-litellm.lmChatOpenAiLitellm",
+      "typeVersion": 1.2,
+      "position": [
+        1368,
+        528
+      ],
+      "credentials": {
+        "openAiApiWithLitellmApi": {
+          "id": "uFgfkq8CZZ5edxgj",
+          "name": "LiteLLM Mirador"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Guarda de forma incremental los datos del lead detectados en la conversacion. USALA cuando el ultimo mensaje aporte un dato nuevo (entre los 4 monitoreados) que NO este ya en el historial. Pasa SOLO los campos nuevos; los otros dejalos vacios. Valores validos: forma_pago=contado|credito|no_definido | plazo=ahora|1_a_3_meses|3_a_6_meses|6_a_12_meses|mas_de_1_ano|no_definido | uso=vivienda|segunda|inversion|no_definido. parcela_interes es texto libre.",
+        "workflowId": {
+          "__rl": true,
+          "value": "Bj9iqnWSvtIyHyaA",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Execute Workflow Trigger').first().json.session_id }}",
+            "parcela_interes": "={{ $fromAI('parcela_interes', 'Numero o codigo de parcela mencionada por el lead (ej 28, B5). Cadena vacia si no es nuevo este turno.', 'string', '') }}",
+            "forma_pago": "={{ $fromAI('forma_pago', 'contado | credito | no_definido. Cadena vacia si no es nuevo.', 'string', '') }}",
+            "plazo": "={{ $fromAI('plazo', 'ahora | 1_a_3_meses | 3_a_6_meses | 6_a_12_meses | mas_de_1_ano | no_definido. Cadena vacia si no es nuevo.', 'string', '') }}",
+            "uso": "={{ $fromAI('uso', 'vivienda | segunda | inversion | no_definido. Para que el lead quiere la parcela. Cadena vacia si no es nuevo.', 'string', '') }}"
+          },
+          "schema": [
+            {
+              "id": "session_id",
+              "type": "string",
+              "required": true,
+              "displayName": "session_id",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "parcela_interes",
+              "type": "string",
+              "required": false,
+              "displayName": "parcela_interes",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "forma_pago",
+              "type": "string",
+              "required": false,
+              "displayName": "forma_pago",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "plazo",
+              "type": "string",
+              "required": false,
+              "displayName": "plazo",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "uso",
+              "type": "string",
+              "required": false,
+              "displayName": "uso",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "id": "tool-actualizar-bg",
+      "name": "Tool actualizar_datos_lead",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1552,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/leads?session_id=eq.{{ $('Execute Workflow Trigger').first().json.session_id }}&select=nombre,whatsapp,email,parcela_interes,plazo,forma_pago,uso",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "fetch-lead-state",
+      "name": "Fetch Lead State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        304
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Une chat_history (Format History) + estado actual del lead (Fetch Lead State)\n// + el mensaje actual del trigger si aun no esta en el historial.\nconst format = $('Format History').first().json;\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst current = $input.first().json;\n\n// El GET devuelve un array con 0 o 1 fila.\nconst row = Array.isArray(current) ? (current[0] || {}) : (current || {});\n\nfunction fmt(v) {\n  if (v === null || v === undefined || v === '') return '(vacio)';\n  return String(v);\n}\n\nconst estado = [\n  `- parcela_interes: ${fmt(row.parcela_interes)}`,\n  `- forma_pago: ${fmt(row.forma_pago)}`,\n  `- plazo: ${fmt(row.plazo)}`,\n  `- uso: ${fmt(row.uso)}`,\n].join('\\n');\n\n// Anexa el mensaje actual si NO aparece ya como ultimo turno user del historial.\nconst currentMsg = String(trigger.message || '').trim();\nlet historyText = (format.chat_history && format.chat_history !== '(sin historial previo)') ? format.chat_history : '';\n\nif (currentMsg) {\n  const userLines = historyText.split('\\n').filter(l => l.startsWith('usuario:'));\n  const lastUserContent = userLines.length > 0\n    ? userLines[userLines.length - 1].replace(/^usuario:\\s*/, '').trim()\n    : '';\n  if (lastUserContent !== currentMsg) {\n    historyText = historyText\n      ? `${historyText}\\nusuario: ${currentMsg}`\n      : `usuario: ${currentMsg}`;\n  }\n}\n\nif (!historyText) historyText = '(sin historial)';\n\nconst prompt = `Datos ya guardados en la base para este lead (si un campo dice (vacio) significa que NO se ha guardado todavia):\\n${estado}\\n\\nConversacion completa entre el usuario y el Agente principal (en orden cronologico):\\n\\n\"\"\"\\n${historyText}\\n\"\"\"`;\n\nreturn [{ json: {\n  prompt,\n} }];"
+      },
+      "id": "build-prompt-context",
+      "name": "Build Prompt Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        304
+      ]
+    },
+    {
+      "id": "track-exec-bg",
+      "name": "Track Execution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        304
+      ],
+      "parameters": {
+        "jsCode": "// Captura los datos del turno background para tracking de costos.\nconst trigger = $('Execute Workflow Trigger').first().json;\n\nconst endedAt = new Date().toISOString();\nconst startedAt = $execution?.startedAt || new Date(Date.now() - 3000).toISOString();\nconst durationMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();\n\nreturn [{\n  json: {\n    session_id: trigger.session_id,\n    workflow: 'background_extractor',\n    workflow_id: 'go161n2FpJp9to3c',\n    execution_id: $execution.id,\n    model: 'google/gemini-2.5-flash',\n    user_message: (trigger.message || '').slice(0, 2000),\n    agent_output: '',\n    started_at: startedAt,\n    ended_at: endedAt,\n    duration_ms: durationMs,\n  }\n}];"
+      }
+    },
+    {
+      "id": "http-insert-exec",
+      "name": "Insert Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1808,
+        304
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/mirador_session_executions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2xsZXd5Y3lzY3llbnZxdGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI1NDg1MCwiZXhwIjoyMDkxODMwODUwfQ.NuKXzAXPeENkmjxRYpX_5faw5JOP32bvgZRL284dJHI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Chat History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Chat History": {
+      "main": [
+        [
+          {
+            "node": "Format History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Flash Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Background)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool actualizar_datos_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Background)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History": {
+      "main": [
+        [
+          {
+            "node": "Fetch Lead State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Lead State": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Background)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Background)": {
+      "main": [
+        [
+          {
+            "node": "Track Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Execution": {
+      "main": [
+        [
+          {
+            "node": "Insert Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "b9dd6eb6-f679-4dee-955a-85db905d4581",
+  "activeVersionId": "b9dd6eb6-f679-4dee-955a-85db905d4581",
+  "versionCounter": 70,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-22T12:55:56.293Z",
+      "createdAt": "2026-04-22T12:55:56.293Z",
+      "role": "workflow:owner",
+      "workflowId": "go161n2FpJp9to3c",
+      "projectId": "30a6jRldjQxRfVCA",
+      "project": {
+        "updatedAt": "2026-04-06T22:42:21.682Z",
+        "createdAt": "2026-04-06T22:39:53.588Z",
+        "id": "30a6jRldjQxRfVCA",
+        "name": "hugo vargas <hugo.vargas.cubelli@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "ad6c5ea4-1002-413c-90ee-d986782c10f5"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

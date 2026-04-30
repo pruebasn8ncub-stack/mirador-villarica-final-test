@@ -23,7 +23,6 @@ import {
   formatExact,
   formatRelative,
   initials,
-  scoreColor,
   shortSession,
 } from '../_lib/format';
 
@@ -38,8 +37,8 @@ interface ConvoListItem {
   lead: {
     session_id: string;
     nombre: string;
-    score: 'CALIENTE' | 'TIBIO' | 'FRIO';
-    score_numeric: number | null;
+    parcela_interes: string | null;
+    plazo: string | null;
     created_at: string;
   } | null;
   session: {
@@ -266,19 +265,13 @@ function ConvoRow({
   item: ConvoListItem;
   onOpen: () => void;
 }) {
-  const c = scoreColor(item.lead?.score);
   return (
     <li>
       <button
         onClick={onOpen}
         className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bosque-50/60"
       >
-        <div
-          className={cn(
-            'flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold',
-            item.lead ? c.bg + ' ' + c.text : 'bg-bosque-50 text-bosque-500'
-          )}
-        >
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-bosque-100 text-[12px] font-semibold text-bosque-700">
           {item.lead ? initials(item.lead.nombre) : '·'}
         </div>
         <div className="min-w-0">
@@ -286,15 +279,9 @@ function ConvoRow({
             <span className="truncate font-semibold text-bosque-900">
               {item.lead?.nombre || 'Visitante anónimo'}
             </span>
-            {item.lead?.score && (
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide',
-                  c.bg,
-                  c.text
-                )}
-              >
-                {item.lead.score}
+            {item.lead?.parcela_interes && (
+              <span className="rounded-full bg-mostaza/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-bosque-800">
+                Parcela {item.lead.parcela_interes}
               </span>
             )}
             <span className="rounded-full bg-bosque-50 px-1.5 py-0.5 font-mono text-[9.5px] text-bosque-600">
@@ -369,12 +356,10 @@ function ConversationDrawer({
         nombre?: string;
         whatsapp?: string;
         email?: string;
-        score?: 'CALIENTE' | 'TIBIO' | 'FRIO';
-        score_numeric?: number;
         parcela_interes?: string;
         forma_pago?: string;
         plazo?: string;
-        rango_presupuesto?: string;
+        uso?: string;
       }
     | null
     | undefined;
@@ -421,7 +406,6 @@ function ConversationDrawer({
               <h2 className="truncate font-display text-xl font-medium text-bosque-900">
                 {lead?.nombre || 'Visitante anónimo'}
               </h2>
-              {lead?.score && <ScorePill score={lead.score} />}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] text-bosque-600">
               <span className="flex items-center gap-1 font-mono">
@@ -446,12 +430,8 @@ function ConversationDrawer({
                 {lead.plazo && lead.plazo !== 'no_definido' && (
                   <Tag>plazo {lead.plazo.replace(/_/g, ' ')}</Tag>
                 )}
-                {lead.rango_presupuesto &&
-                  lead.rango_presupuesto !== 'no_definido' && (
-                    <Tag>{lead.rango_presupuesto}</Tag>
-                  )}
-                {lead.score_numeric !== undefined && (
-                  <Tag>score {lead.score_numeric}/100</Tag>
+                {lead.uso && lead.uso !== 'no_definido' && (
+                  <Tag>uso: {lead.uso}</Tag>
                 )}
               </div>
             )}
@@ -702,18 +682,3 @@ function Tag({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ScorePill({ score }: { score: 'CALIENTE' | 'TIBIO' | 'FRIO' }) {
-  const c = scoreColor(score);
-  return (
-    <span
-      className={cn(
-        'rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide ring-1',
-        c.bg,
-        c.text,
-        c.ring
-      )}
-    >
-      {score}
-    </span>
-  );
-}

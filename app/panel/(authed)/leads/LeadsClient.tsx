@@ -10,24 +10,20 @@ import {
   Mail,
   Phone,
   Hash,
-  Flame,
-  Thermometer,
-  Snowflake,
   Calendar,
   X,
   ExternalLink,
   Download,
-  CheckCircle2,
-  PhoneCall,
   MessageSquareText,
-  Send,
+  MapPin,
+  Clock,
+  Wallet,
+  Target,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import {
   formatExact,
   formatRelative,
   initials,
-  scoreColor,
   shortSession,
 } from '../_lib/format';
 
@@ -37,26 +33,10 @@ interface Lead {
   nombre: string;
   whatsapp: string | null;
   email: string | null;
-  intencion: string | null;
-  plazo: string | null;
-  presupuesto: string | null;
-  score: 'CALIENTE' | 'TIBIO' | 'FRIO';
-  score_numeric: number | null;
-  resumen: string | null;
   parcela_interes: string | null;
-  parcelas_recomendadas: string[] | null;
+  plazo: string | null;
   forma_pago: string | null;
-  pie_disponible: string | null;
-  decisor: string | null;
   uso: string | null;
-  rango_presupuesto: string | null;
-  pre_aprobacion: boolean | null;
-  canales_envio: string[] | null;
-  resumen_enviado_at: string | null;
-  broker_requested_at: string | null;
-  broker_request_reason: string | null;
-  notified_diego: boolean | null;
-  notified_at: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -72,42 +52,17 @@ const fetcher = async (url: string): Promise<LeadsResponse> => {
   return res.json();
 };
 
-type ScoreFilter = 'all' | 'CALIENTE' | 'TIBIO' | 'FRIO';
-
-function ScoreBadge({ score }: { score: Lead['score'] }) {
-  const c = scoreColor(score);
-  const Icon =
-    score === 'CALIENTE' ? Flame : score === 'TIBIO' ? Thermometer : Snowflake;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide ring-1',
-        c.bg,
-        c.text,
-        c.ring
-      )}
-    >
-      <Icon className="h-3 w-3" />
-      {score}
-    </span>
-  );
-}
-
 function downloadCsv(items: Lead[]) {
   const headers = [
     'fecha',
     'nombre',
     'whatsapp',
     'email',
-    'score',
-    'score_numeric',
     'parcela_interes',
-    'forma_pago',
     'plazo',
-    'rango_presupuesto',
-    'broker_requested_at',
+    'forma_pago',
+    'uso',
     'session_id',
-    'resumen',
   ];
   const escape = (s: unknown) => `"${String(s ?? '').replace(/"/g, '""')}"`;
   const rows = items.map((l) =>
@@ -116,15 +71,11 @@ function downloadCsv(items: Lead[]) {
       l.nombre,
       l.whatsapp,
       l.email,
-      l.score,
-      l.score_numeric,
       l.parcela_interes,
-      l.forma_pago,
       l.plazo,
-      l.rango_presupuesto,
-      l.broker_requested_at ? formatExact(l.broker_requested_at) : '',
+      l.forma_pago,
+      l.uso,
       l.session_id,
-      l.resumen,
     ]
       .map(escape)
       .join(',')
@@ -144,7 +95,6 @@ function downloadCsv(items: Lead[]) {
 export function LeadsClient() {
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
-  const [score, setScore] = useState<ScoreFilter>('all');
   const [selected, setSelected] = useState<Lead | null>(null);
 
   useEffect(() => {
@@ -156,9 +106,8 @@ export function LeadsClient() {
     const params = new URLSearchParams();
     params.set('limit', '200');
     if (debouncedQ) params.set('q', debouncedQ);
-    if (score !== 'all') params.set('score', score);
     return params.toString();
-  }, [debouncedQ, score]);
+  }, [debouncedQ]);
 
   const { data, error, isLoading } = useSWR<LeadsResponse>(
     `/api/dashboard/leads?${queryString}`,
@@ -175,7 +124,7 @@ export function LeadsClient() {
           </h1>
           <p className="mt-1 text-sm text-bosque-700">
             Personas que pasaron el gate del chat. Click en una fila para ver
-            todos los datos capturados durante la conversación.
+            los datos capturados durante la conversación.
           </p>
         </div>
         <button
@@ -188,32 +137,16 @@ export function LeadsClient() {
         </button>
       </header>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-card ring-1 ring-bosque-100">
-        <div className="relative flex-1 min-w-[220px]">
+      <div className="mb-4 rounded-2xl bg-white p-3 shadow-card ring-1 ring-bosque-100">
+        <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bosque-400" />
           <input
             type="text"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nombre, email, WhatsApp o resumen…"
+            placeholder="Buscar por nombre, email, WhatsApp o parcela…"
             className="w-full rounded-lg border border-bosque-200 bg-bosque-50/50 py-2 pl-9 pr-3 text-sm text-bosque-900 placeholder:text-bosque-400 focus:border-bosque-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-bosque-200"
           />
-        </div>
-        <div className="flex items-center gap-0.5 rounded-lg border border-bosque-200 bg-bosque-50/50 p-0.5">
-          {(['all', 'CALIENTE', 'TIBIO', 'FRIO'] as ScoreFilter[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScore(s)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors',
-                score === s
-                  ? 'bg-bosque-800 text-crema'
-                  : 'text-bosque-700 hover:bg-bosque-100'
-              )}
-            >
-              {s === 'all' ? 'Todos' : s}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -245,7 +178,7 @@ export function LeadsClient() {
                 Sin resultados
               </p>
               <p className="mt-1 text-xs text-bosque-600">
-                Probá ajustar los filtros o esperar a que más personas pasen el
+                Probá ajustar la búsqueda o esperar a que más personas pasen el
                 gate.
               </p>
             </div>
@@ -265,16 +198,14 @@ export function LeadsClient() {
                         <span className="truncate font-semibold text-bosque-900">
                           {lead.nombre}
                         </span>
-                        <ScoreBadge score={lead.score} />
                         {lead.parcela_interes && (
                           <span className="rounded-full bg-mostaza/10 px-2 py-0.5 text-[10px] font-semibold text-bosque-800">
                             Parcela {lead.parcela_interes}
                           </span>
                         )}
-                        {lead.broker_requested_at && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-red-200">
-                            <PhoneCall className="h-2.5 w-2.5" />
-                            Pidió broker
+                        {lead.uso && lead.uso !== 'no_definido' && (
+                          <span className="rounded-full bg-bosque-50 px-2 py-0.5 text-[10px] font-medium text-bosque-700 ring-1 ring-bosque-100">
+                            {lead.uso}
                           </span>
                         )}
                       </div>
@@ -292,9 +223,7 @@ export function LeadsClient() {
                           </span>
                         )}
                         {lead.forma_pago && lead.forma_pago !== 'no_definido' && (
-                          <span className="text-bosque-500">
-                            · {lead.forma_pago}
-                          </span>
+                          <span className="text-bosque-500">· {lead.forma_pago}</span>
                         )}
                         {lead.plazo && lead.plazo !== 'no_definido' && (
                           <span className="text-bosque-500">
@@ -303,15 +232,8 @@ export function LeadsClient() {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-[10.5px] tabular-nums text-bosque-500">
-                        {formatRelative(lead.created_at)}
-                      </div>
-                      {lead.score_numeric !== null && (
-                        <div className="mt-0.5 font-mono text-[11px] font-semibold text-bosque-700">
-                          {lead.score_numeric}/100
-                        </div>
-                      )}
+                    <div className="text-[10.5px] tabular-nums text-bosque-500">
+                      {formatRelative(lead.created_at)}
                     </div>
                   </button>
                 </li>
@@ -323,10 +245,7 @@ export function LeadsClient() {
 
       <AnimatePresence>
         {selected && (
-          <LeadDetailDrawer
-            lead={selected}
-            onClose={() => setSelected(null)}
-          />
+          <LeadDetailDrawer lead={selected} onClose={() => setSelected(null)} />
         )}
       </AnimatePresence>
     </div>
@@ -376,12 +295,9 @@ function LeadDetailDrawer({
       >
         <header className="flex items-start justify-between gap-3 border-b border-bosque-100 px-5 py-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate font-display text-xl font-medium text-bosque-900">
-                {lead.nombre}
-              </h2>
-              <ScoreBadge score={lead.score} />
-            </div>
+            <h2 className="truncate font-display text-xl font-medium text-bosque-900">
+              {lead.nombre}
+            </h2>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] text-bosque-600">
               <span className="flex items-center gap-1 font-mono">
                 <Hash className="h-3 w-3" />
@@ -403,7 +319,6 @@ function LeadDetailDrawer({
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          {/* Contacto */}
           <Section title="Contacto">
             <Field label="WhatsApp" icon={Phone}>
               {lead.whatsapp ? (
@@ -433,72 +348,8 @@ function LeadDetailDrawer({
             </Field>
           </Section>
 
-          {/* Calificación BANT+ */}
-          <Section title="Calificación BANT+">
-            <Field label="Score numérico">
-              {lead.score_numeric !== null ? (
-                <span className="font-mono text-base font-semibold">
-                  {lead.score_numeric}/100
-                </span>
-              ) : (
-                <Empty />
-              )}
-            </Field>
-            <Field label="Forma de pago">
-              {lead.forma_pago && lead.forma_pago !== 'no_definido' ? (
-                lead.forma_pago
-              ) : (
-                <Empty />
-              )}
-            </Field>
-            <Field label="Pie disponible">
-              {lead.pie_disponible || <Empty />}
-            </Field>
-            <Field label="Plazo">
-              {lead.plazo && lead.plazo !== 'no_definido' ? (
-                lead.plazo.replace(/_/g, ' ')
-              ) : (
-                <Empty />
-              )}
-            </Field>
-            <Field label="Rango presupuesto">
-              {lead.rango_presupuesto && lead.rango_presupuesto !== 'no_definido' ? (
-                lead.rango_presupuesto
-              ) : (
-                <Empty />
-              )}
-            </Field>
-            <Field label="Presupuesto (texto)">
-              {lead.presupuesto || <Empty />}
-            </Field>
-            <Field label="Decisor">
-              {lead.decisor && lead.decisor !== 'no_definido' ? (
-                lead.decisor
-              ) : (
-                <Empty />
-              )}
-            </Field>
-            <Field label="Uso">
-              {lead.uso && lead.uso !== 'no_definido' ? lead.uso : <Empty />}
-            </Field>
-            <Field label="Pre-aprobación bancaria">
-              {lead.pre_aprobacion === null ? (
-                <Empty />
-              ) : lead.pre_aprobacion ? (
-                <span className="inline-flex items-center gap-1 text-emerald-700">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Sí
-                </span>
-              ) : (
-                'No'
-              )}
-            </Field>
-            <Field label="Intención">{lead.intencion || <Empty />}</Field>
-          </Section>
-
-          {/* Interés */}
-          <Section title="Interés en parcelas">
-            <Field label="Parcela de interés">
+          <Section title="Calificación">
+            <Field label="Parcela de interés" icon={MapPin}>
               {lead.parcela_interes ? (
                 <span className="rounded-full bg-mostaza/10 px-2 py-0.5 font-semibold text-bosque-800">
                   {lead.parcela_interes}
@@ -507,69 +358,22 @@ function LeadDetailDrawer({
                 <Empty />
               )}
             </Field>
-            <Field label="Recomendadas por el bot">
-              {lead.parcelas_recomendadas?.length ? (
-                <div className="flex flex-wrap gap-1">
-                  {lead.parcelas_recomendadas.map((p) => (
-                    <span
-                      key={p}
-                      className="rounded-full bg-bosque-100 px-2 py-0.5 text-[11px] font-medium text-bosque-800"
-                    >
-                      {p}
-                    </span>
-                  ))}
-                </div>
+            <Field label="Plazo de compra" icon={Clock}>
+              {lead.plazo && lead.plazo !== 'no_definido' ? (
+                lead.plazo.replace(/_/g, ' ')
               ) : (
                 <Empty />
               )}
             </Field>
-          </Section>
-
-          {/* Resumen IA */}
-          {lead.resumen && (
-            <Section title="Resumen del bot">
-              <p className="whitespace-pre-wrap rounded-lg bg-bosque-50/60 px-3 py-2 text-[12.5px] leading-relaxed text-bosque-800 ring-1 ring-bosque-100">
-                {lead.resumen}
-              </p>
-            </Section>
-          )}
-
-          {/* Eventos */}
-          <Section title="Eventos">
-            <Field label="Resumen enviado" icon={Send}>
-              {lead.resumen_enviado_at ? (
-                <span>
-                  {formatExact(lead.resumen_enviado_at)}{' '}
-                  {lead.canales_envio?.length && (
-                    <span className="text-bosque-500">
-                      · vía {lead.canales_envio.join(' + ')}
-                    </span>
-                  )}
-                </span>
+            <Field label="Forma de pago" icon={Wallet}>
+              {lead.forma_pago && lead.forma_pago !== 'no_definido' ? (
+                lead.forma_pago
               ) : (
                 <Empty />
               )}
             </Field>
-            <Field label="Pidió broker" icon={PhoneCall}>
-              {lead.broker_requested_at ? (
-                <span>
-                  {formatExact(lead.broker_requested_at)}{' '}
-                  {lead.broker_request_reason && (
-                    <span className="text-bosque-500">
-                      · {lead.broker_request_reason}
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <Empty />
-              )}
-            </Field>
-            <Field label="Notificado a Diego">
-              {lead.notified_diego && lead.notified_at
-                ? formatExact(lead.notified_at)
-                : lead.notified_diego
-                  ? 'Sí'
-                  : 'No'}
+            <Field label="Uso" icon={Target}>
+              {lead.uso && lead.uso !== 'no_definido' ? lead.uso : <Empty />}
             </Field>
           </Section>
         </div>

@@ -7,11 +7,8 @@ import {
   MousePointerClick,
   MessagesSquare,
   Users,
-  Flame,
-  Thermometer,
-  Snowflake,
   StickyNote,
-  PhoneCall,
+  Target,
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,17 +20,17 @@ interface StatsResponse {
     launcher_clicks: number;
     conversations_started: number;
     leads: number;
+    qualified_leads: number;
     feedback: number;
-    broker_requested: number;
-    resumen_enviado: number;
   };
-  score_distribution: { CALIENTE: number; TIBIO: number; FRIO: number };
+  forma_pago_distribution: Record<string, number>;
+  uso_distribution: Record<string, number>;
   funnel: {
     sessions: number;
     clicks: number;
     conversations: number;
     leads: number;
-    broker_requested: number;
+    qualified: number;
   };
   series: { date: string; sessions: number; clicks: number; leads: number }[];
 }
@@ -82,7 +79,6 @@ export function OverviewClient() {
 
       {data && (
         <>
-          {/* KPIs */}
           <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <Kpi
               icon={Eye}
@@ -113,7 +109,6 @@ export function OverviewClient() {
           </section>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            {/* Funnel */}
             <section className="lg:col-span-2 rounded-2xl bg-white p-5 shadow-card ring-1 ring-bosque-100">
               <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-bosque-700">
                 Funnel
@@ -121,17 +116,22 @@ export function OverviewClient() {
               <Funnel data={data.funnel} />
             </section>
 
-            {/* Score distribution */}
             <section className="rounded-2xl bg-white p-5 shadow-card ring-1 ring-bosque-100">
               <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-bosque-700">
-                Calificación de leads
+                Distribución de leads
               </h2>
-              <ScoreBars dist={data.score_distribution} />
+              <DistList
+                title="Forma de pago"
+                dist={data.forma_pago_distribution}
+              />
+              <div className="mt-4 border-t border-bosque-100 pt-4">
+                <DistList title="Uso" dist={data.uso_distribution} />
+              </div>
               <div className="mt-5 grid grid-cols-2 gap-2 border-t border-bosque-100 pt-4 text-xs">
                 <SecondaryStat
-                  icon={PhoneCall}
-                  label="Pidieron broker"
-                  value={data.kpis.broker_requested}
+                  icon={Target}
+                  label="Calificados"
+                  value={data.kpis.qualified_leads}
                 />
                 <SecondaryStat
                   icon={StickyNote}
@@ -142,7 +142,6 @@ export function OverviewClient() {
             </section>
           </div>
 
-          {/* Series */}
           <section className="mt-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-bosque-100">
             <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-bosque-700">
               Tendencia diaria
@@ -256,7 +255,7 @@ function Funnel({ data }: { data: StatsResponse['funnel'] }) {
     { label: 'Click al launcher', value: data.clicks, color: 'bg-bosque-400' },
     { label: 'Conversación', value: data.conversations, color: 'bg-bosque-600' },
     { label: 'Lead capturado', value: data.leads, color: 'bg-mostaza-300' },
-    { label: 'Pidió broker', value: data.broker_requested, color: 'bg-mostaza-400' },
+    { label: 'Calificado', value: data.qualified, color: 'bg-mostaza-400' },
   ];
   const max = Math.max(...steps.map((s) => s.value), 1);
   return (
@@ -274,11 +273,16 @@ function Funnel({ data }: { data: StatsResponse['funnel'] }) {
               <div className="h-7 overflow-hidden rounded-md bg-bosque-50">
                 <div
                   className={cn('h-full transition-all', s.color)}
-                  style={{ width: `${(s.value / max) * 100}%`, minWidth: s.value > 0 ? '8px' : '0' }}
+                  style={{
+                    width: `${(s.value / max) * 100}%`,
+                    minWidth: s.value > 0 ? '8px' : '0',
+                  }}
                 />
               </div>
               <div className="absolute inset-0 flex items-center justify-between px-2.5 text-[11.5px] font-semibold text-bosque-900">
-                <span className="tabular-nums">{s.value.toLocaleString('es-CL')}</span>
+                <span className="tabular-nums">
+                  {s.value.toLocaleString('es-CL')}
+                </span>
                 {conv && (
                   <span className="tabular-nums text-[10.5px] font-medium text-bosque-700">
                     {conv}
@@ -293,60 +297,52 @@ function Funnel({ data }: { data: StatsResponse['funnel'] }) {
   );
 }
 
-function ScoreBars({ dist }: { dist: StatsResponse['score_distribution'] }) {
-  const total = dist.CALIENTE + dist.TIBIO + dist.FRIO || 1;
-  const rows = [
-    {
-      key: 'CALIENTE',
-      label: 'Caliente',
-      value: dist.CALIENTE,
-      color: 'bg-red-500',
-      icon: Flame,
-      iconColor: 'text-red-500',
-    },
-    {
-      key: 'TIBIO',
-      label: 'Tibio',
-      value: dist.TIBIO,
-      color: 'bg-mostaza-300',
-      icon: Thermometer,
-      iconColor: 'text-mostaza-400',
-    },
-    {
-      key: 'FRIO',
-      label: 'Frío',
-      value: dist.FRIO,
-      color: 'bg-bosque-300',
-      icon: Snowflake,
-      iconColor: 'text-bosque-500',
-    },
-  ];
+function DistList({
+  title,
+  dist,
+}: {
+  title: string;
+  dist: Record<string, number>;
+}) {
+  const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, [, v]) => s + v, 0) || 1;
+  if (entries.length === 0) {
+    return (
+      <div>
+        <h3 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-bosque-600">
+          {title}
+        </h3>
+        <p className="text-[11px] italic text-bosque-400">Sin datos.</p>
+      </div>
+    );
+  }
   return (
-    <ul className="space-y-2.5">
-      {rows.map((r) => {
-        const pct = (r.value / total) * 100;
-        return (
-          <li key={r.key}>
-            <div className="mb-1 flex items-center justify-between text-[12px]">
-              <span className="flex items-center gap-1.5 font-medium text-bosque-800">
-                <r.icon className={cn('h-3.5 w-3.5', r.iconColor)} />
-                {r.label}
-              </span>
-              <span className="tabular-nums text-bosque-600">
-                {r.value} ·{' '}
-                <span className="text-bosque-500">{Math.round(pct)}%</span>
-              </span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-bosque-50">
-              <div
-                className={cn('h-full transition-all', r.color)}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div>
+      <h3 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-bosque-600">
+        {title}
+      </h3>
+      <ul className="space-y-1.5">
+        {entries.map(([k, v]) => {
+          const pct = (v / total) * 100;
+          return (
+            <li key={k}>
+              <div className="mb-0.5 flex items-center justify-between text-[11.5px]">
+                <span className="truncate text-bosque-800">{k}</span>
+                <span className="tabular-nums text-bosque-600">
+                  {v} <span className="text-bosque-500">{Math.round(pct)}%</span>
+                </span>
+              </div>
+              <div className="h-1 overflow-hidden rounded-full bg-bosque-50">
+                <div
+                  className="h-full bg-bosque-400 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

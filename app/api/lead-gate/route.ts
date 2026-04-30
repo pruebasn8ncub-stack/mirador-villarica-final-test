@@ -17,13 +17,7 @@ const leadGateSchema = z.object({
 
 type LeadGatePayload = z.infer<typeof leadGateSchema>;
 
-// Score inicial: 0. Las señales BANT+ (plazo, presupuesto, uso, forma_pago,
-// decisor, pre_aprobacion) se capturan durante la conversación con el bot.
-function computeInitialScoreNumeric(): number {
-  return 0;
-}
-
-async function notifyN8n(payload: LeadGatePayload, scoreNumeric: number) {
+async function notifyN8n(payload: LeadGatePayload) {
   const webhookUrl = process.env.N8N_LEAD_GATE_WEBHOOK_URL;
   const webhookToken = process.env.N8N_WEBHOOK_TOKEN;
   if (!webhookUrl) return;
@@ -36,12 +30,7 @@ async function notifyN8n(payload: LeadGatePayload, scoreNumeric: number) {
         'Content-Type': 'application/json',
         ...(webhookToken ? { Authorization: `Bearer ${webhookToken}` } : {}),
       },
-      body: JSON.stringify({
-        ...payload,
-        score: 'FRIO',
-        score_numeric: scoreNumeric,
-        source: 'lead_gate',
-      }),
+      body: JSON.stringify({ ...payload, source: 'lead_gate' }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -66,11 +55,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const scoreNumeric = computeInitialScoreNumeric();
-
   const config = getSupabaseConfig();
   if (!config) {
-    await notifyN8n(parsed.data, scoreNumeric);
+    await notifyN8n(parsed.data);
     return NextResponse.json({ ok: true, persisted: false });
   }
 
@@ -82,22 +69,12 @@ export async function POST(req: Request) {
         nombre: parsed.data.nombre,
         whatsapp: parsed.data.whatsapp,
         email: parsed.data.email,
-        score: 'FRIO',
-        score_numeric: scoreNumeric,
-        score_history: [
-          {
-            at: new Date().toISOString(),
-            action: 'gate_submit',
-            source: 'form',
-            score_numeric: scoreNumeric,
-          },
-        ],
         project_slug: 'mirador-villarrica',
       },
       { onConflict: 'session_id' },
       config
     );
-    await notifyN8n(parsed.data, scoreNumeric);
+    await notifyN8n(parsed.data);
     return NextResponse.json({ ok: true, persisted: true, lead_id: rows[0]?.id });
   } catch (err) {
     return NextResponse.json(

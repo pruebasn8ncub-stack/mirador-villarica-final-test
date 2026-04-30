@@ -20,8 +20,8 @@ interface ChatHistoryRow {
 interface LeadMini {
   session_id: string;
   nombre: string;
-  score: string;
-  score_numeric: number | null;
+  parcela_interes: string | null;
+  plazo: string | null;
   created_at: string;
 }
 
@@ -117,7 +117,7 @@ export async function GET(req: Request) {
       ),
       supabaseSelect<LeadMini>(
         'leads',
-        { query: 'select=session_id,nombre,score,score_numeric,created_at&limit=5000' },
+        { query: 'select=session_id,nombre,parcela_interes,plazo,created_at&limit=5000' },
         config
       ),
       supabaseSelect<SessionMini>(

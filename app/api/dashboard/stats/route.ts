@@ -12,11 +12,11 @@ interface SessionRow {
 
 interface LeadRow {
   id: string;
-  score: 'CALIENTE' | 'TIBIO' | 'FRIO';
-  score_numeric: number | null;
   created_at: string;
-  resumen_enviado_at: string | null;
-  broker_requested_at: string | null;
+  parcela_interes: string | null;
+  plazo: string | null;
+  forma_pago: string | null;
+  uso: string | null;
 }
 
 interface WidgetEventRow {
@@ -61,7 +61,6 @@ export async function GET(req: Request) {
   const since = presetToDate(preset);
   const sinceFilter = since ? `&created_at=gte.${since.toISOString()}` : '';
 
-  // Helper para que un fallo en una tabla (ej. tabla no existe aún) no rompa todo el dashboard
   const safe = async <T>(p: Promise<{ rows: T[]; count: number | null }>) => {
     try {
       return await p;
@@ -86,7 +85,7 @@ export async function GET(req: Request) {
         supabaseSelect<LeadRow>(
           'leads',
           {
-            query: `select=id,score,score_numeric,created_at,resumen_enviado_at,broker_requested_at&order=created_at.desc&limit=5000${sinceFilter}`,
+            query: `select=id,created_at,parcela_interes,plazo,forma_pago,uso&order=created_at.desc&limit=5000${sinceFilter}`,
             exactCount: true,
           },
           config
@@ -134,18 +133,18 @@ export async function GET(req: Request) {
     );
     const conversationsCount = conversationSessions.size;
 
-    const scoreDist = leads.rows.reduce(
-      (acc, l) => {
-        acc[l.score] = (acc[l.score] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
+    const qualified = leads.rows.filter(
+      (l) => l.parcela_interes || l.plazo || l.forma_pago || l.uso
+    ).length;
 
-    const brokerRequested = leads.rows.filter((l) => l.broker_requested_at).length;
-    const resumenEnviado = leads.rows.filter((l) => l.resumen_enviado_at).length;
+    // Distribución por forma de pago / uso para reemplazar el viejo score chart
+    const formaPagoDist: Record<string, number> = {};
+    const usoDist: Record<string, number> = {};
+    for (const l of leads.rows) {
+      if (l.forma_pago) formaPagoDist[l.forma_pago] = (formaPagoDist[l.forma_pago] || 0) + 1;
+      if (l.uso) usoDist[l.uso] = (usoDist[l.uso] || 0) + 1;
+    }
 
-    // Daily series para los últimos N días según preset
     const days = preset === 'today' ? 1 : preset === '7d' ? 7 : preset === '30d' ? 30 : 60;
     const buckets: Record<string, { sessions: number; clicks: number; leads: number }> = {};
     for (let i = days - 1; i >= 0; i--) {
@@ -178,21 +177,17 @@ export async function GET(req: Request) {
         launcher_clicks: launcherClicks,
         conversations_started: conversationsCount,
         leads: totalLeads,
+        qualified_leads: qualified,
         feedback: totalFeedback,
-        broker_requested: brokerRequested,
-        resumen_enviado: resumenEnviado,
       },
-      score_distribution: {
-        CALIENTE: scoreDist.CALIENTE || 0,
-        TIBIO: scoreDist.TIBIO || 0,
-        FRIO: scoreDist.FRIO || 0,
-      },
+      forma_pago_distribution: formaPagoDist,
+      uso_distribution: usoDist,
       funnel: {
         sessions: totalSessions,
         clicks: launcherClicks,
         conversations: conversationsCount,
         leads: totalLeads,
-        broker_requested: brokerRequested,
+        qualified: qualified,
       },
       series,
     });
