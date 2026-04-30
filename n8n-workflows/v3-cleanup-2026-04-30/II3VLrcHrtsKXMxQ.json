@@ -1,11 +1,7 @@
 {
-  "updatedAt": "2026-04-29T22:05:11.545Z",
-  "createdAt": "2026-04-15T17:06:21.880Z",
   "id": "II3VLrcHrtsKXMxQ",
   "name": "Mirador Chat - Main (Simplified)",
-  "description": null,
   "active": true,
-  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -210,7 +206,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT nombre, whatsapp, email, parcela_interes, plazo, forma_pago, uso, created_at FROM leads WHERE session_id = '{{ $('Validate Payload').first().json.session_id }}' ORDER BY created_at DESC LIMIT 1;",
+        "query": "=SELECT nombre, whatsapp, email, parcela_interes, plazo, forma_pago, uso, created_at FROM leads WHERE session_id = '{{ $('Validate Payload').first().json.session_id }}' ORDER BY created_at DESC LIMIT 1;",
         "options": {}
       },
       "id": "get-lead-context",
@@ -798,33 +794,5 @@
   },
   "staticData": null,
   "meta": null,
-  "pinData": {},
-  "versionId": "c194ece5-4671-4858-ba32-1a5f97e389bc",
-  "activeVersionId": "c194ece5-4671-4858-ba32-1a5f97e389bc",
-  "versionCounter": 487,
-  "triggerCount": 1,
-  "tags": [],
-  "shared": [
-    {
-      "updatedAt": "2026-04-15T17:06:21.886Z",
-      "createdAt": "2026-04-15T17:06:21.886Z",
-      "role": "workflow:owner",
-      "workflowId": "II3VLrcHrtsKXMxQ",
-      "projectId": "30a6jRldjQxRfVCA",
-      "project": {
-        "updatedAt": "2026-04-06T22:42:21.682Z",
-        "createdAt": "2026-04-06T22:39:53.588Z",
-        "id": "30a6jRldjQxRfVCA",
-        "name": "hugo vargas <hugo.vargas.cubelli@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "creatorId": "ad6c5ea4-1002-413c-90ee-d986782c10f5"
-      }
-    }
-  ],
-  "versionMetadata": {
-    "name": null,
-    "description": null
-  }
+  "tags": []
 }
