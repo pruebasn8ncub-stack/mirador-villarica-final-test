@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseConfig, supabaseSelect } from '@/lib/chat/supabase';
 import { isAuthed } from '@/lib/feedback/auth';
+import {
+  getLangfuseConfig,
+  langfuseGet,
+  langfuseList,
+  observationToTurn,
+  totalsFromTurns,
+  LITELLM_TRACE_NAME,
+  type LangfuseObservation,
+  type LangfuseTrace,
+  type LangfuseListResponse,
+  type TurnRecord,
+} from '@/lib/langfuse/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +52,38 @@ function extractRole(message: unknown): 'user' | 'assistant' | 'system' | 'tool'
   return 'system';
 }
 
+async function fetchSessionGenerations(
+  sessionId: string
+): Promise<LangfuseObservation[]> {
+  const lfConfig = getLangfuseConfig();
+  if (!lfConfig) return [];
+  // 1) Buscar todos los traces bajo ese sessionId (filtramos por LiteLLM-emitidos).
+  const tracesPage = await langfuseGet<LangfuseListResponse<LangfuseTrace>>(
+    '/api/public/traces',
+    { sessionId, limit: 50 },
+    lfConfig
+  );
+  const liteTraces = tracesPage.data.filter(
+    (t) => t.name === LITELLM_TRACE_NAME
+  );
+  if (liteTraces.length === 0) return [];
+
+  // 2) Para cada trace, traer sus GENERATIONs.
+  const all: LangfuseObservation[] = [];
+  for (const trace of liteTraces) {
+    const obs = await langfuseList<LangfuseObservation>(
+      '/api/public/observations',
+      { traceId: trace.id, type: 'GENERATION', limit: 100 },
+      500,
+      lfConfig
+    );
+    all.push(...obs);
+  }
+  // Ordenar por startTime ascendente para el agrupamiento por turno en el cliente.
+  all.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  return all;
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: { session_id: string } }
@@ -56,81 +100,50 @@ export async function GET(
     return NextResponse.json({ error: 'Storage not configured' }, { status: 503 });
   }
 
-  const safe = async <T,>(p: Promise<{ rows: T[]; count: number | null }>) => {
-    try { return await p; } catch { return { rows: [] as T[], count: 0 }; }
-  };
-
-  const num = (v: number | string | null | undefined): number => {
-    if (v == null) return 0;
-    const n = typeof v === 'string' ? parseFloat(v) : v;
-    return Number.isFinite(n) ? n : 0;
-  };
-
   try {
-    const [history, leadRes, sessionRes, feedbackRes, eventsRes, costsRes] = await Promise.all([
-      supabaseSelect<ChatHistoryRow>(
-        'mirador_chat_history',
-        {
-          query: `select=id,session_id,message&session_id=eq.${sid}&order=id.asc&limit=2000`,
-        },
-        config
-      ),
-      supabaseSelect<Record<string, unknown>>(
-        'leads',
-        { query: `select=*&session_id=eq.${sid}&limit=1` },
-        config
-      ),
-      supabaseSelect<Record<string, unknown>>(
-        'sessions',
-        { query: `select=*&id=eq.${sid}&limit=1` },
-        config
-      ),
-      supabaseSelect<{
-        id: string;
-        reviewer_name: string;
-        annotation: string;
-        created_at: string;
-      }>(
-        'chat_feedback',
-        {
-          query: `select=id,reviewer_name,annotation,created_at&session_id=eq.${sid}&order=created_at.desc&limit=50`,
-        },
-        config
-      ),
-      supabaseSelect<{ event_type: string; created_at: string }>(
-        'widget_events',
-        {
-          query: `select=event_type,created_at&session_id=eq.${sid}&order=created_at.asc&limit=200`,
-        },
-        config
-      ),
-      safe(
-        supabaseSelect<{
-          execution_id: string | null;
-          workflow: string;
-          model_real: string | null;
-          provider: string | null;
-          prompt_tokens: number | null;
-          completion_tokens: number | null;
-          total_tokens: number | null;
-          cached_tokens: number | null;
-          reasoning_tokens: number | null;
-          cost_usd: number | string | null;
-          cost_input_usd: number | string | null;
-          cost_output_usd: number | string | null;
-          duration_ms: number | null;
-          exec_started_at: string;
-          exec_ended_at: string;
-          span_id: string | null;
-        }>(
-          'mirador_session_costs',
+    const [history, leadRes, sessionRes, feedbackRes, eventsRes, generations] =
+      await Promise.all([
+        supabaseSelect<ChatHistoryRow>(
+          'mirador_chat_history',
           {
-            query: `select=execution_id,workflow,model_real,provider,prompt_tokens,completion_tokens,total_tokens,cached_tokens,reasoning_tokens,cost_usd,cost_input_usd,cost_output_usd,duration_ms,exec_started_at,exec_ended_at,span_id&session_id=eq.${sid}&order=exec_started_at.asc&limit=500`,
+            query: `select=id,session_id,message&session_id=eq.${sid}&order=id.asc&limit=2000`,
           },
           config
-        )
-      ),
-    ]);
+        ),
+        supabaseSelect<Record<string, unknown>>(
+          'leads',
+          { query: `select=*&session_id=eq.${sid}&limit=1` },
+          config
+        ),
+        supabaseSelect<Record<string, unknown>>(
+          'sessions',
+          { query: `select=*&id=eq.${sid}&limit=1` },
+          config
+        ),
+        supabaseSelect<{
+          id: string;
+          reviewer_name: string;
+          annotation: string;
+          created_at: string;
+        }>(
+          'chat_feedback',
+          {
+            query: `select=id,reviewer_name,annotation,created_at&session_id=eq.${sid}&order=created_at.desc&limit=50`,
+          },
+          config
+        ),
+        supabaseSelect<{ event_type: string; created_at: string }>(
+          'widget_events',
+          {
+            query: `select=event_type,created_at&session_id=eq.${sid}&order=created_at.asc&limit=200`,
+          },
+          config
+        ),
+        fetchSessionGenerations(sid).catch((err) => {
+          console.warn('[langfuse] session fetch failed', err);
+          return [] as LangfuseObservation[];
+        }),
+      ]);
 
     const messages = history.rows.map((r) => ({
       id: r.id,
@@ -139,49 +152,49 @@ export async function GET(
       raw: r.message,
     }));
 
-    const costs = costsRes.rows.map((r) => ({
-      execution_id: r.execution_id,
-      workflow: r.workflow,
-      model: r.model_real,
-      provider: r.provider,
-      prompt_tokens: num(r.prompt_tokens),
-      completion_tokens: num(r.completion_tokens),
-      total_tokens: num(r.total_tokens),
-      cached_tokens: num(r.cached_tokens),
-      reasoning_tokens: num(r.reasoning_tokens),
-      cost_usd: num(r.cost_usd),
-      cost_input_usd: num(r.cost_input_usd),
-      cost_output_usd: num(r.cost_output_usd),
-      duration_ms: r.duration_ms,
-      exec_started_at: r.exec_started_at,
-      exec_ended_at: r.exec_ended_at,
-      matched: r.span_id !== null,
+    const turns: TurnRecord[] = generations.map(observationToTurn);
+    // Mantener compatibilidad de shape con el cliente legacy.
+    const costs = turns.map((t) => ({
+      execution_id: t.observation_id,
+      workflow: t.workflow,
+      model: t.model,
+      provider: t.model ? t.model.split('/')[0] : null,
+      prompt_tokens: t.prompt_tokens,
+      completion_tokens: t.completion_tokens,
+      total_tokens: t.total_tokens,
+      cached_tokens: 0,
+      reasoning_tokens: 0,
+      cost_usd: t.cost_usd,
+      cost_input_usd: t.cost_input_usd,
+      cost_output_usd: t.cost_output_usd,
+      duration_ms: t.duration_ms,
+      exec_started_at: t.started_at,
+      exec_ended_at: t.ended_at ?? t.started_at,
+      matched: t.matched,
+      agent: t.agent,
+      generation_name: t.generation_name,
+      input_price: t.input_price,
+      output_price: t.output_price,
     }));
 
-    const cost_totals = costs.reduce(
-      (acc, c) => ({
-        cost_usd: acc.cost_usd + c.cost_usd,
-        cost_input_usd: acc.cost_input_usd + c.cost_input_usd,
-        cost_output_usd: acc.cost_output_usd + c.cost_output_usd,
-        prompt_tokens: acc.prompt_tokens + c.prompt_tokens,
-        completion_tokens: acc.completion_tokens + c.completion_tokens,
-        total_tokens: acc.total_tokens + c.total_tokens,
-        cached_tokens: acc.cached_tokens + c.cached_tokens,
-        reasoning_tokens: acc.reasoning_tokens + c.reasoning_tokens,
-        llm_calls: acc.llm_calls + 1,
-      }),
-      {
-        cost_usd: 0,
-        cost_input_usd: 0,
-        cost_output_usd: 0,
-        prompt_tokens: 0,
-        completion_tokens: 0,
-        total_tokens: 0,
-        cached_tokens: 0,
-        reasoning_tokens: 0,
-        llm_calls: 0,
-      }
-    );
+    const totals = totalsFromTurns(turns);
+    const cost_totals = {
+      // shape histórica
+      cost_usd: totals.cost_usd,
+      cost_input_usd: totals.cost_input_usd,
+      cost_output_usd: totals.cost_output_usd,
+      prompt_tokens: totals.prompt_tokens,
+      completion_tokens: totals.completion_tokens,
+      total_tokens: totals.total_tokens,
+      cached_tokens: 0,
+      reasoning_tokens: 0,
+      llm_calls: totals.llm_calls,
+      // métricas nuevas
+      latency_total_ms: totals.latency_total_ms,
+      models_used: totals.models_used,
+      workflows: totals.workflows,
+      avg_cost_per_call: totals.avg_cost_per_call,
+    };
 
     return NextResponse.json({
       session_id: sid,

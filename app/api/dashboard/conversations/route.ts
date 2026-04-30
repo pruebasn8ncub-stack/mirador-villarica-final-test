@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseConfig, supabaseSelect } from '@/lib/chat/supabase';
 import { isAuthed } from '@/lib/feedback/auth';
+import {
+  getLangfuseConfig,
+  langfuseList,
+  observationToTurn,
+  type LangfuseObservation,
+} from '@/lib/langfuse/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,6 +56,45 @@ function extractRole(message: unknown): 'user' | 'assistant' | 'system' | 'tool'
   return 'system';
 }
 
+interface SessionCost {
+  cost_usd: number;
+  llm_calls: number;
+  last_call_at: string | null;
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function fetchCostBySession(): Promise<Map<string, SessionCost>> {
+  const lf = getLangfuseConfig();
+  if (!lf) return new Map();
+  // Ventana de 90 días, filtramos GENERATIONs con sessionId UUID (= chat session).
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const observations = await langfuseList<LangfuseObservation>(
+    '/api/public/observations',
+    { type: 'GENERATION', fromStartTime: since, limit: 100 },
+    10000,
+    lf
+  );
+  const map = new Map<string, SessionCost>();
+  for (const obs of observations) {
+    const meta = obs.metadata?.requester_metadata;
+    const fromMeta = meta?.sessionId || meta?.session_id;
+    const sessionId =
+      typeof fromMeta === 'string' && UUID_RE.test(fromMeta) ? fromMeta : obs.traceId;
+    if (!UUID_RE.test(sessionId)) continue;
+    const turn = observationToTurn(obs);
+    const cur =
+      map.get(sessionId) ?? { cost_usd: 0, llm_calls: 0, last_call_at: null };
+    cur.cost_usd += turn.cost_usd;
+    cur.llm_calls += 1;
+    const ref = turn.ended_at ?? turn.started_at;
+    if (!cur.last_call_at || ref > cur.last_call_at) cur.last_call_at = ref;
+    map.set(sessionId, cur);
+  }
+  return map;
+}
+
 export async function GET(req: Request) {
   if (!isAuthed()) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -64,7 +109,7 @@ export async function GET(req: Request) {
   const limit = Math.min(Number(url.searchParams.get('limit') || 80), 200);
 
   try {
-    const [history, leads, sessions] = await Promise.all([
+    const [history, leads, sessions, costMap] = await Promise.all([
       supabaseSelect<ChatHistoryRow>(
         'mirador_chat_history',
         { query: 'select=id,session_id,message&order=id.asc&limit=20000' },
@@ -80,6 +125,10 @@ export async function GET(req: Request) {
         { query: 'select=id,created_at,user_agent,referrer&limit=5000' },
         config
       ),
+      fetchCostBySession().catch((err) => {
+        console.warn('[langfuse] cost map fetch failed', err);
+        return new Map<string, SessionCost>();
+      }),
     ]);
 
     type Convo = {
@@ -89,9 +138,11 @@ export async function GET(req: Request) {
       first_user_message: string | null;
       last_message: string | null;
       last_role: string | null;
-      first_at: string | null; // approx via session.created_at o lead.created_at
+      first_at: string | null;
       lead: LeadMini | null;
       session: SessionMini | null;
+      total_cost_usd: number;
+      llm_calls: number;
     };
 
     const convoMap = new Map<string, Convo>();
@@ -103,6 +154,7 @@ export async function GET(req: Request) {
       if (!convo) {
         const lead = leadMap.get(row.session_id) || null;
         const session = sessionMap.get(row.session_id) || null;
+        const cost = costMap.get(row.session_id);
         convo = {
           session_id: row.session_id,
           message_count: 0,
@@ -113,6 +165,8 @@ export async function GET(req: Request) {
           first_at: session?.created_at || lead?.created_at || null,
           lead,
           session,
+          total_cost_usd: cost?.cost_usd ?? 0,
+          llm_calls: cost?.llm_calls ?? 0,
         };
         convoMap.set(row.session_id, convo);
       }
@@ -129,9 +183,7 @@ export async function GET(req: Request) {
       }
     }
 
-    let items = Array.from(convoMap.values()).filter(
-      (c) => c.message_count > 0
-    );
+    let items = Array.from(convoMap.values()).filter((c) => c.message_count > 0);
 
     if (q) {
       const lo = q.toLowerCase();

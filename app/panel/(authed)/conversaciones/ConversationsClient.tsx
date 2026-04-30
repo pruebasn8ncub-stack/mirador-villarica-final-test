@@ -48,6 +48,8 @@ interface ConvoListItem {
     user_agent: string | null;
     referrer: string | null;
   } | null;
+  total_cost_usd: number;
+  llm_calls: number;
 }
 
 interface ConvoListResponse {
@@ -91,6 +93,10 @@ interface CostTotals {
   cached_tokens: number;
   reasoning_tokens: number;
   llm_calls: number;
+  latency_total_ms?: number;
+  models_used?: string[];
+  workflows?: string[];
+  avg_cost_per_call?: number;
 }
 
 interface ConvoDetail {
@@ -317,6 +323,14 @@ function ConvoRow({
           <span className="text-[10.5px] tabular-nums text-bosque-600">
             {item.message_count} msgs
           </span>
+          {item.total_cost_usd > 0 && (
+            <span
+              className="font-display text-[10.5px] tabular-nums text-bosque-900"
+              title={`${item.llm_calls} llamadas LLM`}
+            >
+              {fmtUsd(item.total_cost_usd)}
+            </span>
+          )}
           <ChevronRight className="mt-0.5 h-3.5 w-3.5 text-bosque-400" />
         </div>
       </button>
@@ -453,6 +467,28 @@ function ConversationDrawer({
                   {fmtTok(data.cost_totals.total_tokens)} tok ·{' '}
                   {data.cost_totals.llm_calls} calls
                 </Tag>
+                {data.cost_totals.avg_cost_per_call !== undefined &&
+                  data.cost_totals.avg_cost_per_call > 0 && (
+                    <Tag>~{fmtUsd(data.cost_totals.avg_cost_per_call)}/call</Tag>
+                  )}
+                {data.cost_totals.latency_total_ms !== undefined &&
+                  data.cost_totals.latency_total_ms > 0 && (
+                    <Tag>
+                      {(data.cost_totals.latency_total_ms / 1000).toFixed(1)}s LLM
+                    </Tag>
+                  )}
+                {data.cost_totals.models_used &&
+                  data.cost_totals.models_used.length > 0 && (
+                    <Tag>
+                      {data.cost_totals.models_used
+                        .map((m) => m.split('/').pop())
+                        .slice(0, 2)
+                        .join(' · ')}
+                      {data.cost_totals.models_used.length > 2
+                        ? ` +${data.cost_totals.models_used.length - 2}`
+                        : ''}
+                    </Tag>
+                  )}
               </div>
             )}
           </div>
