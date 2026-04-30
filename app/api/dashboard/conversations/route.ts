@@ -4,6 +4,7 @@ import { isAuthed } from '@/lib/feedback/auth';
 import {
   getLangfuseConfig,
   langfuseList,
+  isExcludedObservation,
   observationToTurn,
   type LangfuseObservation,
 } from '@/lib/langfuse/client';
@@ -70,12 +71,14 @@ async function fetchCostBySession(): Promise<Map<string, SessionCost>> {
   if (!lf) return new Map();
   // Ventana de 90 días, filtramos GENERATIONs con sessionId UUID (= chat session).
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const observations = await langfuseList<LangfuseObservation>(
-    '/api/public/observations',
-    { type: 'GENERATION', fromStartTime: since, limit: 100 },
-    10000,
-    lf
-  );
+  const observations = (
+    await langfuseList<LangfuseObservation>(
+      '/api/public/observations',
+      { type: 'GENERATION', fromStartTime: since, limit: 100 },
+      10000,
+      lf
+    )
+  ).filter((o) => !isExcludedObservation(o));
   const map = new Map<string, SessionCost>();
   for (const obs of observations) {
     const meta = obs.metadata?.requester_metadata;

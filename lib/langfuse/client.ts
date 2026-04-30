@@ -77,6 +77,19 @@ export interface LangfuseListResponse<T> {
 
 export const LITELLM_TRACE_NAME = 'litellm-acompletion';
 
+// Generation names a excluir del panel: corresponden a workflows o agentes
+// retirados que dejaron observations residuales en Langfuse. Como la API pública
+// de Langfuse no permite borrar observations individuales, los filtramos acá.
+const EXCLUDED_OBSERVATION_NAMES = new Set<string>(['background-extractor-call']);
+
+export function isExcludedObservation(obs: LangfuseObservation): boolean {
+  if (obs.name && EXCLUDED_OBSERVATION_NAMES.has(obs.name)) return true;
+  const reqMeta = obs.metadata?.requester_metadata;
+  if (reqMeta?.workflow === 'mirador-background-lead-updater') return true;
+  if (reqMeta?.agent === 'background-extractor') return true;
+  return false;
+}
+
 export function getLangfuseConfig(): LangfuseConfig | null {
   const host = process.env.LANGFUSE_HOST || 'https://us.cloud.langfuse.com';
   const publicKey = process.env.LANGFUSE_PUBLIC_KEY;

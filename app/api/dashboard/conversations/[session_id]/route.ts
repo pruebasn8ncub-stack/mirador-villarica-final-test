@@ -3,6 +3,7 @@ import { getSupabaseConfig, supabaseSelect } from '@/lib/chat/supabase';
 import { isAuthed } from '@/lib/feedback/auth';
 import {
   getLangfuseConfig,
+  isExcludedObservation,
   langfuseGet,
   langfuseList,
   observationToTurn,
@@ -77,7 +78,7 @@ async function fetchSessionGenerations(
       500,
       lfConfig
     );
-    all.push(...obs);
+    all.push(...obs.filter((o) => !isExcludedObservation(o)));
   }
   // Ordenar por startTime ascendente para el agrupamiento por turno en el cliente.
   all.sort((a, b) => a.startTime.localeCompare(b.startTime));

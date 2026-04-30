@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAuthed } from '@/lib/feedback/auth';
 import {
   getLangfuseConfig,
+  isExcludedObservation,
   langfuseList,
   observationToTurn,
   type LangfuseObservation,
@@ -56,12 +57,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'session_id inválido' }, { status: 400 });
     }
     try {
-      const observations = await langfuseList<LangfuseObservation>(
-        '/api/public/observations',
-        { traceId: sessionId, type: 'GENERATION', limit: 100 },
-        500,
-        lf
-      );
+      const observations = (
+        await langfuseList<LangfuseObservation>(
+          '/api/public/observations',
+          { traceId: sessionId, type: 'GENERATION', limit: 100 },
+          500,
+          lf
+        )
+      ).filter((o) => !isExcludedObservation(o));
       observations.sort((a, b) => a.startTime.localeCompare(b.startTime));
       const turns = observations.map(observationToTurn);
       const totals = {
@@ -109,16 +112,18 @@ export async function GET(req: Request) {
   const since = presetToDate(preset);
 
   try {
-    const observations = await langfuseList<LangfuseObservation>(
-      '/api/public/observations',
-      {
-        type: 'GENERATION',
-        fromStartTime: since ? since.toISOString() : undefined,
-        limit: 100,
-      },
-      10000,
-      lf
-    );
+    const observations = (
+      await langfuseList<LangfuseObservation>(
+        '/api/public/observations',
+        {
+          type: 'GENERATION',
+          fromStartTime: since ? since.toISOString() : undefined,
+          limit: 100,
+        },
+        10000,
+        lf
+      )
+    ).filter((o) => !isExcludedObservation(o));
 
     const turns = observations.map((obs) => ({
       ...observationToTurn(obs),
