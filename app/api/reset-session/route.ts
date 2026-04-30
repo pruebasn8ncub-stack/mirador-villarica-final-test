@@ -12,31 +12,13 @@ const bodySchema = z.object({
   session_id: z.string().regex(UUID_RE, 'session_id debe ser UUID'),
 });
 
-// Campos del lead que se limpian al resetear. Se conservan id, session_id,
+// Campos BANT del lead que se limpian al resetear. Se conservan id, session_id,
 // nombre, email, whatsapp, project_slug, created_at y updated_at.
 const LEAD_RESET_FIELDS = {
-  intencion: null,
-  plazo: null,
-  presupuesto: null,
-  uso: null,
-  forma_pago: null,
-  rango_presupuesto: null,
-  pie_disponible: null,
-  decisor: null,
-  pre_aprobacion: null,
   parcela_interes: null,
-  parcelas_recomendadas: null,
-  resumen: null,
-  resumen_enviado_at: null,
-  canales_envio: null,
-  broker_requested_at: null,
-  broker_request_reason: null,
-  notified_diego: false,
-  notified_at: null,
-  last_notified_score: null,
-  score: 'FRIO',
-  score_numeric: 0,
-  score_history: [],
+  plazo: null,
+  forma_pago: null,
+  uso: null,
 };
 
 export async function POST(req: Request) {
