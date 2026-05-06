@@ -55,10 +55,11 @@ export function Loader() {
   useGSAP(
     () => {
       if (!show || !mounted) return;
+      if (!containerRef.current) return;
 
-      const mm = gsap.matchMedia();
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      mm.add('(prefers-reduced-motion: reduce)', () => {
+      if (reduced) {
         gsap.set([miradorRef.current, tsRef.current, dividerRef.current], { autoAlpha: 1 });
         gsap.set(sceneRef.current, { autoAlpha: 0 });
         const tl = gsap.timeline({ onComplete: finish });
@@ -66,9 +67,12 @@ export function Loader() {
           .to({}, { duration: 0.6 })
           .to(containerRef.current, { autoAlpha: 0, duration: 0.4 });
         timelineRef.current = tl;
-      });
 
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        const failsafe = window.setTimeout(finish, MAX_DURATION_MS);
+        return () => window.clearTimeout(failsafe);
+      }
+
+      {
         const tl = gsap.timeline({
           defaults: { ease: 'power2.inOut' },
           onComplete: finish,
@@ -142,7 +146,7 @@ export function Loader() {
             onStart: () => setSkipVisible(true),
           }
         );
-      });
+      }
 
       const failsafe = window.setTimeout(finish, MAX_DURATION_MS);
       return () => window.clearTimeout(failsafe);
