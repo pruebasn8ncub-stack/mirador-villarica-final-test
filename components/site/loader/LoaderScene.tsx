@@ -1,15 +1,16 @@
 import Image from 'next/image';
+import type { RefObject } from 'react';
 import { VolcanoSvg } from './VolcanoSvg';
 import { MountainsSvg } from './MountainsSvg';
 import { TreesSvg } from './TreesSvg';
 import { WaterSvg } from './WaterSvg';
 
 type Props = {
-  miradorRef: React.RefObject<HTMLDivElement>;
-  tsRef: React.RefObject<HTMLDivElement>;
-  dividerRef: React.RefObject<HTMLDivElement>;
-  sceneRef: React.RefObject<HTMLDivElement>;
-  photoRef: React.RefObject<HTMLDivElement>;
+  miradorRef: RefObject<HTMLDivElement>;
+  tsRef: RefObject<HTMLDivElement>;
+  dividerRef: RefObject<HTMLDivElement>;
+  sceneRef: RefObject<HTMLDivElement>;
+  photoRef: RefObject<HTMLDivElement>;
 };
 
 export function LoaderScene({ miradorRef, tsRef, dividerRef, sceneRef, photoRef }: Props) {
