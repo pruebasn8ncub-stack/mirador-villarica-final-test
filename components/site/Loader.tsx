@@ -50,7 +50,6 @@ export function Loader() {
       // ignore
     }
     setShow(false);
-    document.body.style.overflow = '';
   };
 
   useGSAP(
@@ -122,6 +121,7 @@ export function Loader() {
             { y: -40, scale: 0.9, autoAlpha: 0.7, duration: 0.6 },
             3.8
           )
+          // bosque-950 → crema (matches tailwind.config.ts tokens)
           .to(overlayRef.current,
             {
               background: 'linear-gradient(180deg, #071410 0%, rgba(7,20,16,0.4) 50%, #faf6ee 100%)',
@@ -157,7 +157,7 @@ export function Loader() {
   if (!mounted || !show) return null;
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-[100]">
+    <div ref={containerRef} className="fixed inset-0 z-[100]" aria-hidden="true">
       <div
         ref={overlayRef}
         className="absolute inset-0 bg-bosque-950"
