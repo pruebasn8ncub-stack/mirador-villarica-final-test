@@ -1,187 +1,130 @@
-'use client';
-
-import { motion } from 'framer-motion';
-import { Mail, MapPin, Phone, Instagram, Facebook, Youtube, MessageCircle, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Instagram, Facebook, Youtube, Mail, Phone, MapPin } from 'lucide-react';
 import { DIEGO, PROYECTO } from '@/data/content';
-import { openChatWith } from '@/lib/chat-events';
 
-const TRUST = [
-  '12 años en parcelaciones del sur',
-  'SAG aprobado · Roles listos',
-  'Inscripción inmediata en CBR',
+const FOOTER_NAV = [
+  { href: '#proyecto', label: 'Proyecto' },
+  { href: '#ubicacion', label: 'Ubicación' },
+  { href: '#financiamiento', label: 'Financiamiento' },
+  { href: '#tour', label: 'Tour 360°' },
+  { href: '#faq', label: 'FAQ' },
 ];
 
-const NAV_COLS = [
+const SOCIAL = [
+  { href: 'https://instagram.com/terra.segura', icon: Instagram, label: 'Instagram' },
   {
-    title: 'Proyecto',
-    links: [
-      { label: 'Conocer', href: '#proyecto' },
-      { label: 'Master Plan', href: '#master-plan' },
-      { label: 'Galería', href: '#galeria' },
-      { label: 'Tour 360°', href: '#tour-360' },
-      { label: 'Ubicación', href: '#ubicacion' },
-    ],
+    href: 'https://facebook.com/profile.php?id=61578113903295',
+    icon: Facebook,
+    label: 'Facebook',
   },
-  {
-    title: 'Comprar',
-    links: [
-      { label: 'Cotizar', href: '#cotizar' },
-      { label: 'Simulador hipotecario', href: '#cotizar' },
-      { label: 'Reservar parcela', href: '#cotizar' },
-      { label: 'Brochure (PDF)', href: PROYECTO.brochureUrl },
-    ],
-  },
+  { href: 'https://youtube.com/@PortalTerrenocom', icon: Youtube, label: 'YouTube' },
 ];
 
 export function Footer() {
   return (
-    <footer className="relative bg-bosque-950 text-crema">
-      <div className="mx-auto max-w-7xl px-5 pb-10 pt-20 md:px-10 md:pt-24">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.7 }}
-          className="rounded-[28px] bg-gradient-to-br from-bosque-800 via-bosque-900 to-bosque-950 p-8 ring-1 ring-crema/10 md:p-12"
-        >
-          <div className="grid items-center gap-8 md:grid-cols-[1.5fr_1fr]">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza">
-                ¿Listo para asegurar tu parcela?
+    <footer className="relative bg-bosque-950 text-crema/85">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12 py-16 sm:py-20">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
+          <div className="lg:col-span-5">
+            <Image
+              src="/assets/mirador-logo.png"
+              alt="Mirador de Villarrica"
+              width={240}
+              height={240}
+              className="size-24 sm:size-28 object-contain rounded-2xl mb-7"
+            />
+            <p className="text-crema/65 text-[15px] leading-relaxed max-w-md">
+              {PROYECTO.totalParcelas} parcelas en {PROYECTO.superficieTotal} de bosque
+              nativo. SAG aprobado. Crédito directo con Terra Segura Inmobiliaria.
+            </p>
+            <div className="mt-9 pt-7 border-t border-crema/10 max-w-md">
+              <p className="text-[10px] tracking-eyebrow uppercase text-crema/45 mb-4">
+                Un proyecto de
               </p>
-              <h2 className="mt-3 font-display text-3xl font-light leading-[1.1] tracking-display md:text-4xl lg:text-5xl">
-                Conversemos sin compromiso.<br />
-                <span className="italic text-mostaza-300">Lucía o Diego — tú eliges.</span>
-              </h2>
-            </div>
-            <div className="flex flex-col gap-3 md:items-end">
-              <button
-                onClick={() => openChatWith({ intent: 'general' })}
-                className="group flex items-center justify-center gap-2 rounded-full bg-mostaza px-7 py-3.5 text-sm font-semibold text-bosque-900 shadow-xl shadow-mostaza-500/20 transition hover:-translate-y-0.5 hover:bg-mostaza-400"
-              >
-                <MessageCircle className="h-4 w-4 transition-transform group-hover:rotate-12" strokeWidth={2.4} />
-                Hablar con Lucía
-              </button>
-              <a
-                href={`https://wa.me/${DIEGO.whatsappRaw}?text=${encodeURIComponent(`Hola ${DIEGO.nombre.split(' ')[0]}, me interesa Mirador de Villarrica.`)}`}
-                target="_blank"
-                rel="noopener"
-                className="flex items-center justify-center gap-2 rounded-full border border-crema/25 px-7 py-3.5 text-sm font-medium text-crema transition hover:border-mostaza hover:text-mostaza"
-              >
-                <Phone className="h-4 w-4" strokeWidth={2.4} />
-                WhatsApp · {DIEGO.nombre}
-              </a>
+              <Image
+                src="/assets/terra-segura-logo.png"
+                alt="Terra Segura Inmobiliaria"
+                width={400}
+                height={83}
+                className="h-9 sm:h-10 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+              />
             </div>
           </div>
-        </motion.div>
 
-        <div className="mt-16 grid gap-12 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-mostaza text-bosque-900 font-display text-xl font-bold ring-2 ring-mostaza/30">
-                M
-              </div>
-              <div className="leading-tight">
-                <p className="font-display text-lg font-semibold tracking-display">
-                  {PROYECTO.nombre}
-                </p>
-                <p className="text-[10.5px] uppercase tracking-eyebrow text-crema/65">
-                  por {PROYECTO.desarrolladora}
-                </p>
-              </div>
-            </div>
-            <p className="mt-5 max-w-md text-[14px] leading-relaxed text-crema/70">
-              Parcelación rural ubicada en {PROYECTO.ubicacion}.
-              {' '}{PROYECTO.totalParcelas} parcelas desde 5.000 m² entre el volcán Villarrica y el lago Colico.
+          <div className="lg:col-span-3">
+            <p className="text-[11px] tracking-eyebrow uppercase text-mostaza mb-5">
+              Navegar
             </p>
-            <ul className="mt-6 space-y-2">
-              {TRUST.map((t) => (
-                <li key={t} className="flex items-center gap-2 text-[13px] text-crema/75">
-                  <ShieldCheck className="h-3.5 w-3.5 text-mostaza" strokeWidth={2.4} />
-                  {t}
+            <ul className="space-y-3">
+              {FOOTER_NAV.map((n) => (
+                <li key={n.href}>
+                  <Link
+                    href={n.href}
+                    className="text-crema/70 hover:text-mostaza text-[15px] transition-colors"
+                  >
+                    {n.label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {NAV_COLS.map((col) => (
-            <div key={col.title} className="md:col-span-2">
-              <p className="mb-4 text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza">
-                {col.title}
-              </p>
-              <ul className="space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <a
-                      href={l.href}
-                      className="text-[14px] text-crema/75 transition-colors hover:text-mostaza"
-                    >
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-
-          <div className="md:col-span-3">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza">
+          <div className="lg:col-span-4">
+            <p className="text-[11px] tracking-eyebrow uppercase text-mostaza mb-5">
               Contacto
             </p>
-            <ul className="space-y-3 text-[13.5px] text-crema/80">
+            <ul className="space-y-4 text-[15px]">
               <li>
                 <p className="font-medium text-crema">{DIEGO.nombre}</p>
-                <p className="text-crema/60">Asesor inmobiliario</p>
+                <p className="text-crema/55 text-xs mt-0.5">Broker · Terra Segura</p>
               </li>
-              <li className="flex items-start gap-2">
-                <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mostaza" strokeWidth={2.4} />
-                <a href={`tel:${DIEGO.whatsappRaw}`} className="hover:text-mostaza">
-                  {DIEGO.whatsapp}
+              <li>
+                <a
+                  href={`tel:${DIEGO.whatsappRaw}`}
+                  className="inline-flex items-center gap-3 text-crema/70 hover:text-crema transition-colors"
+                >
+                  <Phone className="size-4 text-mostaza" /> {DIEGO.whatsapp}
                 </a>
               </li>
-              <li className="flex items-start gap-2">
-                <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mostaza" strokeWidth={2.4} />
-                <a href={`mailto:${DIEGO.email}`} className="hover:text-mostaza">
-                  {DIEGO.email}
+              <li>
+                <a
+                  href={`mailto:${DIEGO.email}`}
+                  className="inline-flex items-center gap-3 text-crema/70 hover:text-crema transition-colors"
+                >
+                  <Mail className="size-4 text-mostaza" /> {DIEGO.email}
                 </a>
               </li>
-              <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mostaza" strokeWidth={2.4} />
+              <li className="flex items-start gap-3 text-crema/65">
+                <MapPin className="size-4 text-mostaza mt-1 shrink-0" />
                 <span>{DIEGO.oficina}</span>
               </li>
             </ul>
 
-            <div className="mt-5 flex items-center gap-2">
-              <SocialLink href="https://instagram.com/terra.segura" label="Instagram"><Instagram className="h-4 w-4" strokeWidth={2.2} /></SocialLink>
-              <SocialLink href="https://facebook.com/profile.php?id=61578113903295" label="Facebook"><Facebook className="h-4 w-4" strokeWidth={2.2} /></SocialLink>
-              <SocialLink href="https://youtube.com/@PortalTerrenocom" label="YouTube"><Youtube className="h-4 w-4" strokeWidth={2.2} /></SocialLink>
+            <div className="mt-8 flex items-center gap-2">
+              {SOCIAL.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  className="size-10 rounded-full border border-crema/15 hover:border-mostaza hover:text-mostaza flex items-center justify-center transition-colors"
+                >
+                  <s.icon className="size-4" />
+                </a>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-start gap-3 border-t border-crema/10 pt-6 text-[12px] text-crema/55 md:flex-row md:items-center md:justify-between">
-          <p>© {new Date().getFullYear()} {PROYECTO.desarrolladora}. Todos los derechos reservados.</p>
-          <p className="flex flex-wrap gap-x-5 gap-y-1">
-            <a href="/politica-privacidad" className="hover:text-mostaza">Política de privacidad</a>
-            <a href="/terminos" className="hover:text-mostaza">Términos y condiciones</a>
-            <span className="text-crema/40">Sitio rediseñado · v2</span>
+        <div className="mt-16 pt-8 border-t border-crema/10 flex flex-wrap items-center justify-between gap-4 text-xs text-crema/50">
+          <p>© {new Date().getFullYear()} Terra Segura Inmobiliaria. Todos los derechos reservados.</p>
+          <p>
+            Diseño y desarrollo · <span className="italic">in-house</span>
           </p>
         </div>
       </div>
     </footer>
-  );
-}
-
-function SocialLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener"
-      aria-label={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-crema/20 text-crema/80 transition hover:border-mostaza hover:bg-mostaza/10 hover:text-mostaza"
-    >
-      {children}
-    </a>
   );
 }

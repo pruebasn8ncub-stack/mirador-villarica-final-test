@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirador de Villarrica · Camino a producción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5F1E8;
+    --cream-2:#EFE9DB;
+    --ink:#191919;
+    --ink-soft:#3A3A38;
+    --muted:#6B6B66;
+    --rust:#CC785C;
+    --rust-deep:#A85B42;
+    --line:rgba(25,25,25,0.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  html,body{height:100%;background:var(--cream);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{scroll-snap-type:y mandatory;overflow-y:scroll}
+  .slide > *{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1)}
+  .slide.is-active > *{opacity:1;transform:translateY(0)}
+  .slide.is-active > *:nth-child(2){transition-delay:.05s}
+  .slide.is-active > *:nth-child(3){transition-delay:.1s}
+  .slide.is-active > *:nth-child(4){transition-delay:.15s}
+  .slide.is-active > *:nth-child(5){transition-delay:.2s}
+  .slide.is-active > *:nth-child(6){transition-delay:.25s}
+  .slide.is-active > *:nth-child(7){transition-delay:.3s}
+  .slide.is-active > *:nth-child(8){transition-delay:.35s}
+  .slide.is-active > *:nth-child(9){transition-delay:.4s}
+  @media (prefers-reduced-motion: reduce){
+    .slide > *{opacity:1;transform:none;transition:none}
+    html{scroll-behavior:auto}
+  }
+  .deck{display:flex;flex-direction:column}
+  .slide{
+    height:100vh;
+    scroll-snap-align:start;
+    padding:clamp(40px, 5vh, 64px) clamp(48px, 6vw, 96px);
+    display:flex;flex-direction:column;justify-content:center;
+    position:relative;
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .slide-num{position:absolute;top:clamp(20px,3vh,32px);right:clamp(24px,3vw,40px);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+  .brand{position:absolute;top:clamp(20px,3vh,32px);left:clamp(24px,3vw,40px);font-size:11px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+  .brand b{color:var(--rust);font-weight:500}
+  h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:500;letter-spacing:-0.02em;line-height:1.05}
+  h1{font-size:clamp(44px, 6.5vw, 72px);max-width:18ch}
+  h2{font-size:clamp(32px, 4.2vw, 50px);max-width:22ch;margin-bottom:clamp(16px,2.5vh,28px)}
+  h3{font-size:clamp(20px,2.2vw,26px);margin-bottom:10px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--rust);margin-bottom:clamp(12px,2vh,20px);font-weight:600}
+  p{font-size:clamp(15px, 1.3vw, 18px);line-height:1.5;color:var(--ink-soft);max-width:68ch}
+  p.lead{font-size:clamp(17px, 1.5vw, 21px);color:var(--ink);max-width:62ch;line-height:1.45}
+  .meta{margin-top:clamp(24px,4vh,48px);font-size:13px;color:var(--muted);letter-spacing:.02em}
+  .meta span{color:var(--ink)}
+  ul.clean{list-style:none;margin-top:clamp(12px,2vh,20px)}
+  ul.clean li{padding:clamp(9px,1.3vh,14px) 0;border-top:1px solid var(--line);font-size:clamp(15px,1.35vw,18px);color:var(--ink);display:flex;gap:18px;align-items:baseline}
+  ul.clean li:last-child{border-bottom:1px solid var(--line)}
+  ul.clean li .idx{font-family:'Fraunces',serif;color:var(--rust);font-size:16px;min-width:30px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,2.5vw,40px);margin-top:clamp(16px,2.5vh,24px)}
+  .card{background:var(--cream-2);border:1px solid var(--line);border-radius:4px;padding:clamp(16px,2vw,24px) clamp(18px,2.2vw,28px)}
+  .card h4{font-family:'Fraunces',serif;font-size:clamp(16px,1.4vw,19px);font-weight:500;margin-bottom:8px;color:var(--ink)}
+  .card p{font-size:clamp(13px,1.1vw,15px);color:var(--ink-soft);line-height:1.45}
+  .tag{display:inline-block;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--rust);border:1px solid var(--rust);padding:4px 10px;border-radius:999px;margin-bottom:14px;font-weight:600;align-self:flex-start}
+  .bullets{margin-top:clamp(12px,2vh,18px)}
+  .bullets li{position:relative;padding:clamp(6px,1vh,10px) 0 clamp(6px,1vh,10px) 26px;font-size:clamp(14px,1.25vw,17px);color:var(--ink-soft);list-style:none;line-height:1.45}
+  .bullets li::before{content:"";position:absolute;left:0;top:calc(clamp(6px,1vh,10px) + 0.7em);width:14px;height:2px;background:var(--rust)}
+  .bullets li b{color:var(--ink);font-weight:600}
+  .two-col{display:grid;grid-template-columns:200px 1fr;gap:clamp(24px,4vw,56px);align-items:start;margin-top:clamp(12px,2vh,20px)}
+  .two-col .label{font-family:'Fraunces',serif;font-size:clamp(16px,1.6vw,20px);color:var(--rust);font-style:italic;padding-top:4px}
+  .rule{width:64px;height:2px;background:var(--rust);margin-bottom:clamp(16px,2.5vh,24px)}
+  .footer-note{position:absolute;bottom:clamp(18px,2.5vh,28px);left:clamp(48px,6vw,96px);right:clamp(48px,6vw,96px);display:flex;justify-content:space-between;font-size:11px;color:var(--muted);letter-spacing:.05em}
+  .big-number{font-family:'Fraunces',serif;font-size:clamp(80px,11vw,130px);color:var(--rust);line-height:1;margin-bottom:12px;font-weight:400}
+  .cover-mark{font-family:'Fraunces',serif;font-style:italic;color:var(--rust);font-size:clamp(16px,1.6vw,20px);margin-bottom:clamp(16px,2.5vh,24px)}
+  .pill-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+  .pill{background:#fff;border:1px solid var(--line);padding:8px 16px;border-radius:999px;font-size:14px;color:var(--ink)}
+  .status-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:clamp(16px,2.5vh,28px)}
+  .status{padding:clamp(14px,2vh,20px);background:var(--cream-2);border-radius:4px;border-left:3px solid var(--rust)}
+  .status .k{font-family:'Fraunces',serif;font-size:clamp(22px,2.6vw,30px);color:var(--ink);line-height:1}
+  .status .l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .q{font-family:'Fraunces',serif;font-style:italic;font-size:clamp(16px,1.6vw,21px);color:var(--rust-deep);margin-top:clamp(16px,2.5vh,24px);max-width:56ch;line-height:1.4}
+  @media print{
+    body{scroll-snap-type:none}
+    .slide{page-break-after:always;min-height:auto;height:100vh}
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- 1. COVER -->
+<section class="slide">
+  <div class="brand"><b>Terra Segura</b> · Mirador de Villarrica</div>
+  <span class="slide-num">01 / 11</span>
+  <div class="cover-mark">— Reunión de definiciones</div>
+  <h1>Camino a producción.</h1>
+  <p class="lead" style="margin-top:40px">Puntos a cerrar antes de desplegar el chatbot al público. Decisiones técnicas, comerciales y operativas que necesitamos resolver juntos.</p>
+  <div class="meta">Preparado por <span>Hugo Vargas Cubelli</span> · Abril 2026</div>
+</section>
+
+<!-- 2. CONTEXTO -->
+<section class="slide">
+  <span class="brand"><b>Contexto</b></span>
+  <span class="slide-num">02 / 11</span>
+  <div class="eyebrow">Dónde estamos hoy</div>
+  <h2>El MVP funciona. Ahora toca industrializarlo.</h2>
+  <p class="lead">El chatbot ya conversa, califica leads y muestra unidades del proyecto. Lo que sigue es alinear la infraestructura, las reglas del negocio y los puntos de integración con los equipos de Palena antes de abrir el tráfico real.</p>
+  <div class="status-row">
+    <div class="status"><div class="k">9</div><div class="l">Puntos a definir</div></div>
+    <div class="status"><div class="k">MVP</div><div class="l">Estado actual</div></div>
+    <div class="status"><div class="k">Producción</div><div class="l">Objetivo de esta reunión</div></div>
+  </div>
+</section>
+
+<!-- 3. AGENDA -->
+<section class="slide">
+  <span class="brand"><b>Agenda</b></span>
+  <span class="slide-num">03 / 11</span>
+  <div class="eyebrow">Lo que necesitamos cerrar hoy</div>
+  <h2>Nueve decisiones, un objetivo.</h2>
+  <ul class="clean">
+    <li><span class="idx">01</span>Despliegue de backend, base de datos y APIs</li>
+    <li><span class="idx">02</span>Cuenta OpenRouter y carga de créditos para el modelo</li>
+    <li><span class="idx">03</span>Credenciales de WhatsApp y correo corporativo</li>
+    <li><span class="idx">04</span>Estrategia de mejora y depuración del flujo conversacional</li>
+    <li><span class="idx">05</span>Reglas de scoring del lead</li>
+    <li><span class="idx">06</span>Fuente de verdad sobre stock</li>
+    <li><span class="idx">07</span>Reglas internas del negocio (crédito, proceso de compra)</li>
+    <li><span class="idx">08</span>Derivación y notificación al broker</li>
+    <li><span class="idx">09</span>Costos estimados en producción</li>
+  </ul>
+</section>
+
+<!-- 4. Punto 1 — Infraestructura -->
+<section class="slide">
+  <span class="brand"><b>01</b> · Infraestructura</span>
+  <span class="slide-num">04 / 11</span>
+  <span class="tag">Decisión técnica</span>
+  <h2>¿Dónde vive el sistema?</h2>
+  <div class="rule"></div>
+  <p class="lead">Tres capas que requieren definición: el backend de automatización (n8n), la base de datos (Supabase) y el hosting del widget web.</p>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Opción A · Infraestructura de Hugo</h4>
+      <p>n8n y Supabase en mi VPS. Despliegue inmediato, yo mantengo y escalo. Menor fricción operativa, dependencia de un proveedor externo.</p>
+    </div>
+    <div class="card">
+      <h4>Opción B · Infraestructura de Palena</h4>
+      <p>Instalación en servidores propios. Control total del dato y costos de hosting absorbidos. Requiere setup inicial y acuerdo de soporte.</p>
+    </div>
+  </div>
+  <p class="q">¿Prefieren autonomía total desde el día uno, o partir en mi infraestructura y migrar cuando el volumen lo justifique?</p>
+</section>
+
+<!-- 5. Punto 2 — OpenRouter -->
+<section class="slide">
+  <span class="brand"><b>02</b> · Modelo LLM</span>
+  <span class="slide-num">05 / 11</span>
+  <span class="tag">Cuenta y créditos</span>
+  <h2>OpenRouter como proveedor de modelos.</h2>
+  <div class="rule"></div>
+  <p class="lead">OpenRouter nos da acceso unificado a Claude, GPT, Gemini y modelos open-source. Pagas solo lo que consumes, sin compromisos mensuales.</p>
+  <ul class="bullets">
+    <li><b>Cuenta corporativa</b> a nombre de Terra Segura / Palena con método de pago propio.</li>
+    <li><b>Carga inicial sugerida:</b> USD 50–100 para validar costos reales en producción.</li>
+    <li><b>Ventaja clave:</b> podemos cambiar de modelo (Claude → Gemini → GPT) sin reescribir el flujo.</li>
+    <li><b>Facturación transparente:</b> dashboard con consumo por día y por modelo.</li>
+  </ul>
+</section>
+
+<!-- 6. Punto 3 — Credenciales -->
+<section class="slide">
+  <span class="brand"><b>03</b> · Canales de contacto</span>
+  <span class="slide-num">06 / 11</span>
+  <span class="tag">Credenciales y accesos</span>
+  <h2>Conectar con los canales oficiales de Palena.</h2>
+  <div class="rule"></div>
+  <p class="lead">Para que el bot escale conversaciones y envíe notificaciones necesitamos acceso a los canales reales del cliente.</p>
+  <div class="two-col">
+    <div class="label">WhatsApp</div>
+    <div>
+      <p>Número oficial de Palena conectado vía <b>WhatsApp Business API</b> (Meta o proveedor tipo Evolution/360dialog). Esto habilita notificaciones salientes al broker y al cliente.</p>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top:32px">
+    <div class="label">Email</div>
+    <div>
+      <p>Cuenta corporativa (ej. <b>contacto@terrasegura.cl</b>) con acceso SMTP o delegación Google Workspace para enviar resúmenes de leads al broker y confirmaciones al cliente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. Punto 4 — Flujo conversacional -->
+<section class="slide">
+  <span class="brand"><b>04</b> · Calidad conversacional</span>
+  <span class="slide-num">07 / 11</span>
+  <span class="tag">Mejora continua</span>
+  <h2>Cómo afinamos lo que el bot dice.</h2>
+  <div class="rule"></div>
+  <p class="lead">Un chatbot en producción no se "termina" — se afina semana a semana con conversaciones reales.</p>
+  <ul class="bullets">
+    <li><b>Revisión semanal de transcripciones</b> (primeras 4 semanas): detectar dónde el bot se pierde o responde mal.</li>
+    <li><b>Versionado de prompts</b>: cada cambio queda registrado, reversible en minutos.</li>
+    <li><b>Feedback loop con el broker</b>: los leads que "no llegaron bien calificados" son oro para entrenar al bot.</li>
+    <li><b>Métricas clave</b>: tasa de derivación, leads calificados, preguntas sin respuesta, tiempo hasta el primer contacto humano.</li>
+  </ul>
+  <p class="q">Proponemos un ritual de 30 min semanales las primeras 4 semanas para calibrar.</p>
+</section>
+
+<!-- 8. Punto 5 — Scoring -->
+<section class="slide">
+  <span class="brand"><b>05</b> · Scoring del lead</span>
+  <span class="slide-num">08 / 11</span>
+  <span class="tag">Reglas de calificación</span>
+  <h2>¿Qué hace que un lead sea "caliente"?</h2>
+  <div class="rule"></div>
+  <p class="lead">Hoy el bot tiene una lógica base (intención + plazo + presupuesto). Necesitamos calibrarla con el criterio comercial de Palena.</p>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Variables actuales</h4>
+      <p><b>Intención</b> · Solo información / Comprar / Inversión<br><b>Plazo</b> · Inmediato / 3-6m / 6-12m / +1 año<br><b>Presupuesto</b> · Rango UF declarado<br><b>Forma de pago</b> · Contado / Crédito</p>
+    </div>
+    <div class="card">
+      <h4>Preguntas abiertas</h4>
+      <p>¿Qué combinación dispara "lead caliente"?<br>¿Presupuesto bajo pero plazo inmediato → caliente o tibio?<br>¿Leads de inversión tienen flujo distinto?</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9. Punto 6 — Stock -->
+<section class="slide">
+  <span class="brand"><b>06</b> · Fuente de verdad</span>
+  <span class="slide-num">09 / 11</span>
+  <span class="tag">Stock y disponibilidad</span>
+  <h2>Integrar el bot con el Sheets que ya usan.</h2>
+  <div class="rule"></div>
+  <p class="lead">La fuente de verdad ya existe: el Google Sheets que Palena mantiene actualizado y publica en el sitio web. El bot debe leer desde ahí — no crear una copia paralela.</p>
+  <ul class="bullets">
+    <li><b>Sincronización en vivo ·</b> El bot consulta el Sheets cada X minutos (o al momento) vía Google Sheets API.</li>
+    <li><b>Cero doble pega ·</b> Palena sigue actualizando un solo lugar, como hoy. El bot se adapta, no al revés.</li>
+    <li><b>Consistencia garantizada ·</b> Lo que ve el bot = lo que ve el sitio web = lo que ve el broker.</li>
+  </ul>
+  <p class="q">¿Con qué frecuencia se actualiza el Sheets? ¿Quién tiene permisos de edición? Eso define el intervalo de sincronización.</p>
+</section>
+
+<!-- 10. Puntos 7 y 8 — Reglas internas + Broker -->
+<section class="slide">
+  <span class="brand"><b>07–08</b> · Reglas del negocio</span>
+  <span class="slide-num">10 / 11</span>
+  <span class="tag">Proceso comercial</span>
+  <h2>El bot necesita conocer sus reglas.</h2>
+  <div class="rule"></div>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Requisitos de crédito</h4>
+      <p>¿Qué pide el banco o la corredora? Renta mínima, antigüedad laboral, DICOM, pie disponible. El bot puede pre-calificar financieramente antes de derivar.</p>
+    </div>
+    <div class="card">
+      <h4>Proceso de compra</h4>
+      <p>Reserva → pie → escrituración. ¿Montos, plazos, documentos? El bot responde preguntas frecuentes y evita que el broker repita lo mismo 50 veces al día.</p>
+    </div>
+    <div class="card">
+      <h4>Derivación al broker</h4>
+      <p>¿Cuándo se escala? ¿A qué broker (por zona, por disponibilidad, por tipo de lead)? ¿Notificación vía WhatsApp, email, o ambos?</p>
+    </div>
+    <div class="card">
+      <h4>SLA de respuesta humana</h4>
+      <p>Si el lead quiere hablar con un humano, ¿cuál es el tiempo de respuesta comprometido? El bot puede gestionar la expectativa.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11. Costos + cierre -->
+<section class="slide">
+  <span class="brand"><b>09</b> · Costos + próximos pasos</span>
+  <span class="slide-num">11 / 11</span>
+  <span class="tag">Cierre</span>
+  <h2>Costos en producción y siguientes pasos.</h2>
+  <div class="rule"></div>
+  <p class="lead">El costo mensual depende de tres variables: modelo LLM elegido, volumen de conversaciones y canal (WhatsApp tiene tarifa por conversación según Meta).</p>
+  <ul class="bullets">
+    <li><b>Modelo LLM ·</b> Gemini Flash (más barato, suficiente) vs Claude Sonnet (premium, más fino). Definir en conjunto.</li>
+    <li><b>Volumen estimado ·</b> Necesitamos proyectar conversaciones/mes para dimensionar presupuesto OpenRouter.</li>
+    <li><b>WhatsApp ·</b> Meta cobra por conversación iniciada (USD 0,05–0,08 aprox en Chile). Acumulable con volumen real.</li>
+    <li><b>Infraestructura ·</b> VPS compartido (~USD 20/mes) vs dedicado según opción elegida en punto 1.</li>
+  </ul>
+  <p class="q">Próximo paso: cerrar decisiones 1, 2 y 3 esta semana → habilita despliegue en staging en 7 días.</p>
+  <div class="footer-note">
+    <span>Mirador de Villarrica · Camino a producción</span>
+    <span>Hugo Vargas Cubelli · +56 9 9253 3044</span>
+  </div>
+</section>
+
+</div>
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.intersectionRatio > 0.55) e.target.classList.add('is-active');
+      else e.target.classList.remove('is-active');
+    });
+  },{threshold:[0, 0.55, 0.9]});
+  slides.forEach(s=>io.observe(s));
+  function currentIndex(){
+    const y = window.scrollY + window.innerHeight/2;
+    let idx = 0;
+    slides.forEach((s,i)=>{ if(s.offsetTop <= y) idx = i; });
+    return idx;
+  }
+  function goTo(i){
+    i = Math.max(0, Math.min(slides.length-1, i));
+    slides[i].scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight' || e.key==='PageDown' || e.key===' '){
+      e.preventDefault(); goTo(currentIndex()+1);
+    } else if(e.key==='ArrowLeft' || e.key==='PageUp'){
+      e.preventDefault(); goTo(currentIndex()-1);
+    } else if(e.key==='Home'){
+      e.preventDefault(); goTo(0);
+    } else if(e.key==='End'){
+      e.preventDefault(); goTo(slides.length-1);
+    }
+  });
+</script>
+</body>
+</html>

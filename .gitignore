@@ -46,3 +46,6 @@ chrome-session/
 # Source assets (already copied to public/assets/ and public/brochure/)
 assets-sitio/
 brochure.pdf
+
+# Local brainstorm sessions
+.superpowers/

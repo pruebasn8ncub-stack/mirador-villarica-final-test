@@ -1,11 +1,17 @@
 import { Header } from '@/components/site/Header';
 import { Hero } from '@/components/site/Hero';
-import { Descripcion } from '@/components/site/Descripcion';
-import { MasterPlanInteractivo } from '@/components/site/MasterPlanInteractivo';
+import { StatsHero } from '@/components/site/StatsHero';
+import { VivirVillarrica } from '@/components/site/VivirVillarrica';
+import { Pilares } from '@/components/site/Pilares';
+import { SalesProgress } from '@/components/site/SalesProgress';
 import { Galeria } from '@/components/site/Galeria';
-import { Tour360 } from '@/components/site/Tour360';
 import { Ubicacion } from '@/components/site/Ubicacion';
-import { Cotizar } from '@/components/site/Cotizar';
+import { Financiamiento } from '@/components/site/Financiamiento';
+import { Proceso } from '@/components/site/Proceso';
+import { Tour360 } from '@/components/site/Tour360';
+import { BrokerCard } from '@/components/site/BrokerCard';
+import { Faq } from '@/components/site/Faq';
+import { CtaFinal } from '@/components/site/CtaFinal';
 import { Footer } from '@/components/site/Footer';
 
 export default function HomePage() {
@@ -14,12 +20,18 @@ export default function HomePage() {
       <Header />
       <main>
         <Hero />
-        <Descripcion />
-        <MasterPlanInteractivo />
+        <StatsHero />
+        <VivirVillarrica />
+        <Pilares />
+        <SalesProgress />
         <Galeria />
-        <Tour360 />
         <Ubicacion />
-        <Cotizar />
+        <Financiamiento />
+        <Proceso />
+        <Tour360 />
+        <BrokerCard />
+        <Faq />
+        <CtaFinal />
       </main>
       <Footer />
     </>

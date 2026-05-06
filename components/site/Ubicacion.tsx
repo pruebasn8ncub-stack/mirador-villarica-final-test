@@ -1,175 +1,110 @@
-'use client';
+import { Plane, MapPin, Mountain, Trees, ExternalLink } from 'lucide-react';
+import { DISTANCIAS, PROYECTO } from '@/data/content';
+import { ChatCta } from './ChatCta';
+import { Reveal } from './Reveal';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Car, MapPin, Plane, Trees, Waves, Mountain, Coffee, Compass } from 'lucide-react';
-import Map, { Marker, NavigationControl, FullscreenControl, ScaleControl } from 'react-map-gl/mapbox';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { DISTANCIAS } from '@/data/content';
-import { cn } from '@/lib/utils';
+const PROYECTO_LAT = -39.0833;
+const PROYECTO_LNG = -71.9667;
+const MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${PROYECTO_LAT},${PROYECTO_LNG}`;
+const MAPS_EMBED = `https://maps.google.com/maps?q=${PROYECTO_LAT},${PROYECTO_LNG}&hl=es&z=11&output=embed`;
 
-const QUE_HAY_CERCA = [
-  { icon: Waves,    titulo: 'Lago Colico',          desc: 'Uno de los lagos más limpios del sur. Kayak, pesca, paddle.' },
-  { icon: Mountain, titulo: 'Termas naturales',     desc: 'Geométricas, Pellaifa, Coñaripe — todas en menos de 2h.' },
-  { icon: Trees,    titulo: 'Senderismo',           desc: 'Reservas Villarrica y Huerquehue, bosques nativos.' },
-  { icon: Compass,  titulo: 'Ski y deportes',       desc: 'Centro de esquí Villarrica-Pucón a 1h 30 min.' },
-  { icon: Coffee,   titulo: 'Gastronomía',          desc: 'Pucón y Villarrica con la mejor escena gastronómica del sur.' },
-  { icon: Plane,    titulo: 'Aeropuerto Araucanía', desc: 'Vuelo directo Santiago–Temuco (1h 20). 45 min al proyecto.' },
-];
-
-const LAT = -39.0833;
-const LNG = -71.9667;
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const ICON_MAP: Record<string, typeof Plane> = {
+  'Cunco': Trees,
+  'Lago Colico': Trees,
+  'Villarrica centro': MapPin,
+  'Temuco': MapPin,
+  'Pucón': Mountain,
+  'Aeropuerto Araucanía': Plane,
+};
 
 export function Ubicacion() {
-  const [showFallback, setShowFallback] = useState(false);
-
-  const hasMapbox = !!MAPBOX_TOKEN;
-  const fallbackEmbedUrl = `https://www.google.com/maps?q=${LAT},${LNG}&hl=es&z=11&output=embed`;
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${LAT},${LNG}&travelmode=driving`;
-
   return (
-    <section id="ubicacion" className="relative bg-white py-24 md:py-32">
-      <div className="mx-auto max-w-7xl px-5 md:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.7 }}
-          className="grid items-end gap-6 md:grid-cols-[1.4fr_1fr]"
-        >
-          <div>
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza-500">
-              Ubicación
+    <section id="ubicacion" className="relative py-24 sm:py-32 lg:py-40 bg-crema">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+          <div className="lg:col-span-5 lg:sticky lg:top-32">
+            <p className="inline-flex items-center gap-2.5 text-[11px] tracking-eyebrow uppercase text-bosque-700/80 mb-6">
+              <span className="size-1.5 rounded-full bg-mostaza" /> Ubicación
             </p>
-            <h2 className="font-display text-4xl font-light leading-[1.05] tracking-display text-bosque-900 md:text-5xl lg:text-6xl">
-              En Colico,<br />
-              <span className="italic text-bosque-700">a pocos minutos de todo.</span>
+            <h2 className="font-display text-bosque-900 tracking-display leading-[1.05] text-[clamp(2rem,4.5vw,3.75rem)] font-light mb-6">
+              A 55 minutos
+              <br />
+              <span className="italic">del aeropuerto</span>.
             </h2>
+            <p className="text-bosque-900/75 text-base sm:text-lg leading-relaxed mb-8">
+              {PROYECTO.ubicacion}, sobre la ruta Villarrica – Las Hortensias. Lago Colico
+              a 20 minutos, volcán Villarrica al frente, Pucón a una hora y media.
+            </p>
+            <ChatCta size="md" variant="secondary" prefill="¿Cómo llego al proyecto?">
+              ¿Cómo llego?
+            </ChatCta>
           </div>
-          <p className="text-[14.5px] leading-relaxed text-bosque-700/80">
-            Sobre la ruta Villarrica–Las Hortensias, en el corazón de la Araucanía. A 20 minutos
-            del lago Colico, 55 del centro de Villarrica y 45 del aeropuerto.
-          </p>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.8, delay: 0.15 }}
-          className="mt-10 grid gap-6 lg:grid-cols-12"
-        >
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] shadow-card-hover ring-1 ring-bosque-100 lg:col-span-7 lg:aspect-auto">
-            {hasMapbox && !showFallback ? (
-              <Map
-                mapboxAccessToken={MAPBOX_TOKEN}
-                initialViewState={{ longitude: LNG, latitude: LAT, zoom: 10.5 }}
-                mapStyle="mapbox://styles/mapbox/outdoors-v12"
-                style={{ width: '100%', height: '100%', minHeight: '420px' }}
-                onError={() => setShowFallback(true)}
-              >
-                <Marker longitude={LNG} latitude={LAT} anchor="bottom">
-                  <div className="flex flex-col items-center" aria-label="Ubicación de Mirador de Villarrica">
-                    <div className="rounded-full bg-mostaza px-3 py-1 text-[11px] font-bold text-bosque-900 shadow-lg ring-2 ring-white">
-                      Mirador
-                    </div>
-                    <div className="-mt-1 h-3 w-3 rotate-45 bg-mostaza shadow" />
-                    <span className="relative mt-1 flex h-3 w-3">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mostaza opacity-60" />
-                      <span className="relative inline-flex h-3 w-3 rounded-full bg-mostaza ring-2 ring-white" />
-                    </span>
+          <div className="lg:col-span-7 space-y-8">
+            <Reveal>
+              <div className="relative aspect-[4/3] sm:aspect-[16/10] rounded-3xl overflow-hidden bg-bosque-900/5 border border-bosque-900/8 shadow-card">
+                <iframe
+                  src={MAPS_EMBED}
+                  title="Ubicación del proyecto Mirador de Villarrica en Colico, La Araucanía"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-bosque-950/85 via-bosque-950/30 to-transparent"
+                  aria-hidden
+                />
+
+                <div className="pointer-events-none absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] tracking-eyebrow uppercase text-mostaza mb-1">
+                      Mirador de Villarrica
+                    </p>
+                    <p className="font-display italic text-xl sm:text-2xl text-crema leading-tight">
+                      39°08′S · 71°57′W
+                    </p>
                   </div>
-                </Marker>
-                <NavigationControl position="top-right" showCompass={false} />
-                <FullscreenControl position="top-right" />
-                <ScaleControl position="bottom-left" maxWidth={120} unit="metric" />
-              </Map>
-            ) : (
-              <iframe
-                src={fallbackEmbedUrl}
-                title="Ubicación de Mirador de Villarrica en Colico"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="absolute inset-0 h-full w-full border-0"
-                allowFullScreen
-              />
-            )}
-          </div>
-
-          <div className="space-y-3 lg:col-span-5">
-            <div className="rounded-[24px] bg-crema p-6 shadow-card">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza-500">
-                  Distancias en auto
-                </p>
-                <Car className="h-4 w-4 text-bosque-500" strokeWidth={2.2} />
+                  <a
+                    href={MAPS_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pointer-events-auto inline-flex items-center gap-2 text-crema text-xs sm:text-[13px] font-medium px-4 py-2 rounded-full bg-bosque-950/70 backdrop-blur-md border border-crema/20 hover:bg-mostaza hover:text-bosque-950 hover:border-mostaza transition-colors whitespace-nowrap"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Ver en Google Maps
+                  </a>
+                </div>
               </div>
-              <ul className="space-y-3">
-                {DISTANCIAS.map((d) => (
-                  <li key={d.lugar} className="flex items-baseline justify-between gap-3 border-b border-bosque-100 pb-2 last:border-b-0 last:pb-0">
-                    <span className="text-[14px] font-medium text-bosque-900">{d.lugar}</span>
-                    <span className="text-[13.5px] tabular-nums text-bosque-700">
-                      {d.tiempo}
-                      {d.km && <span className="ml-2 text-bosque-500">· {d.km}</span>}
+            </Reveal>
+
+            <ul className="grid sm:grid-cols-2 gap-px bg-bosque-900/8 border border-bosque-900/8 rounded-2xl overflow-hidden">
+              {DISTANCIAS.map((d, i) => {
+                const Icon = ICON_MAP[d.lugar] ?? MapPin;
+                return (
+                  <li
+                    key={d.lugar}
+                    className="bg-crema p-5 sm:p-6 flex items-center gap-4 hover:bg-crema-200 transition-colors"
+                  >
+                    <span className="size-10 rounded-xl bg-bosque-900/5 border border-bosque-900/8 flex items-center justify-center shrink-0">
+                      <Icon className="size-4 text-bosque-700" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-bosque-900 font-medium tracking-tight">{d.lugar}</p>
+                      <p className="text-bosque-900/55 text-xs mt-0.5">
+                        {d.tiempo}
+                        {d.km && ` · ${d.km}`}
+                      </p>
+                    </div>
+                    <span className="font-display italic text-bosque-900/20 text-sm">
+                      0{i + 1}
                     </span>
                   </li>
-                ))}
-              </ul>
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noopener"
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-bosque-200 px-5 py-2.5 text-[13px] font-semibold text-bosque-800 transition hover:border-mostaza hover:text-mostaza"
-              >
-                <Compass className="h-3.5 w-3.5" strokeWidth={2.4} />
-                Cómo llegar
-              </a>
-              {!hasMapbox && (
-                <p className="mt-3 flex items-start gap-1.5 text-[11px] text-bosque-500/85">
-                  <MapPin className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={2.4} />
-                  Mapa interactivo disponible al configurar <code className="rounded bg-bosque-50 px-1 text-[10.5px]">NEXT_PUBLIC_MAPBOX_TOKEN</code>.
-                </p>
-              )}
-            </div>
+                );
+              })}
+            </ul>
           </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="mt-16"
-        >
-          <p className="mb-7 text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza-500">
-            Qué hay cerca
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {QUE_HAY_CERCA.map((q) => {
-              const Icon = q.icon;
-              return (
-                <div
-                  key={q.titulo}
-                  className={cn(
-                    'group rounded-2xl border border-bosque-100 bg-white p-5 transition',
-                    'hover:-translate-y-1 hover:border-mostaza/40 hover:shadow-card-hover',
-                  )}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-bosque-50 text-bosque-700 transition group-hover:bg-mostaza/15 group-hover:text-mostaza-500">
-                    <Icon className="h-5 w-5" strokeWidth={2} />
-                  </div>
-                  <h3 className="mt-4 font-display text-lg font-medium text-bosque-900">
-                    {q.titulo}
-                  </h3>
-                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-bosque-700/80">
-                    {q.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

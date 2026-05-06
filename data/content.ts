@@ -37,15 +37,15 @@ export const DISTANCIAS: Array<{
 ];
 
 export const GALERIA = [
-  { src: '/assets/banner-volcan.jpg', alt: 'Vista aérea del proyecto con Volcán Villarrica al fondo' },
-  { src: '/assets/galeria1.jpg', alt: 'Entorno natural del proyecto — Mirador de Villarrica' },
-  { src: '/assets/galeria2.jpg', alt: 'Vista general del proyecto' },
-  { src: '/assets/galeria3.jpg', alt: 'Bosque nativo en Mirador de Villarrica' },
-  { src: '/assets/galeria5-atardecer.jpg', alt: 'Atardecer en Mirador de Villarrica' },
-  { src: '/assets/galeria6.jpg', alt: 'Panorámica del terreno — Colico' },
-  { src: '/assets/galeria7.jpg', alt: 'Parcela con vista al entorno natural' },
-  { src: '/assets/lagocolico.jpg', alt: 'Lago Colico a 20 minutos del proyecto' },
-  { src: '/assets/imagen1.jpg', alt: 'Acceso y caminos internos del proyecto' },
+  { src: '/assets/banner-volcan.jpg', alt: 'Vista aérea del proyecto con Volcán Villarrica al fondo', width: 1600, height: 1200 },
+  { src: '/assets/imagen1.jpg', alt: 'Acceso y caminos internos del proyecto', width: 1600, height: 2133 },
+  { src: '/assets/galeria1.jpg', alt: 'Entorno natural del proyecto — Mirador de Villarrica', width: 1600, height: 1200 },
+  { src: '/assets/galeria5-atardecer.jpg', alt: 'Atardecer en Mirador de Villarrica', width: 1600, height: 1200 },
+  { src: '/assets/galeria2.jpg', alt: 'Vista general del proyecto', width: 1600, height: 1200 },
+  { src: '/assets/galeria3.jpg', alt: 'Bosque nativo en Mirador de Villarrica', width: 1600, height: 1200 },
+  { src: '/assets/galeria6.jpg', alt: 'Panorámica del terreno — Colico', width: 1600, height: 1200 },
+  { src: '/assets/lagocolico.jpg', alt: 'Lago Colico a 20 minutos del proyecto', width: 1600, height: 924 },
+  { src: '/assets/galeria7.jpg', alt: 'Parcela con vista al entorno natural', width: 1600, height: 1200 },
 ];
 
 export const PROCESO_COMPRA = [

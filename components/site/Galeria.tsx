@@ -1,109 +1,116 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { useState } from 'react';
+import { MasonryPhotoAlbum, type RenderImageContext, type RenderImageProps } from 'react-photo-album';
+import 'react-photo-album/masonry.css';
 import Lightbox from 'yet-another-react-lightbox';
 import Captions from 'yet-another-react-lightbox/plugins/captions';
+import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
+import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
-import Counter from 'yet-another-react-lightbox/plugins/counter';
 import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/captions.css';
-import 'yet-another-react-lightbox/plugins/counter.css';
+import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import { GALERIA } from '@/data/content';
+import { Reveal } from './Reveal';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
-};
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const photos = GALERIA.map((g) => ({
+  src: g.src,
+  alt: g.alt,
+  width: g.width,
+  height: g.height,
+}));
 
-const PATTERN = [
-  'col-span-2 row-span-2', '', '', '', 'col-span-2', '', '', '', 'row-span-2',
-];
+function NextImageRenderer(
+  { alt, title, sizes, className, onClick }: RenderImageProps,
+  { photo, width, height }: RenderImageContext<(typeof photos)[number]>,
+) {
+  return (
+    <div
+      style={{ width: '100%', position: 'relative', aspectRatio: `${width} / ${height}` }}
+      className={className}
+    >
+      <Image
+        fill
+        src={photo.src}
+        alt={alt ?? photo.alt}
+        title={title}
+        sizes={sizes ?? '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
+        placeholder="empty"
+        onClick={onClick}
+        className="object-cover transition-transform duration-700 hover:scale-[1.04] cursor-zoom-in"
+      />
+    </div>
+  );
+}
 
 export function Galeria() {
-  const [index, setIndex] = useState<number>(-1);
+  const [index, setIndex] = useState(-1);
 
   return (
-    <section
-      id="galeria"
-      className="relative bg-crema py-24 md:py-32"
-    >
-      <div className="mx-auto max-w-7xl px-5 md:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.7 }}
-          className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end"
-        >
-          <div className="max-w-2xl">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-eyebrow text-mostaza-500">
-              Galería
+    <section id="galeria" className="relative py-24 sm:py-32 lg:py-40 bg-crema-200">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+        <div className="flex flex-wrap items-end justify-between gap-6 mb-12 sm:mb-16">
+          <div className="max-w-xl">
+            <p className="inline-flex items-center gap-2.5 text-[11px] tracking-eyebrow uppercase text-bosque-700/80 mb-6">
+              <span className="size-1.5 rounded-full bg-mostaza" /> El lugar
             </p>
-            <h2 className="font-display text-4xl font-light leading-[1.05] tracking-display text-bosque-900 md:text-5xl lg:text-6xl">
-              Lo que <span className="italic text-bosque-700">verás</span> al llegar
+            <h2 className="font-display text-bosque-900 tracking-display leading-[1.05] text-[clamp(2rem,4.5vw,3.75rem)] font-light">
+              No es una promesa,
+              <br />
+              <span className="italic">son fotos del terreno</span>.
             </h2>
           </div>
-          <p className="max-w-md text-[14.5px] leading-relaxed text-bosque-700/80">
-            Bosque nativo, vista al volcán, lago Colico a 20 minutos. Toca cualquier foto para
-            agrandar, hacer zoom o navegar con las flechas.
+          <p className="max-w-sm text-bosque-900/70 text-[15px] leading-relaxed">
+            Tomadas en abril desde el punto exacto donde vivirá tu parcela.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-100px' }}
-          className="mt-12 grid auto-rows-[180px] grid-cols-2 gap-3 sm:grid-cols-3 md:auto-rows-[220px] md:gap-4 lg:grid-cols-4"
-        >
-          {GALERIA.map((g, i) => (
-            <motion.button
-              key={g.src}
-              variants={fadeUp}
-              onClick={() => setIndex(i)}
-              type="button"
-              className={`group relative overflow-hidden rounded-2xl shadow-card transition hover:-translate-y-1 hover:shadow-card-hover ${PATTERN[i % PATTERN.length]}`}
-              aria-label={`Ampliar imagen ${i + 1}: ${g.alt}`}
-            >
-              <Image
-                src={g.src}
-                alt={g.alt}
-                fill
-                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                className="object-cover transition duration-700 group-hover:scale-[1.06]"
-                priority={i < 3}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-bosque-950/55 via-transparent to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
-              <span className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-[10.5px] font-semibold uppercase tracking-eyebrow text-bosque-800 opacity-0 backdrop-blur-sm transition duration-300 group-hover:opacity-100">
-                Ampliar
-              </span>
-            </motion.button>
-          ))}
-        </motion.div>
+        <Reveal>
+          <div className="[&_.react-photo-album--masonryColumn>div]:overflow-hidden [&_.react-photo-album--masonryColumn>div]:rounded-2xl [&_.react-photo-album--masonryColumn>div]:bg-bosque-900/5">
+            <MasonryPhotoAlbum
+              photos={photos}
+              columns={(containerWidth) => {
+                if (containerWidth < 640) return 1;
+                if (containerWidth < 1024) return 2;
+                return 3;
+              }}
+              spacing={(containerWidth) => (containerWidth < 640 ? 12 : 16)}
+              onClick={({ index }) => setIndex(index)}
+              render={{ image: NextImageRenderer }}
+              sizes={{
+                size: '1200px',
+                sizes: [
+                  { viewport: '(max-width: 640px)', size: 'calc(100vw - 40px)' },
+                  { viewport: '(max-width: 1024px)', size: 'calc(50vw - 24px)' },
+                ],
+              }}
+            />
+          </div>
+        </Reveal>
       </div>
 
       <Lightbox
-        index={index}
         open={index >= 0}
+        index={index}
         close={() => setIndex(-1)}
-        slides={GALERIA.map((g) => ({
-          src: g.src,
-          alt: g.alt,
-          description: g.alt,
+        slides={photos.map((p) => ({
+          src: p.src,
+          alt: p.alt,
+          width: p.width,
+          height: p.height,
+          description: p.alt,
         }))}
-        plugins={[Captions, Zoom, Counter]}
-        captions={{ descriptionTextAlign: 'center', descriptionMaxLines: 2 }}
+        plugins={[Captions, Fullscreen, Thumbnails, Zoom]}
+        carousel={{ finite: false }}
+        thumbnails={{ position: 'bottom', borderRadius: 8, gap: 12, padding: 4 }}
         zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }}
-        counter={{ container: { style: { top: 'unset', bottom: 0 } } }}
-        controller={{ closeOnBackdropClick: true }}
+        captions={{ descriptionTextAlign: 'center', showToggle: true }}
         styles={{
-          container: { backgroundColor: 'rgba(7, 20, 16, 0.95)' },
-          slide: { padding: '24px' },
+          container: { backgroundColor: 'rgba(20, 30, 25, 0.96)' },
+          thumbnailsContainer: { backgroundColor: 'rgba(20, 30, 25, 0.96)' },
         }}
-        animation={{ swipe: 240, fade: 220 }}
       />
     </section>
   );

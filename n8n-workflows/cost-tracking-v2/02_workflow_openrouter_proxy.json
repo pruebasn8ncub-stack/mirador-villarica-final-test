@@ -1,0 +1,186 @@
+{
+  "name": "[Tracking] OpenRouter Proxy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openrouter-proxy/v1/chat/completions",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-proxy",
+      "name": "Webhook (OpenRouter Proxy)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "openrouter-proxy"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae el marker mirador del system prompt, lo limpia, e inyecta `user` field en el body.\n// Body recibido del LM Chat OpenRouter: { model, messages, temperature, ... }\nconst incoming = $input.first().json;\nconst body = incoming.body || incoming;\nconst headers = incoming.headers || {};\n\nif (!body || !Array.isArray(body.messages)) {\n  throw new Error('Invalid request body: missing messages array');\n}\n\nconst sysMsg = body.messages.find(m => m.role === 'system');\nif (!sysMsg || typeof sysMsg.content !== 'string') {\n  throw new Error('No system message found');\n}\n\nconst markerRe = /<!--mirador:([0-9a-f-]{36})::([^:]+)::([\\w-]+)-->/;\nconst m = sysMsg.content.match(markerRe);\nif (!m) {\n  throw new Error('Missing mirador marker in system prompt');\n}\nconst [, sessionId, executionId, nodeName] = m;\n\n// Limpia el marker antes de reenviar a OpenRouter (cero impacto en el modelo)\nsysMsg.content = sysMsg.content.replace(/<!--mirador:[^>]+-->\\s*\\n?/, '');\n\nconst requestId = crypto.randomUUID();\nconst userField = `${sessionId}::${executionId}::${requestId}`;\nbody.user = userField;\n\nconst workflow = headers['x-mirador-workflow'] || nodeName.split('-')[0] || 'unknown';\nconst incomingAuth = headers['authorization'] || headers['Authorization'] || null;\n\nreturn [{\n  json: {\n    body,\n    sessionId,\n    executionId,\n    nodeName,\n    requestId,\n    userField,\n    workflow,\n    model: body.model || null,\n    proxyStartedAt: new Date().toISOString(),\n    incomingAuth\n  }\n}];"
+      },
+      "id": "code-extract",
+      "name": "Extract Marker + Inject User",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://segllewycyscyenvqtes.supabase.co/rest/v1/mirador_request_map",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer",       "value": "return=minimal"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"request_id\": \"{{ $json.requestId }}\",\n  \"session_id\": \"{{ $json.sessionId }}\",\n  \"execution_id\": \"{{ $json.executionId }}\",\n  \"workflow\": \"{{ $json.workflow }}\",\n  \"node_name\": \"{{ $json.nodeName }}\",\n  \"model_requested\": \"{{ $json.model }}\",\n  \"user_field\": \"{{ $json.userField }}\",\n  \"proxy_started_at\": \"{{ $json.proxyStartedAt }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "id": "insert-map-pre",
+      "name": "INSERT request_map (pre-call)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "continueOnFail": true,
+      "notes": "Credencial requerida: httpHeaderAuth llamada 'Supabase Mirador SR'\nname=apikey  value=<SUPABASE_SERVICE_ROLE_KEY>\nLuego agregar manualmente el header Authorization=Bearer <SAME_KEY> via 'Send Headers'."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ $('Extract Marker + Inject User').first().json.incomingAuth }}"},
+            {"name": "Content-Type",  "value": "application/json"},
+            {"name": "HTTP-Referer",  "value": "https://mirador-villarrica-chatbot.vercel.app"},
+            {"name": "X-Title",       "value": "Mirador Chat"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Extract Marker + Inject User').first().json.body) }}",
+        "options": {
+          "fullResponse": true,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "forward-openrouter",
+      "name": "Forward to OpenRouter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae generation_id (header X-Generation-Id o body.id) y arma payload de UPDATE.\nconst resp = $input.first().json;\nconst meta = $('Extract Marker + Inject User').first().json;\n\nconst headers = resp.headers || {};\nconst statusCode = resp.statusCode || resp.status || 0;\nconst respBody = resp.body !== undefined ? resp.body : resp;\n\nconst genIdHeader = headers['x-generation-id'] || headers['X-Generation-Id'] || null;\nconst genIdBody = (respBody && typeof respBody === 'object') ? respBody.id : null;\nconst generation_id = genIdHeader || genIdBody || null;\n\nlet upstreamError = null;\nif (statusCode >= 400) {\n  upstreamError = typeof respBody === 'string'\n    ? respBody.slice(0, 500)\n    : JSON.stringify(respBody).slice(0, 500);\n}\n\nreturn [{\n  json: {\n    request_id: meta.requestId,\n    generation_id,\n    proxy_ended_at: new Date().toISOString(),\n    upstream_status: statusCode,\n    upstream_error: upstreamError,\n    response_body: respBody,\n    response_status: statusCode\n  }\n}];"
+      },
+      "id": "code-extract-genid",
+      "name": "Extract generation_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 0]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://segllewycyscyenvqtes.supabase.co/rest/v1/mirador_request_map?request_id=eq.{{ $json.request_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer",       "value": "return=minimal"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"generation_id\": {{ $json.generation_id ? JSON.stringify($json.generation_id) : 'null' }}, \"proxy_ended_at\": \"{{ $json.proxy_ended_at }}\", \"upstream_status\": {{ $json.upstream_status }}, \"upstream_error\": {{ $json.upstream_error ? JSON.stringify($json.upstream_error) : 'null' }} }",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "id": "update-map-post",
+      "name": "UPDATE request_map (post-call)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Extract generation_id').first().json.response_body }}",
+        "options": {
+          "responseCode": "={{ $('Extract generation_id').first().json.response_status || 200 }}",
+          "responseHeaders": {
+            "entries": [
+              {"name": "X-Generation-Id",      "value": "={{ $('Extract generation_id').first().json.generation_id || '' }}"},
+              {"name": "X-Mirador-Request-Id", "value": "={{ $('Extract Marker + Inject User').first().json.requestId }}"}
+            ]
+          }
+        }
+      },
+      "id": "respond",
+      "name": "Respond to LM Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 0]
+    }
+  ],
+  "connections": {
+    "Webhook (OpenRouter Proxy)": {
+      "main": [[{"node": "Extract Marker + Inject User", "type": "main", "index": 0}]]
+    },
+    "Extract Marker + Inject User": {
+      "main": [[{"node": "INSERT request_map (pre-call)", "type": "main", "index": 0}]]
+    },
+    "INSERT request_map (pre-call)": {
+      "main": [[{"node": "Forward to OpenRouter", "type": "main", "index": 0}]]
+    },
+    "Forward to OpenRouter": {
+      "main": [[{"node": "Extract generation_id", "type": "main", "index": 0}]]
+    },
+    "Extract generation_id": {
+      "main": [[{"node": "UPDATE request_map (post-call)", "type": "main", "index": 0}]]
+    },
+    "UPDATE request_map (post-call)": {
+      "main": [[{"node": "Respond to LM Chat", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

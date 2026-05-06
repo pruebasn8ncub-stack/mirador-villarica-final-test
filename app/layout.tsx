@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Fraunces, Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import { ChatWidget } from '@/components/chat/ChatWidget';
+import { Loader } from '@/components/site/Loader';
 import { PROYECTO, DIEGO } from '@/data/content';
 import './globals.css';
 
@@ -65,7 +66,10 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/assets/mirador-logo.png', type: 'image/png' },
+    ],
+    apple: '/assets/mirador-logo.png',
   },
 };
 
@@ -130,6 +134,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es-CL" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="font-sans bg-crema text-bosque-900 antialiased">
+        <Loader />
         {children}
         <ChatWidget />
         <Analytics />
