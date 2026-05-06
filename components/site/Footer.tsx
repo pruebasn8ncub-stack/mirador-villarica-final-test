@@ -28,11 +28,11 @@ export function Footer() {
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
           <div className="lg:col-span-5">
             <Image
-              src="/assets/mirador-logo.png"
+              src="/assets/mirador-logo-amarillo.png"
               alt="Mirador de Villarrica"
-              width={240}
-              height={240}
-              className="size-24 sm:size-28 object-contain rounded-2xl mb-7"
+              width={320}
+              height={320}
+              className="h-24 sm:h-28 w-auto object-contain mb-7"
             />
             <p className="text-crema/65 text-[15px] leading-relaxed max-w-md">
               {PROYECTO.totalParcelas} parcelas en {PROYECTO.superficieTotal} de bosque
