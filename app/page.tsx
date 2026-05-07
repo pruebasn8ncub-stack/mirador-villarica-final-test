@@ -7,6 +7,7 @@ import { SalesProgress } from '@/components/site/SalesProgress';
 import { Galeria } from '@/components/site/Galeria';
 import { Ubicacion } from '@/components/site/Ubicacion';
 import { Financiamiento } from '@/components/site/Financiamiento';
+import { Trayectoria } from '@/components/site/Trayectoria';
 import { Proceso } from '@/components/site/Proceso';
 import { Tour360 } from '@/components/site/Tour360';
 import { BrokerCard } from '@/components/site/BrokerCard';
@@ -27,6 +28,7 @@ export default function HomePage() {
         <Galeria />
         <Ubicacion />
         <Financiamiento />
+        <Trayectoria />
         <Proceso />
         <Tour360 />
         <BrokerCard />

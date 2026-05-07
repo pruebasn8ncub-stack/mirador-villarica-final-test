@@ -85,6 +85,128 @@ export const CARACTERISTICAS = [
   { icon: 'Mountain', titulo: 'Entorno', detalle: 'Bosque nativo · Vistas al volcán y al lago' },
 ];
 
+export const TERRA_SEGURA = {
+  oficina: 'Av. Las Condes 7700, Oficina 205A · Santiago',
+  sitio: 'https://terrasegura.cl/',
+  pilares: [
+    {
+      icon: 'ShieldCheck',
+      titulo: 'Seguridad legal',
+      detalle:
+        'Roles propios, planos SAG aprobados y escrituras inscritas en el Conservador. Cero promesas largas.',
+    },
+    {
+      icon: 'Compass',
+      titulo: 'Experiencia',
+      detalle:
+        'Equipo experto en finanzas e inversión inmobiliaria, con proyectos desde Aysén hasta Valparaíso.',
+    },
+    {
+      icon: 'GraduationCap',
+      titulo: 'Educación al cliente',
+      detalle:
+        'Acompañamos cada compra con asesoría legal, financiera y de uso del terreno. Compras sin letra chica.',
+    },
+  ],
+};
+
+export const PROYECTOS_TERRA_SEGURA: Array<{
+  slug: string;
+  nombre: string;
+  region: string;
+  comuna: string;
+  estado: 'Este proyecto' | 'En venta' | 'Nuevo' | 'Próximamente';
+  precioDesde: string;
+  descripcion: string;
+  image: string;
+  href: string;
+}> = [
+  {
+    slug: 'mirador-villarrica',
+    nombre: 'Mirador de Villarrica',
+    region: 'La Araucanía',
+    comuna: 'Lago Colico',
+    estado: 'Este proyecto',
+    precioDesde: '$14.490.000',
+    descripcion:
+      '94 parcelas sobre 80 ha de bosque nativo, entre el volcán y el lago. SAG aprobado y roles listos.',
+    image: '/assets/banner-volcan.jpg',
+    href: '#top',
+  },
+  {
+    slug: 'mirador-curacavi',
+    nombre: 'Mirador de Curacaví',
+    region: 'Región Metropolitana',
+    comuna: 'Curacaví',
+    estado: 'En venta',
+    precioDesde: '$34.990.000',
+    descripcion:
+      'Parcelas desde 5.000 m² a una hora de Santiago, en armonía con la naturaleza. SAG aprobado y crédito directo.',
+    image: '/assets/proyectos/mirador-curacavi.jpg',
+    href: 'https://miradordecuracavi.cl/',
+  },
+  {
+    slug: 'altos-limache',
+    nombre: 'Altos de Limache',
+    region: 'Valparaíso',
+    comuna: 'Limache',
+    estado: 'En venta',
+    precioDesde: '$32.990.000',
+    descripcion:
+      'Menos de 40 parcelas de 5.000 m² con acceso directo a la ruta. A 1 h 20 de Santiago, vistas al valle.',
+    image: '/assets/proyectos/altos-limache.jpg',
+    href: 'https://portalterreno.cl/proyecto/2173',
+  },
+  {
+    slug: 'valle-bucalemu',
+    nombre: 'Valle Bucalemu',
+    region: 'O’Higgins',
+    comuna: 'Bucalemu',
+    estado: 'Nuevo',
+    precioDesde: '$14.490.000',
+    descripcion:
+      'Parcelas planas a 10 minutos de la playa, con caminos terminados, portón y roles listos para escriturar.',
+    image: '/assets/proyectos/valle-bucalemu.jpg',
+    href: 'https://vallebucalemu.cl/',
+  },
+  {
+    slug: 'mirador-osorno',
+    nombre: 'Mirador de Osorno',
+    region: 'Los Lagos',
+    comuna: 'Osorno',
+    estado: 'En venta',
+    precioDesde: '$11.990.000',
+    descripcion:
+      '62 parcelas de 5.000 m² y 10.000 m² a 40 minutos de Osorno, a 9 km del Río Bueno.',
+    image: '/assets/proyectos/mirador-osorno.png',
+    href: 'https://portalterreno.cl/proyecto/2166',
+  },
+  {
+    slug: 'altos-osorno',
+    nombre: 'Altos de Osorno',
+    region: 'Los Lagos',
+    comuna: 'San Juan de la Costa',
+    estado: 'En venta',
+    precioDesde: '$11.990.000',
+    descripcion:
+      '62 parcelas en entorno prístino, a 30 minutos de Osorno. Caminos listos, roles disponibles en junio 2026.',
+    image: '/assets/proyectos/altos-osorno.jpg',
+    href: 'https://altosdeosorno.cl/',
+  },
+  {
+    slug: 'ribera-rio-palena',
+    nombre: 'Ribera Río Palena',
+    region: 'Aysén',
+    comuna: 'Cisnes',
+    estado: 'En venta',
+    precioDesde: '$19.990.000',
+    descripcion:
+      '15 macrolotes a orillas del Río Palena y la Carretera Austral, con bosques milenarios. Roles y SAG aprobados.',
+    image: '/assets/proyectos/ribera-palena.png',
+    href: 'https://portalterreno.cl/proyecto/2164',
+  },
+];
+
 export const LUGARES_CERCANOS: Array<{
   titulo: string;
   descripcion: string;
