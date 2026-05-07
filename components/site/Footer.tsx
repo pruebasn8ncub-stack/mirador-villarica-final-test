@@ -42,13 +42,38 @@ export function Footer() {
               <p className="text-[10px] tracking-eyebrow uppercase text-crema/45 mb-4">
                 Un proyecto de
               </p>
-              <Image
-                src="/assets/terra-segura-logo.png"
-                alt="Terra Segura Inmobiliaria"
-                width={400}
-                height={83}
-                className="h-9 sm:h-10 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-              />
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                <a
+                  href="https://terrasegura.cl/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Terra Segura Inmobiliaria — Sitio oficial"
+                  className="inline-flex shrink-0 transition-opacity hover:opacity-100"
+                >
+                  <Image
+                    src="/assets/terra-segura-logo.png"
+                    alt="Terra Segura Inmobiliaria"
+                    width={400}
+                    height={83}
+                    className="h-9 sm:h-10 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                  />
+                </a>
+                <span className="hidden sm:block h-8 w-px bg-crema/15" aria-hidden />
+                <div className="flex items-center gap-2">
+                  {SOCIAL.map((s) => (
+                    <a
+                      key={s.label}
+                      href={s.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${s.label} de Terra Segura`}
+                      className="size-10 rounded-full border border-crema/15 hover:border-mostaza hover:text-mostaza flex items-center justify-center transition-colors"
+                    >
+                      <s.icon className="size-4" />
+                    </a>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -100,21 +125,6 @@ export function Footer() {
                 <span>{DIEGO.oficina}</span>
               </li>
             </ul>
-
-            <div className="mt-8 flex items-center gap-2">
-              {SOCIAL.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.label}
-                  className="size-10 rounded-full border border-crema/15 hover:border-mostaza hover:text-mostaza flex items-center justify-center transition-colors"
-                >
-                  <s.icon className="size-4" />
-                </a>
-              ))}
-            </div>
           </div>
         </div>
 
