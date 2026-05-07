@@ -89,25 +89,30 @@ export function Trayectoria() {
               Sobre Terra Segura · Inmobiliaria gestora
             </p>
             <h2 className="font-display text-bosque-900 tracking-display leading-[1.02] text-[clamp(2.25rem,5vw,4.25rem)] font-light">
-              Mirador es uno de los proyectos de
+              Mirador es uno de los proyectos de{' '}
+              <span className="italic text-mostaza">Terra Segura</span>.
             </h2>
+          </div>
+          <div className="lg:col-span-5 lg:pt-3 space-y-7">
             <a
               href={TERRA_SEGURA.sitio}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Terra Segura Inmobiliaria — Sitio oficial"
-              className="inline-flex items-center mt-6 sm:mt-8 transition-opacity hover:opacity-80"
+              className="group block transition-opacity hover:opacity-80"
             >
+              <span className="block text-[10px] tracking-eyebrow uppercase text-bosque-700/55 mb-2.5">
+                Inmobiliaria gestora
+              </span>
               <Image
                 src="/assets/terra-segura-logo.png"
                 alt="Terra Segura Inmobiliaria"
                 width={400}
                 height={83}
-                className="h-12 sm:h-16 lg:h-20 w-auto object-contain invert opacity-90"
+                className="h-8 sm:h-9 w-auto object-contain invert opacity-85"
               />
+              <span className="block mt-4 h-px w-16 bg-bosque-900/15" aria-hidden />
             </a>
-          </div>
-          <div className="lg:col-span-5 lg:pt-3 space-y-6">
             <p className="text-bosque-900/75 text-base sm:text-lg leading-relaxed">
               Terra Segura Inmobiliaria desarrolla parcelaciones de inversión
               en Chile, desde Aysén hasta Valparaíso. Propone terrenos con
