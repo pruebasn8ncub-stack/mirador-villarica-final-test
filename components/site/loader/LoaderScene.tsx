@@ -1,50 +1,32 @@
 import Image from 'next/image';
 import type { RefObject } from 'react';
 import { VolcanoSvg } from './VolcanoSvg';
-import { MountainsSvg } from './MountainsSvg';
 import { TreesSvg } from './TreesSvg';
-import { WaterSvg } from './WaterSvg';
 
 type Props = {
   miradorRef: RefObject<HTMLDivElement>;
   tsRef: RefObject<HTMLDivElement>;
   dividerRef: RefObject<HTMLDivElement>;
   sceneRef: RefObject<HTMLDivElement>;
-  photoRef: RefObject<HTMLDivElement>;
+  logosRef: RefObject<HTMLDivElement>;
 };
 
-export function LoaderScene({ miradorRef, tsRef, dividerRef, sceneRef, photoRef }: Props) {
+export function LoaderScene({ miradorRef, tsRef, dividerRef, sceneRef, logosRef }: Props) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
       <div
-        ref={photoRef}
-        className="absolute inset-0 opacity-0"
-        style={{ filter: 'blur(8px)' }}
+        ref={sceneRef}
+        className="absolute inset-x-0 bottom-0 h-[34%] sm:h-[36%] pointer-events-none opacity-0"
         aria-hidden="true"
       >
-        <Image
-          src="/assets/banner-volcan.jpg"
-          alt=""
-          fill
-          priority
-          className="object-cover"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-bosque-950/90 via-bosque-950/70 to-bosque-950/95" />
+        <TreesSvg className="absolute inset-x-0 bottom-[6%] w-full h-[42%]" />
+        <VolcanoSvg className="absolute left-1/2 -translate-x-1/2 bottom-[6%] h-[78%] w-auto" />
       </div>
 
       <div
-        ref={sceneRef}
-        className="absolute inset-x-0 bottom-0 h-[55%] pointer-events-none"
-        aria-hidden="true"
+        ref={logosRef}
+        className="relative z-10 flex flex-col items-center gap-6 sm:gap-8 -translate-y-[12%] sm:-translate-y-[14%]"
       >
-        <WaterSvg className="absolute inset-x-0 bottom-0 w-full h-[12%] hidden sm:block" />
-        <TreesSvg className="absolute inset-x-0 bottom-[8%] w-full h-[18%] hidden sm:block" />
-        <MountainsSvg className="absolute inset-x-0 bottom-[6%] w-full h-[60%]" />
-        <VolcanoSvg className="absolute left-1/2 -translate-x-1/2 bottom-[6%] h-[80%] w-auto" />
-      </div>
-
-      <div className="relative z-10 flex flex-col items-center gap-6 sm:gap-8">
         <div ref={miradorRef} className="opacity-0">
           <Image
             src="/assets/mirador-logo-amarillo.png"
@@ -58,9 +40,9 @@ export function LoaderScene({ miradorRef, tsRef, dividerRef, sceneRef, photoRef 
 
         <div ref={dividerRef} className="h-px w-32 sm:w-40 bg-mostaza/50 origin-center" />
 
-        <div ref={tsRef} className="opacity-0 flex flex-col items-center gap-2">
-          <span className="text-[9px] tracking-[0.4em] uppercase text-crema/55 font-sans">
-            Por
+        <div ref={tsRef} className="opacity-0 flex flex-col items-center gap-2.5">
+          <span className="text-[9px] sm:text-[10px] tracking-[0.4em] uppercase text-crema/60 font-sans">
+            Un proyecto de
           </span>
           <Image
             src="/assets/terra-segura-logo.webp"
