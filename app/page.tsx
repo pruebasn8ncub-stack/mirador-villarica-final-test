@@ -20,17 +20,24 @@ export default function HomePage() {
     <>
       <Header />
       <main>
+        {/* 1. Apertura emocional */}
         <Hero />
         <StatsHero />
         <VivirVillarrica />
-        <Pilares />
-        <SalesProgress />
+
+        {/* 2. Inmersión visual — "ya estoy en el lugar" */}
         <Galeria />
-        <Ubicacion />
-        <Financiamiento />
-        <Trayectoria />
-        <Proceso />
         <Tour360 />
+        <Ubicacion />
+
+        {/* 3. Argumentos racionales — autoridad antes del precio */}
+        <Pilares />
+        <Trayectoria />
+        <Financiamiento />
+
+        {/* 4. Conversión — urgencia con contexto + cierre */}
+        <SalesProgress />
+        <Proceso />
         <BrokerCard />
         <Faq />
         <CtaFinal />
