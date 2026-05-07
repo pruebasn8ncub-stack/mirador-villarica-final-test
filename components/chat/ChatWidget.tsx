@@ -310,8 +310,29 @@ export function ChatWidget() {
   const [mounted, setMounted] = useState(false);
   const [prefillInput, setPrefillInput] = useState<string>('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Mostrar el launcher recién cuando el usuario hizo scroll fuera del hero.
+  // Mantiene la inmersión inicial de la home limpia, sin distractores.
+  const [hasScrolled, setHasScrolled] = useState(false);
   const firstMessageSent = useRef(false);
   const streamTimers = useRef<number[]>([]);
+
+  useEffect(() => {
+    const threshold = () => Math.max(window.innerHeight * 0.6, 320);
+    const reveal = () => {
+      if (window.scrollY > threshold()) {
+        setHasScrolled(true);
+        window.removeEventListener('scroll', reveal);
+      }
+    };
+    // Si la página carga ya scrolleada (deep link, refresh a media página),
+    // mostrar el launcher de inmediato.
+    if (window.scrollY > threshold()) {
+      setHasScrolled(true);
+      return;
+    }
+    window.addEventListener('scroll', reveal, { passive: true });
+    return () => window.removeEventListener('scroll', reveal);
+  }, []);
 
   // Bus global: cualquier componente del sitio puede abrir el chat con
   // un mensaje sembrado (ej. click en parcela del master plan interactivo).
@@ -551,7 +572,7 @@ export function ChatWidget() {
           desmonta con fade/scale via AnimatePresence y la ventana del chat
           ocupa su rol. Evita el "botón X flotante" duplicado que confunde. */}
       <AnimatePresence>
-        {!isOpen && (
+        {!isOpen && hasScrolled && (
           <ChatLauncher key="launcher" isOpen={false} onClick={handleLauncherClick} />
         )}
       </AnimatePresence>
