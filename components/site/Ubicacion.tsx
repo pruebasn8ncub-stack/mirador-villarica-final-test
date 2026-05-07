@@ -6,7 +6,10 @@ import { Reveal } from './Reveal';
 const PROYECTO_LAT = -39.011906;
 const PROYECTO_LNG = -72.123736;
 const MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${PROYECTO_LAT},${PROYECTO_LNG}`;
-const MAPS_EMBED = `https://maps.google.com/maps?q=${PROYECTO_LAT},${PROYECTO_LNG}&hl=es&z=14&output=embed`;
+// `t=h` = vista híbrida (satélite + nombres de calles/lugares).
+// Para zonas rurales con bosque nativo da una imagen mucho más rica que el mapa
+// estándar: se ven el lago, la topografía y el entorno real del proyecto.
+const MAPS_EMBED = `https://maps.google.com/maps?q=loc:${PROYECTO_LAT},${PROYECTO_LNG}&hl=es&z=14&t=h&output=embed`;
 
 const ICON_MAP: Record<string, typeof Plane> = {
   'Cunco': Trees,
