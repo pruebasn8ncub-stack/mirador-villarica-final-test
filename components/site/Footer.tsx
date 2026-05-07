@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin } from 'lucide-react';
-import { DIEGO, PROYECTO } from '@/data/content';
+import { DIEGO } from '@/data/content';
 
 const FOOTER_NAV = [
   { href: '#proyecto', label: 'Proyecto' },
@@ -35,8 +35,8 @@ export function Footer() {
               className="h-24 sm:h-28 w-auto object-contain mb-7"
             />
             <p className="text-crema/65 text-[15px] leading-relaxed max-w-md">
-              {PROYECTO.totalParcelas} parcelas en {PROYECTO.superficieTotal} de bosque
-              nativo. SAG aprobado. Crédito directo con Terra Segura Inmobiliaria.
+              Tu pedazo de sur, entre el volcán y el lago. Crédito directo con
+              Terra Segura Inmobiliaria.
             </p>
             <div className="mt-9 pt-7 border-t border-crema/10 max-w-md">
               <p className="text-[10px] tracking-eyebrow uppercase text-crema/45 mb-4">

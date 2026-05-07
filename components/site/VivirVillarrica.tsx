@@ -8,7 +8,7 @@ const PANELS = [
     titleStart: 'Sueña y vive a 50 minutos de',
     titleEnd: 'Villarrica',
     copy: '80 hectáreas en uno de los entornos más codiciados del sur de Chile, sobre la ruta Villarrica – Las Hortensias.',
-    chip: '80 ha · Colico, Araucanía',
+    chip: 'Bosque nativo intacto',
     image: '/assets/imagen1.jpg',
     alt: 'Vista aérea del campo Mirador de Villarrica, 80 hectáreas en Colico',
     align: 'left',

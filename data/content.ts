@@ -81,7 +81,7 @@ export const CARACTERISTICAS = [
   { icon: 'Zap', titulo: 'Luz', detalle: 'Postación eléctrica en la entrada del proyecto' },
   { icon: 'Route', titulo: 'Caminos internos', detalle: 'Estabilizados · Aptos para todo tipo de vehículos' },
   { icon: 'Shield', titulo: 'Acceso', detalle: 'Portón de entrada al proyecto' },
-  { icon: 'FileCheck2', titulo: 'Legal', detalle: 'SAG aprobado · Roles listos · CBR inmediato' },
+  { icon: 'FileCheck2', titulo: 'Legal', detalle: 'Inscripción en el Conservador la misma semana de la escritura' },
   { icon: 'Mountain', titulo: 'Entorno', detalle: 'Bosque nativo · Vistas al volcán y al lago' },
 ];
 

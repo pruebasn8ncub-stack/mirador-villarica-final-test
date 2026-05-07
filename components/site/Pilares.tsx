@@ -35,9 +35,9 @@ export function Pilares() {
           </div>
           <div className="lg:col-span-6 lg:col-start-7 lg:pt-3">
             <p className="text-bosque-900/75 text-base sm:text-lg leading-relaxed">
-              Ochenta hectáreas de bosque nativo divididas en 94 parcelas con rol propio,
-              SAG aprobado y caminos listos. Sin promesas largas: tu inscripción en el
-              Conservador queda firme la misma semana de la escritura.
+              Cada parcela tiene rol propio, infraestructura terminada y entorno
+              blindado por bosque nativo. La inscripción en el Conservador queda
+              firme la misma semana de la escritura.
             </p>
           </div>
         </div>

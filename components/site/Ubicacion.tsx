@@ -3,10 +3,10 @@ import { DISTANCIAS, PROYECTO } from '@/data/content';
 import { ChatCta } from './ChatCta';
 import { Reveal } from './Reveal';
 
-const PROYECTO_LAT = -39.0833;
-const PROYECTO_LNG = -71.9667;
+const PROYECTO_LAT = -39.011906;
+const PROYECTO_LNG = -72.123736;
 const MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${PROYECTO_LAT},${PROYECTO_LNG}`;
-const MAPS_EMBED = `https://maps.google.com/maps?q=${PROYECTO_LAT},${PROYECTO_LNG}&hl=es&z=11&output=embed`;
+const MAPS_EMBED = `https://maps.google.com/maps?q=${PROYECTO_LAT},${PROYECTO_LNG}&hl=es&z=14&output=embed`;
 
 const ICON_MAP: Record<string, typeof Plane> = {
   'Cunco': Trees,

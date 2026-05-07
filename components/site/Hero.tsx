@@ -1,6 +1,5 @@
 import { ArrowDown } from 'lucide-react';
 import { ChatCta } from './ChatCta';
-import { PROYECTO } from '@/data/content';
 
 export function Hero() {
   return (
@@ -45,9 +44,9 @@ export function Hero() {
           </h1>
 
           <p className="mt-9 sm:mt-11 max-w-2xl text-crema/85 text-lg sm:text-xl leading-[1.55]">
-            {PROYECTO.totalParcelas} parcelas desde 5.000 m² en {PROYECTO.superficieTotal}{' '}
-            de bosque nativo. SAG aprobado, roles listos, crédito directo desde{' '}
-            <span className="text-crema font-medium">{PROYECTO.precioContado}</span>.
+            Bosque nativo, papeles en regla y entrega inmediata. La inversión
+            ya hecha — solo falta que tu nombre quede{' '}
+            <span className="text-crema font-medium">en la escritura</span>.
           </p>
 
           <div className="mt-9 sm:mt-12 flex flex-wrap items-center gap-3 sm:gap-4">
