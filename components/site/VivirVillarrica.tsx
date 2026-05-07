@@ -5,7 +5,7 @@ const PANELS = [
   {
     id: 'suenia',
     eyebrow: 'Sueña',
-    titleStart: 'Sueña y vive',
+    titleStart: 'Sueña y vive a 50 minutos de',
     titleEnd: 'Villarrica',
     copy: '80 hectáreas en uno de los entornos más codiciados del sur de Chile, sobre la ruta Villarrica – Las Hortensias.',
     chip: '80 ha · Colico, Araucanía',

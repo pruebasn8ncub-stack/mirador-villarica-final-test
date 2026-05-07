@@ -132,7 +132,7 @@ export function Header() {
                 intent="general"
                 icon="sparkle"
               >
-                Habla con Lucía
+                Habla con un ejecutivo / Lucía
               </ChatCta>
             </div>
             <button
@@ -173,7 +173,7 @@ export function Header() {
                 className="w-full"
                 icon="sparkle"
               >
-                Habla con Lucía
+                Habla con un ejecutivo / Lucía
               </ChatCta>
             </div>
           </nav>

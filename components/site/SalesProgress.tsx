@@ -76,7 +76,7 @@ export function SalesProgress() {
                       Avance del proyecto
                     </span>
                     <span className="font-display text-mostaza text-base tabular-nums">
-                      {ocupadasPct}% colocado
+                      {ocupadasPct}% ya vendido
                     </span>
                   </div>
                   <div

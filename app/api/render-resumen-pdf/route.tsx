@@ -300,7 +300,7 @@ function ResumenDocument({ data }: { data: RenderBody }) {
               { url: TOUR_URL, icon: `${base}/assets/icons/icon-tour.png`, label: 'Tour 360°', desc: 'Recorrido virtual del proyecto', cta: 'Abrir →' },
               { url: BROCHURE_URL, icon: `${base}/assets/icons/icon-brochure.png`, label: 'Brochure PDF', desc: 'Información completa del proyecto', cta: 'Descargar →' },
               { url: SHEET_URL, icon: `${base}/assets/icons/icon-inventario.png`, label: 'Inventario en vivo', desc: 'Precios y disponibilidad en tiempo real', cta: 'Ver planilla →' },
-              { url: LOCATION_URL, icon: `${base}/assets/icons/icon-ubicacion.png`, label: 'Ubicación', desc: 'Colico, Región de La Araucanía', cta: 'Ver mapa →' },
+              { url: LOCATION_URL, icon: `${base}/assets/icons/icon-ubicacion.png`, label: 'Ubicación', desc: 'Lago Colico, Región de La Araucanía', cta: 'Ver mapa →' },
             ].map((r) => (
               <View key={r.label} style={styles.resourceItem}>
                 <View style={styles.resourceIconWrap}>

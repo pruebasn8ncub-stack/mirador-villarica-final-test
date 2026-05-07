@@ -69,7 +69,7 @@ export function GateModal({ onSubmit, onClose, error }: GateModalProps) {
                 Lucía
               </h2>
               <p className="truncate text-[11px] leading-tight text-crema/75">
-                Asistente virtual · Proyecto Mirador de Villarrica
+                Ejecutiva comercial · Proyecto Mirador de Villarrica
               </p>
               <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide leading-tight text-emerald-300">
                 <span className="relative inline-flex h-1.5 w-1.5">

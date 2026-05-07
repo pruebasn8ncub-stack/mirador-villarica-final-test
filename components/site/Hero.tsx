@@ -34,7 +34,7 @@ export function Hero() {
         <div className="max-w-4xl">
           <p className="inline-flex items-center gap-2.5 text-mostaza text-[11px] sm:text-xs font-sans tracking-eyebrow uppercase mb-7 sm:mb-9">
             <span className="size-1.5 rounded-full bg-mostaza animate-pulse-dot" />
-            <span>Colico · Región de La Araucanía</span>
+            <span>Lago Colico · Región de La Araucanía</span>
           </p>
 
           <h1 className="font-display text-crema tracking-display leading-[0.95] text-[clamp(2.5rem,7.5vw,6.25rem)] font-light">

@@ -62,7 +62,7 @@ export function ChatLauncher({
               'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:border-mostaza-300',
               'animate-bubble-float'
             )}
-            aria-label="Abrir chat con Lucía, asesora virtual"
+            aria-label="Abrir chat con Lucía, ejecutiva comercial"
           >
             <div className="px-3.5 py-2.5">
               <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-mostaza-500">
@@ -70,7 +70,7 @@ export function ChatLauncher({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-70" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 </span>
-                Asesora virtual · Lucía
+Ejecutiva comercial · Lucía
               </p>
               <p className="mt-1 text-[12.5px] font-medium leading-snug text-bosque-900">
                 👋 {bubbleMessage}
@@ -125,7 +125,7 @@ export function ChatLauncher({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onClick}
-          aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat con Lucía, asesora virtual de Mirador de Villarrica'}
+          aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat con Lucía, ejecutiva comercial de Mirador de Villarrica'}
           aria-expanded={isOpen}
           className={cn(
             'group relative flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-full',

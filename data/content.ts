@@ -1,7 +1,7 @@
 export const PROYECTO = {
   nombre: 'Mirador de Villarrica',
   desarrolladora: 'Terra Segura Inmobiliaria',
-  ubicacion: 'Colico, Región de La Araucanía',
+  ubicacion: 'Lago Colico, Región de La Araucanía',
   totalParcelas: 94,
   superficieTotal: '80 hectáreas',
   rangoTamanios: 'Desde 5.000 m² hasta 1 hectárea',

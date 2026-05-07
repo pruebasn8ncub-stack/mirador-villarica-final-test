@@ -21,14 +21,14 @@ export function StatsHero() {
               <span className="size-1.5 rounded-full bg-mostaza animate-pulse-dot" /> En cifras
             </p>
             <h2 className="font-display text-crema tracking-display leading-[1.02] text-[clamp(2.25rem,5vw,4.25rem)] font-light">
-              Cifras peritadas,
+              Cifras reales,
               <br />
               <span className="italic text-mostaza">no de marketing</span>.
             </h2>
           </div>
           <div className="lg:col-span-5 lg:col-start-8 lg:pt-4">
             <p className="text-crema/70 text-base sm:text-lg leading-relaxed">
-              Cada cifra está peritada y respaldada por documentación legal. Ningún
+              Cada cifra es real y está respaldada por documentación legal. Ningún
               número de marketing, ningún asterisco escondido.
             </p>
           </div>

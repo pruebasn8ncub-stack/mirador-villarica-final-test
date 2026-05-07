@@ -44,7 +44,7 @@ function buildOpeningMessages(lead: LeadGateData | null): Message[] {
       id: 'opening-1',
       role: 'assistant',
       content:
-        `${saludo} 👋 Soy **Lucía**, asistente virtual de Mirador de Villarrica. ` +
+        `${saludo} 👋 Soy **Lucía**, ejecutiva comercial del proyecto Mirador de Villarrica. ` +
         `Puedo ayudarte a consultar disponibilidad de parcelas, precios y conectarte con un broker cuando lo necesites.\n\n` +
         `Para partir, ¿ya tienes información del proyecto o prefieres que lo revisemos juntos?`,
       timestamp: Date.now(),

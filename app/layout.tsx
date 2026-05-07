@@ -26,10 +26,10 @@ const SITE_URL = 'https://mirador-villarrica-chatbot.vercel.app';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${PROYECTO.nombre} — Parcelas en Colico, Araucanía | Terra Segura`,
+    default: `${PROYECTO.nombre} — Parcelas en Lago Colico, Araucanía | Terra Segura`,
     template: `%s | ${PROYECTO.nombre}`,
   },
-  description: `${PROYECTO.totalParcelas} parcelas desde 5.000 m² entre el volcán y el lago, en Colico, Región de La Araucanía. SAG aprobado, roles listos, caminos estabilizados. Desde ${PROYECTO.precioContado} contado o crédito directo desde ${PROYECTO.precioCredito}.`,
+  description: `${PROYECTO.totalParcelas} parcelas desde 5.000 m² entre el volcán y el lago, en Lago Colico, Región de La Araucanía. SAG aprobado, roles listos, caminos estabilizados. Desde ${PROYECTO.precioContado} contado o crédito directo desde ${PROYECTO.precioCredito}.`,
   keywords: [
     'parcelas Villarrica', 'parcelas Colico', 'parcelas Araucanía',
     'Mirador de Villarrica', 'Terra Segura', 'inversión sur de Chile',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: `${PROYECTO.nombre} — Tu pedazo de sur entre el volcán y el lago`,
-    description: `${PROYECTO.totalParcelas} parcelas desde 5.000 m² en Colico, Araucanía. Desde ${PROYECTO.precioContado}. SAG aprobado, crédito directo.`,
+    description: `${PROYECTO.totalParcelas} parcelas desde 5.000 m² en Lago Colico, Araucanía. Desde ${PROYECTO.precioContado}. SAG aprobado, crédito directo.`,
     url: SITE_URL,
     siteName: PROYECTO.nombre,
     locale: 'es_CL',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `${PROYECTO.nombre} — Terra Segura`,
-    description: `${PROYECTO.totalParcelas} parcelas en Colico, Araucanía. Desde ${PROYECTO.precioContado}.`,
+    description: `${PROYECTO.totalParcelas} parcelas en Lago Colico, Araucanía. Desde ${PROYECTO.precioContado}.`,
   },
   robots: {
     index: true,
@@ -107,7 +107,7 @@ const jsonLd = {
       description: `Parcelación de ${PROYECTO.superficieTotal} con ${PROYECTO.totalParcelas} parcelas desde 5.000 m².`,
       address: {
         '@type': 'PostalAddress',
-        addressLocality: 'Colico',
+        addressLocality: 'Lago Colico',
         addressRegion: 'La Araucanía',
         addressCountry: 'CL',
       },

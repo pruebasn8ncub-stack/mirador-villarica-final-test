@@ -187,7 +187,7 @@ export function Galeria() {
               <h2 className="font-display text-bosque-900 tracking-display leading-[1.05] text-[clamp(2rem,4.5vw,3.75rem)] font-light">
                 No es una promesa,
                 <br />
-                <span className="italic">son fotos del terreno</span>.
+                <span className="italic">son fotos reales del terreno</span>.
               </h2>
             </div>
             <p className="max-w-sm text-bosque-900/70 text-[15px] leading-relaxed">
