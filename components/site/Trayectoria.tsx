@@ -88,26 +88,24 @@ export function Trayectoria() {
               <span className="size-1.5 rounded-full bg-mostaza" />
               Sobre Terra Segura · Inmobiliaria gestora
             </p>
+            <h2 className="font-display text-bosque-900 tracking-display leading-[1.02] text-[clamp(2.25rem,5vw,4.25rem)] font-light">
+              Mirador es uno de los proyectos de
+            </h2>
             <a
               href={TERRA_SEGURA.sitio}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Terra Segura Inmobiliaria — Sitio oficial"
-              className="inline-flex items-center mb-8 transition-opacity hover:opacity-80"
+              className="inline-flex items-center mt-6 sm:mt-8 transition-opacity hover:opacity-80"
             >
               <Image
                 src="/assets/terra-segura-logo.png"
                 alt="Terra Segura Inmobiliaria"
                 width={400}
                 height={83}
-                className="h-9 sm:h-11 w-auto object-contain invert opacity-85"
+                className="h-12 sm:h-16 lg:h-20 w-auto object-contain invert opacity-90"
               />
             </a>
-            <h2 className="font-display text-bosque-900 tracking-display leading-[1.02] text-[clamp(2.25rem,5vw,4.25rem)] font-light">
-              Mirador es uno de los proyectos de
-              <br />
-              <span className="italic text-mostaza">Terra Segura</span>.
-            </h2>
           </div>
           <div className="lg:col-span-5 lg:pt-3 space-y-6">
             <p className="text-bosque-900/75 text-base sm:text-lg leading-relaxed">
